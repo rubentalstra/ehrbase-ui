@@ -7,6 +7,16 @@
 #   interpolated into any `run:` block. If a future job needs such input,
 #   use env: with $-shell-quoting per
 #   https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+#
+# pnpm + Node ordering, per https://github.com/pnpm/action-setup:
+#   1. pnpm/action-setup@v6 with `standalone: true` installs @pnpm/exe
+#      (Node-bundled binary). This works even when the runner's default
+#      Node is older than what pnpm 11.3.0 requires (>= 22.13).
+#   2. pnpm/action-setup's built-in `cache: true` handles store caching
+#      (auto store-prune post-action, lockfile-keyed).
+#   3. actions/setup-node@v6 installs the Node version from .nvmrc (no
+#      `cache:` parameter — pnpm/action-setup already cached the store).
+#   4. `pnpm install --frozen-lockfile`.
 
 name: CI
 
@@ -34,33 +44,20 @@ jobs:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          package-manager-cache: false
-
-      - name: Activate pnpm via corepack (matches packageManager field)
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.3.0 --activate
-          pnpm --version
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.store }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -98,24 +95,16 @@ jobs:
       - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          package-manager-cache: false
-      - run: |
-          corepack enable
-          corepack prepare pnpm@11.3.0 --activate
-      - id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.store }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
 
@@ -128,24 +117,16 @@ jobs:
       - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          package-manager-cache: false
-      - run: |
-          corepack enable
-          corepack prepare pnpm@11.3.0 --activate
-      - id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.store }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
       - run: pnpm install --frozen-lockfile
       - run: pnpm run storybook:build
       - uses: actions/upload-artifact@v4
@@ -163,24 +144,16 @@ jobs:
       - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          package-manager-cache: false
-      - run: |
-          corepack enable
-          corepack prepare pnpm@11.3.0 --activate
-      - id: pnpm-cache
-        run: echo "store=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.store }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
       - run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
