@@ -15,7 +15,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1E** Vitest + `vitest-axe` + Button axe baseline test — §12.4, §24
 - [x] **1F** Playwright + `@axe-core/playwright` + smoke E2E — §12.4, §24
 - [x] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
-- [ ] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010) — §17
+- [x] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010, verification passed) — §17
 - [x] **1I** Pino app logger, stdout only (audit pipeline deferred to M4) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
 - [ ] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) — §18

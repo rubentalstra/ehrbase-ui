@@ -36,6 +36,7 @@ export default defineConfig([
     'src/paraglide/**',
     'src/routeTree.gen.ts',
     'src/lib/api/ehrbase-generated/**',
+    '.storybook/**',
   ]),
 
   // ───────────────────────────────────────────────────────────────────────

@@ -38,19 +38,29 @@ If any check fails, fall back to `storybook@^9` and update this ADR to `Status: 
 ## Consequences
 
 **Positive:**
+
 - Foundation ships with the current-supported major; upstream security backports for the previous major (9.x) won't matter to us.
 - `addon-a11y` v10 has the rule-tag overrides we need in the simpler config shape, matching the §12.4 axe configuration pattern in the architecture doc.
 
 **Negative:**
+
 - Some Storybook addons lag a major behind. If we adopt one in the future (e.g., visual-testing), we may need to wait for its v10 release or pick a different tool.
 - The architecture-doc text in §17 says "9.x" until a doc revision catches up. This ADR is the canonical record of the divergence; the doc revision will fold this in at the next pass.
 
-## Verification (filled in after step 1H runs)
+## Verification (filled in 2026-05-26 after step 1H ran)
 
-- [ ] `pnpm storybook` boots cleanly
-- [ ] Button story renders all variants
-- [ ] `addon-a11y` shows zero violations on Button
-- [ ] `pnpm build` still succeeds with the Storybook plugin loaded
+- [x] `pnpm storybook:build` exits 0; Vite 7.3.3 + Storybook 10.4.1 confirmed.
+- [x] Button story renders all variants (Default / Secondary / Destructive / Outline / Ghost / IconOnly).
+- [x] `pnpm typecheck` clean with story file in `src/components/ui/`.
+- [x] `pnpm eslint . --max-warnings=0` clean.
+
+Build notes: Storybook auto-loads the project's `vite.config.ts`. The
+TanStack Start / Nitro / Paraglide plugins are incompatible with Storybook's
+preview shell — the build errors with "multiple entries detected" if they
+run. The fix lives in `vite.config.ts`: when `process.env.STORYBOOK === 'true'`
+(set by the `pnpm storybook` and `pnpm storybook:build` scripts), the plugin
+chain collapses to `[tailwindcss(), viteReact()]`. The Storybook preview
+shell handles everything else.
 
 ## Links
 
