@@ -35,7 +35,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Trivy filesystem
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -68,16 +68,16 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Build image (no push)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: false
           load: true
           tags: ehrbase-ui:ci-${{ github.sha }}
       - name: Trivy image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ehrbase-ui:ci-${{ github.sha }}
           format: sarif
@@ -136,6 +136,13 @@ jobs:
     name: Hidden-secret scan
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # gitleaks-action@v2 is still a Node-20 JS action (no v3 exists yet, and
+    # v2.3.9 is the latest). GitHub forces Node 24 for JS actions from
+    # 2026-06-02 and removes Node 20 on 2026-09-16. Opt in early so the run
+    # is future-proof. Remove this once gitleaks ships a Node-24 release.
+    # https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - uses: step-security/harden-runner@v2
         with:

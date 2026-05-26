@@ -34,6 +34,40 @@ Reasons stated by the maintainer:
 2. Lower maintenance overhead — Dependabot proposes one PR per major bump
    instead of one PR per patch bump.
 
+### Pinning convention (two cases)
+
+- **Actions at v1.0+** pin to the moving major tag: `@v6`, `@v7`, `@v4`, …
+  (gets patch/minor automatically; Dependabot bumps the major).
+- **Actions still at 0.x** have no stable major tag, so they pin to the
+  exact version and Dependabot bumps them: `aquasecurity/trivy-action@v0.36.0`,
+  `anchore/sbom-action@v0.24.0`. (A bare `@v0` floats across every 0.x
+  release — too loose for a 0.x project that may ship breaking changes in a
+  minor.)
+
+### Node-20 runtime audit (2026-05-27)
+
+GitHub deprecates the Node-20 actions runtime (forced Node 24 from
+2026-06-02, Node 20 removed 2026-09-16). Audited every action; the
+runtime of each pinned version was checked against its `action.yml`
+`runs.using`. Result:
+
+- Bumped to current Node-24 majors: `actions/upload-artifact@v4 → v7`,
+  `docker/setup-buildx-action@v3 → v4`, `docker/build-push-action@v6 → v7`,
+  `docker/login-action@v3 → v4`, `sigstore/cosign-installer@v3 → v4`,
+  `softprops/action-gh-release@v2 → v3`.
+- Pinned off a floating ref: `aquasecurity/trivy-action@master → v0.36.0`
+  (a `@master` ref is the exact supply-chain hole this ADR exists to avoid —
+  it should never have been there).
+- Already Node-24 / composite, left as-is: `actions/checkout@v6`,
+  `actions/setup-node@v6`, `pnpm/action-setup@v6`, `step-security/harden-runner@v2`,
+  `github/codeql-action/*@v4`, `actions/dependency-review-action@v5`,
+  `anchore/sbom-action@v0.24.0`.
+- **`gitleaks/gitleaks-action@v2`** is the one unavoidable Node-20 holdout
+  (latest is v2.3.9; no v3 exists). Its job sets
+  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` — the GitHub-sanctioned opt-in
+  — so it runs on Node 24 today. Remove that env flag once gitleaks ships a
+  Node-24 release.
+
 ## Risks accepted
 
 This trades two specific safety properties for the readability + maintenance
