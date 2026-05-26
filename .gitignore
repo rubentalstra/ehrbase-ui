@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# TanStack Start / Nitro / Vite build output
+.output/
+.nitro/
+.vinxi/
+.tanstack/
+dist/
+build/
+
+# Paraglide compiled output (regenerated on build)
+src/paraglide/
+app/paraglide/
+
+# orval generated output (regenerated on demand)
+src/lib/api/ehrbase-generated/
+
+# Test artefacts
+coverage/
+playwright-report/
+playwright/.cache/
+test-results/
+.vitest-cache/
+
+# Storybook static build
+storybook-static/
+
+# Env files — never commit
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+#.idea/
+.vscode/
+*.swp
+*.swo
+.fleet/
+
+# Sourcemaps generated for release artefacts (uploaded out-of-band, never served)
+*.map
