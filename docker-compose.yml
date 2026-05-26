@@ -5,12 +5,23 @@
 
 services:
   ehrbase-db:
-    image: postgres:18.4-alpine
+    # EHRbase ships a companion Postgres image that pre-creates the
+    # ehrbase / ehrbase_restricted roles + the extensions EHRbase needs.
+    # Vanilla postgres:18 does NOT have these, so EHRbase's Flyway migration
+    # fails against it. The companion image is PG16-based (only 16.2 is
+    # published) — this is the one place the stack is not on PG18. Keycloak's
+    # DB below stays on vanilla postgres:18.4. See docs/architecture.md §18
+    # note + REFERENCES drift list.
+    image: ehrbase/ehrbase-v2-postgres:16.2
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ehrbase
+      EHRBASE_USER_ADMIN: ehrbase
+      EHRBASE_PASSWORD_ADMIN: ehrbase
+      EHRBASE_USER: ehrbase_restricted
+      EHRBASE_PASSWORD: ehrbase_restricted
     volumes:
+      # PG16 image uses the classic /var/lib/postgresql/data mount.
       - ehrbase_pg:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
@@ -22,16 +33,37 @@ services:
   ehrbase:
     # Pin to an exact version. Never use :latest.
     image: ehrbase/ehrbase:2.31.0
+    # EHRbase builds its OAuth2 JwtDecoder at startup by fetching Keycloak's
+    # OIDC discovery doc, so it must not start until Keycloak's realm import
+    # has finished. We gate on keycloak: service_healthy (see Keycloak's
+    # /health/ready healthcheck) rather than crash-restarting until the realm
+    # appears — deterministic ordering, no boot-time error noise.
+    # restart: unless-stopped is an orthogonal runtime-resilience policy
+    # (recover from a later crash), not the startup-ordering mechanism.
+    restart: unless-stopped
     depends_on:
       ehrbase-db: { condition: service_healthy }
-      keycloak: { condition: service_started }
+      keycloak: { condition: service_healthy }
     environment:
       DB_URL: jdbc:postgresql://ehrbase-db:5432/ehrbase
-      DB_USER: postgres
-      DB_PASS: postgres
+      # EHRbase 2.x two-user model: admin runs Flyway migrations, the
+      # restricted user is the runtime connection. Both are created by the
+      # companion postgres image above.
+      DB_USER_ADMIN: ehrbase
+      DB_PASS_ADMIN: ehrbase
+      DB_USER: ehrbase_restricted
+      DB_PASS: ehrbase_restricted
       SECURITY_AUTHTYPE: OAUTH
-      SECURITY_OAUTH_ISSUER_URI: http://keycloak:8080/realms/ehrbase
-      SECURITY_OAUTH_JWK_SET_URI: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/certs
+      # EHRbase 2.x wires its JwtDecoder from the STANDARD Spring Boot
+      # resource-server property spring.security.oauth2.resourceserver.jwt.*.
+      # Spring's env-var binding drops the hyphen in `issuer-uri`, so the
+      # var is ...JWT_ISSUERURI (not ISSUER_URI). The arch-doc §18 names
+      # (SECURITY_OAUTH_ISSUER_URI) bind to nothing → no JwtDecoder bean →
+      # "APPLICATION FAILED TO START". See docs/architecture.md §18 note.
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI: http://keycloak:8080/realms/ehrbase
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/certs
+      SECURITY_OAUTH2USERROLE: clinician
+      SECURITY_OAUTH2ADMINROLE: admin
       ADMIN_API_ACTIVE: 'true'
     ports: ['8080:8080']
     networks: [ehrbase-net]
@@ -43,14 +75,21 @@ services:
       POSTGRES_PASSWORD: keycloak
       POSTGRES_DB: keycloak
     volumes:
-      - keycloak_pg:/var/lib/postgresql/data
+      # Postgres 18+ mount convention (see ehrbase-db above).
+      - keycloak_pg:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak']
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks: [ehrbase-net]
 
   keycloak:
     # CVE-2026-37981 floor (§5.12).
     image: quay.io/keycloak/keycloak:26.6.2
     command: start-dev --import-realm
-    depends_on: [keycloak-db]
+    depends_on:
+      keycloak-db: { condition: service_healthy }
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -63,6 +102,23 @@ services:
     volumes:
       - ./keycloak/import:/opt/keycloak/data/import:ro
     ports: ['8180:8080']
+    # Health gate on the management-port /health/ready endpoint (port 9000,
+    # enabled by KC_HEALTH_ENABLED). It only reports UP after `--import-realm`
+    # finishes, so any dependent gated on service_healthy is guaranteed the
+    # ehrbase realm is live. The Keycloak 26 image has no curl/wget, but it
+    # does ship bash — so we use bash's /dev/tcp to speak raw HTTP.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bash',
+          '-c',
+          "exec 3<>/dev/tcp/localhost/9000; echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q '200 OK' <&3",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
     networks: [ehrbase-net]
 
   # Valkey: BSD-licensed Redis fork. ioredis works against it unchanged.
@@ -118,9 +174,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    restart: unless-stopped
     depends_on:
+      # EHRbase has no healthcheck (distroless image, no shell) and the UI
+      # only calls it lazily at request time, so service_started is enough.
+      # Keycloak + Valkey ARE gated on health since the BFF (Milestone 2)
+      # talks to them on the auth path.
       ehrbase: { condition: service_started }
-      keycloak: { condition: service_started }
+      keycloak: { condition: service_healthy }
       valkey: { condition: service_healthy }
     environment:
       NODE_ENV: production

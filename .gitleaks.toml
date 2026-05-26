@@ -35,6 +35,8 @@ regexes = [
   '''KEYCLOAK_ADMIN_PASSWORD:\s*admin''',
   '''POSTGRES_PASSWORD:\s*(postgres|keycloak)''',
   '''KC_DB_PASSWORD:\s*keycloak''',
+  '''EHRBASE_(USER|PASSWORD)(_ADMIN)?:\s*ehrbase(_restricted)?''',
+  '''DB_(USER|PASS)(_ADMIN)?:\s*ehrbase(_restricted)?''',
   '''POSTGRES_USER:\s*(postgres|keycloak)''',
   '''KC_DB_USERNAME:\s*keycloak''',
   '''POSTGRES_DB:\s*(ehrbase|keycloak)''',
