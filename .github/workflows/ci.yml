@@ -42,6 +42,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
       - name: Activate pnpm via corepack (matches packageManager field)
         run: |
@@ -100,6 +101,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
       - run: |
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
@@ -129,6 +131,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
       - run: |
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
@@ -163,6 +166,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
       - run: |
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
