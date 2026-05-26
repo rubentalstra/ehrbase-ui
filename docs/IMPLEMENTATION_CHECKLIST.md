@@ -14,7 +14,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1D** ESLint v10 flat config + `jsx-a11y-x` + `@eslint-react` + `react-hooks` v7 — §12.3
 - [x] **1E** Vitest + `vitest-axe` + Button axe baseline test — §12.4, §24
 - [ ] **1F** Playwright + `@axe-core/playwright` + smoke E2E — §12.4, §24
-- [ ] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
+- [x] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
 - [ ] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010) — §17
 - [ ] **1I** Pino app logger, stdout only (audit pipeline deferred to M4) — §13.1
 - [ ] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15

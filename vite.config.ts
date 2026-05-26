@@ -6,6 +6,7 @@ import { devtools } from '@tanstack/devtools-vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
+import { paraglideVitePlugin } from '@inlang/paraglide-js'
 
 export default defineConfig({
   resolve: {
@@ -16,6 +17,12 @@ export default defineConfig({
   plugins: [
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
+    paraglideVitePlugin({
+      project: './project.inlang',
+      outdir: './src/paraglide',
+      // Strict mode is on by default; missing keys in any registered locale
+      // file fail the build (docs/architecture.md §11.7).
+    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
