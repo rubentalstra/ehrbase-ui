@@ -1,0 +1,173 @@
+# Security workflow — Trivy + Semgrep + pnpm audit + Gitleaks.
+# Runs on every PR and weekly on a schedule (docs/architecture.md §20.4).
+# Action pinning strategy: ADR-0011 (semver tags, not SHAs).
+#
+# Workflow-injection hardening (per
+# https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/):
+# no untrusted-input interpolation in run: blocks.
+#
+# See ci.yml header for the pnpm + Node setup pattern (pnpm/action-setup@v6
+# standalone mode before actions/setup-node@v6).
+
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+
+permissions:
+  contents: read
+  security-events: write # for SARIF upload to GitHub Security tab
+
+jobs:
+  trivy-fs:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Trivy filesystem
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  trivy-image:
+    name: Trivy container image scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Foundation milestone: image scan runs in advisory mode (does not block
+    # the PR). The base image has known HIGH/CRITICAL CVEs that get resolved
+    # when alpine/node updates flow through Dependabot. Tighten to
+    # exit-code: '1' before tagging v1.0 (audit-log + a real readiness route
+    # also need to be in place before strict image gating makes sense).
+    continue-on-error: true
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - name: Build image (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ehrbase-ui:ci-${{ github.sha }}
+      - name: Trivy image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ehrbase-ui:ci-${{ github.sha }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: HIGH,CRITICAL
+          exit-code: '0' # advisory until v1.0; see continue-on-error comment
+          ignore-unfixed: true
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: semgrep ci --config=auto --sarif --output=semgrep.sarif || true
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  pnpm-audit:
+    name: pnpm audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - run: pnpm install --frozen-lockfile
+      - name: pnpm audit (fail on HIGH/CRITICAL)
+        run: pnpm audit --audit-level=high
+      - name: pnpm audit signatures
+        run: pnpm audit signatures
+
+  gitleaks:
+    name: Hidden-secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # Run the official gitleaks tool from its pinned image rather than the
+      # gitleaks-action JS wrapper. Reasons:
+      #   - The wrapper (gitleaks-action@v2.3.9) is a Node-20 action with no
+      #     Node-24 release; running the binary removes that runtime coupling
+      #     entirely instead of papering over it with a FORCE_* opt-in flag.
+      #   - Consistent with the other scanners in this file (Trivy, Semgrep)
+      #     which also emit SARIF and upload via codeql-action/upload-sarif.
+      #   - We control the exact tool version (manual bump; the image is
+      #     inside a run: step so Dependabot's docker ecosystem won't see it).
+      # gitleaks detect exits non-zero when leaks are found → fails the job.
+      - name: Gitleaks scan
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            detect \
+              --source=/repo \
+              --config=/repo/.gitleaks.toml \
+              --redact \
+              --report-format=sarif \
+              --report-path=/repo/gitleaks.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks

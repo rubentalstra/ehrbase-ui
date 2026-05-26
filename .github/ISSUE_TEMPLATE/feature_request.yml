@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose new capability for ehrbase-ui
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are reviewed against the v1.0 roadmap in
+        `docs/IMPLEMENTATION_CHECKLIST.md`. Items explicitly out of scope
+        for v1.0 (§1 "Explicitly NOT in v1.0") will be tagged `v2-candidate`.
+  - type: input
+    id: arch_section
+    attributes:
+      label: Architecture-doc § this relates to
+      description: 'If the feature touches an existing arch-doc area, name it. Use `n/a` if entirely new.'
+      placeholder: '§7 Dynamic Forms'
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This is a v1.0 ask (must ship before tagging v1.0)
+        - label: This is a post-v1.0 / v2-candidate ask
+        - label: This is a clinical-safety concern (auth, audit, retention)
+        - label: This is an accessibility / compliance ask

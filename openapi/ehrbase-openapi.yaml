@@ -1,0 +1,8 @@
+# Placeholder for the vendored EHRbase OpenAPI spec.
+# Replaced in Milestone 6 by the actual spec fetched from EHRbase 2.31.x.
+# docs/architecture.md §15.
+openapi: 3.0.3
+info:
+  title: EHRbase OpenAPI (placeholder)
+  version: 0.0.0
+paths: {}

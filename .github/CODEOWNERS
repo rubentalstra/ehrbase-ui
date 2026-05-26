@@ -1,0 +1,20 @@
+# Code ownership — docs/architecture.md §16 (repo layout) and §20.10
+# (branch protection). Update as the contributor base grows.
+
+# Default owner for everything in the repo.
+*                                        @rubentalstra
+
+# Architecture, ADRs, governance — only the maintainer changes these without
+# discussion. New contributors should open a PR + invite a review.
+/docs/architecture.md                    @rubentalstra
+/docs/adr/                               @rubentalstra
+/CLAUDE.md                               @rubentalstra
+
+# CI/CD pipeline + security workflows.
+/.github/workflows/                      @rubentalstra
+/.github/dependabot.yml                  @rubentalstra
+
+# Audit / auth / session — clinical-safety critical (§5 + §14).
+/src/lib/audit/                          @rubentalstra
+/src/lib/auth/                           @rubentalstra
+/src/lib/session.server.ts               @rubentalstra

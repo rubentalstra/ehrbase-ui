@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_title": "ehrbase-ui",
+  "app_subtitle": "The missing open-source UI for EHRbase. Foundation milestone in progress.",
+  "app_checklist_hint": "See docs/IMPLEMENTATION_CHECKLIST.md for milestone status."
+}
