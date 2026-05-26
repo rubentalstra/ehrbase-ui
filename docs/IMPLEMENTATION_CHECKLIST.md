@@ -18,7 +18,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010, verification passed) — §17
 - [x] **1I** Pino app logger, stdout only (audit pipeline deferred to M4) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
-- [ ] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) — §18
+- [x] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) + realm import — §18, §5.6
 - [ ] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml` — §20
 - [x] **1M** Pre-commit hooks via `husky` + `lint-staged` + `commitlint`
 - [ ] **1N** `.claude/` — sub-agents, `.mcp.json`, project notes

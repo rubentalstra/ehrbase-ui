@@ -1,0 +1,158 @@
+# Development stack for ehrbase-ui.
+# docs/architecture.md §18 — all images pinned to exact tags, never :latest.
+# Observability stack (Loki, Tempo, Prometheus, OTel collector) is kept
+# commented out until Milestone 7 lands the corresponding wiring.
+
+services:
+  ehrbase-db:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ehrbase
+    volumes:
+      - ehrbase_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ehrbase-net]
+
+  ehrbase:
+    # Pin to an exact version. Never use :latest.
+    image: ehrbase/ehrbase:2.31.0
+    depends_on:
+      ehrbase-db: { condition: service_healthy }
+      keycloak: { condition: service_started }
+    environment:
+      DB_URL: jdbc:postgresql://ehrbase-db:5432/ehrbase
+      DB_USER: postgres
+      DB_PASS: postgres
+      SECURITY_AUTHTYPE: OAUTH
+      SECURITY_OAUTH_ISSUER_URI: http://keycloak:8080/realms/ehrbase
+      SECURITY_OAUTH_JWK_SET_URI: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/certs
+      ADMIN_API_ACTIVE: 'true'
+    ports: ['8080:8080']
+    networks: [ehrbase-net]
+
+  keycloak-db:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+      POSTGRES_DB: keycloak
+    volumes:
+      - keycloak_pg:/var/lib/postgresql/data
+    networks: [ehrbase-net]
+
+  keycloak:
+    # CVE-2026-37981 floor (§5.12).
+    image: quay.io/keycloak/keycloak:26.6.2
+    command: start-dev --import-realm
+    depends_on: [keycloak-db]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HEALTH_ENABLED: 'true'
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    ports: ['8180:8080']
+    networks: [ehrbase-net]
+
+  # Valkey: BSD-licensed Redis fork. ioredis works against it unchanged.
+  # CVE floor 9.1.0 (§5.12).
+  valkey:
+    image: valkey/valkey:9.1.0-alpine
+    command: ['valkey-server', '--appendonly', 'yes']
+    volumes:
+      - valkey_data:/data
+    networks: [ehrbase-net]
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Observability stack — uncomment together once Milestone 7 wires OTel.
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:0.110.0
+  #   command: ["--config=/etc/otel-collector-config.yaml"]
+  #   volumes:
+  #     - ./otel/collector-config.yaml:/etc/otel-collector-config.yaml:ro
+  #   ports:
+  #     - "4317:4317"   # OTLP gRPC
+  #     - "4318:4318"   # OTLP HTTP
+  #   networks: [ehrbase-net]
+  #
+  # tempo:
+  #   image: grafana/tempo:2.6.0
+  #   command: ["-config.file=/etc/tempo.yaml"]
+  #   volumes:
+  #     - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+  #     - tempo_data:/var/tempo
+  #   networks: [ehrbase-net]
+  #
+  # loki:
+  #   image: grafana/loki:3.0.0
+  #   command: -config.file=/etc/loki/local-config.yaml
+  #   ports: ["3100:3100"]
+  #   networks: [ehrbase-net]
+  #
+  # prometheus:
+  #   image: prom/prometheus:v3.0.0
+  #   command:
+  #     - --config.file=/etc/prometheus/prometheus.yml
+  #     - --web.enable-otlp-receiver
+  #   volumes:
+  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus_data:/prometheus
+  #   networks: [ehrbase-net]
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      ehrbase: { condition: service_started }
+      keycloak: { condition: service_started }
+      valkey: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      EHRBASE_URL: http://ehrbase:8080/ehrbase/rest/openehr/v1
+      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/ehrbase
+      KEYCLOAK_CLIENT_ID: ehrbase-ui
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
+      KEYCLOAK_REDIRECT_URI: http://localhost:3000/api/auth/callback
+      VALKEY_URL: redis://valkey:6379
+      AUDIT_LOG_PATH: /var/log/ehrbase-ui/audit.ndjson
+      AUDIT_PSEUDONYM_SECRET: ${AUDIT_PSEUDONYM_SECRET:-dev-only-rotate-in-prod}
+      LOG_LEVEL: info
+      # OTel kept off in dev until M7.
+      OTEL_ENABLED: 'false'
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: ehrbase-ui
+      OTEL_TRACES_SAMPLER: parentbased_traceidratio
+      OTEL_TRACES_SAMPLER_ARG: '0.1'
+    volumes:
+      - audit_logs:/var/log/ehrbase-ui
+    ports: ['3000:3000']
+    networks: [ehrbase-net]
+
+volumes:
+  ehrbase_pg:
+  keycloak_pg:
+  valkey_data:
+  audit_logs:
+  # tempo_data:
+  # prometheus_data:
+
+networks:
+  ehrbase-net:
+    driver: bridge
