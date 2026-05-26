@@ -62,11 +62,16 @@ runtime of each pinned version was checked against its `action.yml`
   `actions/setup-node@v6`, `pnpm/action-setup@v6`, `step-security/harden-runner@v2`,
   `github/codeql-action/*@v4`, `actions/dependency-review-action@v5`,
   `anchore/sbom-action@v0.24.0`.
-- **`gitleaks/gitleaks-action@v2`** is the one unavoidable Node-20 holdout
-  (latest is v2.3.9; no v3 exists). Its job sets
-  `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` — the GitHub-sanctioned opt-in
-  — so it runs on Node 24 today. Remove that env flag once gitleaks ships a
-  Node-24 release.
+- **`gitleaks/gitleaks-action@v2`** (a Node-20 JS wrapper, latest v2.3.9, no
+  v3) was **removed entirely** rather than force-flagged onto Node 24. The
+  gitleaks job now runs the official tool from its pinned image
+  `ghcr.io/gitleaks/gitleaks:v8.30.1` via `docker run`, emits SARIF, and
+  uploads it through `codeql-action/upload-sarif` — identical to the Trivy
+  and Semgrep jobs. This removes the Node-runtime coupling at the root
+  instead of masking it with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`, and makes
+  all three SARIF scanners consistent. The image tag is bumped manually
+  (it lives in a `run:` step, so Dependabot's docker ecosystem doesn't
+  track it).
 
 ## Risks accepted
 

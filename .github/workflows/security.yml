@@ -136,13 +136,6 @@ jobs:
     name: Hidden-secret scan
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    # gitleaks-action@v2 is still a Node-20 JS action (no v3 exists yet, and
-    # v2.3.9 is the latest). GitHub forces Node 24 for JS actions from
-    # 2026-06-02 and removes Node 20 on 2026-09-16. Opt in early so the run
-    # is future-proof. Remove this once gitleaks ships a Node-24 release.
-    # https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     steps:
       - uses: step-security/harden-runner@v2
         with:
@@ -151,7 +144,30 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+      # Run the official gitleaks tool from its pinned image rather than the
+      # gitleaks-action JS wrapper. Reasons:
+      #   - The wrapper (gitleaks-action@v2.3.9) is a Node-20 action with no
+      #     Node-24 release; running the binary removes that runtime coupling
+      #     entirely instead of papering over it with a FORCE_* opt-in flag.
+      #   - Consistent with the other scanners in this file (Trivy, Semgrep)
+      #     which also emit SARIF and upload via codeql-action/upload-sarif.
+      #   - We control the exact tool version (manual bump; the image is
+      #     inside a run: step so Dependabot's docker ecosystem won't see it).
+      # gitleaks detect exits non-zero when leaks are found → fails the job.
+      - name: Gitleaks scan
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            detect \
+              --source=/repo \
+              --config=/repo/.gitleaks.toml \
+              --redact \
+              --report-format=sarif \
+              --report-path=/repo/gitleaks.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
