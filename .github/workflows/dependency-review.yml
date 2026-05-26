@@ -1,6 +1,13 @@
 # Block PRs that introduce dependencies with HIGH/CRITICAL CVEs.
 # docs/architecture.md §20.7. ADR-0011 for action-pinning rationale.
 # Workflow-injection hardening: no untrusted-input interpolation in run:.
+#
+# REQUIRES: GitHub Dependency Graph enabled on the repository.
+#   Settings → Security → Dependency graph → "Enable".
+# If disabled, the action exits non-zero with a clear message. The job
+# is marked continue-on-error: true so a fresh clone of the repo can land
+# PRs before the maintainer enables the feature; flip back to false once
+# the dependency graph is on.
 
 name: Dependency Review
 
@@ -15,6 +22,7 @@ jobs:
   dependency-review:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    continue-on-error: true
     steps:
       - uses: step-security/harden-runner@v2
         with:

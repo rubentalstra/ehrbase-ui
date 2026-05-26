@@ -1,0 +1,42 @@
+# Gitleaks configuration — extends the default rule set with project-
+# specific allowlists for known false positives.
+#
+# The default rule set is *added to* this file's [extend] block (no rules
+# are dropped). Allowlists below carve out specific dev-only placeholder
+# values that gitleaks's generic-api-key entropy rule mistakes for secrets.
+
+title = "ehrbase-ui gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dev-only placeholders + JDBC DB names that look like high-entropy secrets"
+
+# Paths where dev-only credentials live. These files ship known-bad
+# placeholder values clearly labelled `dev-only-rotate-in-prod`. Real
+# production secrets are env-injected and never land in the repo.
+paths = [
+  '''\.env\.example$''',
+  '''docker-compose\.yml$''',
+  '''keycloak/import/.*\.json$''',
+  '''docs/architecture\.md$''',
+]
+
+# Literal placeholder values used in dev compose / realm exports.
+# Anyone leaking these would be leaking a string everyone on the internet
+# already knows.
+regexes = [
+  '''dev-only-rotate-in-prod''',
+  '''replace-me''',
+  '''replace-me-with-openssl-rand-hex-32''',
+  '''DevClinician123!''',
+  '''DevAdmin123!''',
+  '''KEYCLOAK_ADMIN_PASSWORD:\s*admin''',
+  '''POSTGRES_PASSWORD:\s*(postgres|keycloak)''',
+  '''KC_DB_PASSWORD:\s*keycloak''',
+  '''POSTGRES_USER:\s*(postgres|keycloak)''',
+  '''KC_DB_USERNAME:\s*keycloak''',
+  '''POSTGRES_DB:\s*(ehrbase|keycloak)''',
+  '''jdbc:postgresql://[a-zA-Z0-9-]+:[0-9]+/[a-zA-Z0-9_-]+''',
+]
