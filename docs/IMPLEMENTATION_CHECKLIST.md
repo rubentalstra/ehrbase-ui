@@ -22,7 +22,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml`, CODEOWNERS, PR + issue templates — §20 (semver-tag pinning per ADR-0011)
 - [x] **1M** Pre-commit hooks via `husky` + `lint-staged` + `commitlint`
 - [ ] **1N** `.claude/` — sub-agents, `.mcp.json`, project notes
-- [ ] **1O** ADR-0001 (stack) + ADR-0010 (storybook upgrade) ratified; PR template + CODEOWNERS
+- [x] **1O** ADR-0001 (stack) + ADR-0010 (storybook upgrade) + ADR-0011 (action pinning) ratified; PR template + CODEOWNERS shipped in 1L
 
 ## Milestone 2 — Auth + BFF (§5)
 
