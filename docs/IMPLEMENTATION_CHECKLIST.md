@@ -19,7 +19,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1I** Pino app logger, stdout only (audit pipeline deferred to M4) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
 - [x] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) + realm import — §18, §5.6
-- [ ] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml` — §20
+- [x] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml`, CODEOWNERS, PR + issue templates — §20 (semver-tag pinning per ADR-0011)
 - [x] **1M** Pre-commit hooks via `husky` + `lint-staged` + `commitlint`
 - [ ] **1N** `.claude/` — sub-agents, `.mcp.json`, project notes
 - [ ] **1O** ADR-0001 (stack) + ADR-0010 (storybook upgrade) ratified; PR template + CODEOWNERS

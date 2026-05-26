@@ -1,0 +1,133 @@
+# Tag-driven release pipeline (docs/architecture.md §20.6).
+# Builds the image, pushes to GHCR, Cosign keyless-signs, attaches SBOM,
+# attaches source-maps as a private artefact, creates a GitHub Release.
+# ADR-0011 for action-pinning rationale (semver tags, not SHAs).
+#
+# Workflow-injection hardening: tag name + repo name are interpolated into
+# env: before any run: block uses them.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build, sign, publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write # create GitHub Release
+      packages: write # push to GHCR
+      id-token: write # Cosign keyless via Fulcio
+      attestations: write # SBOM attestation
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute release metadata
+        id: meta
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          version="${REF_NAME#v}"
+          image="ghcr.io/${REPO,,}"
+          echo "version=${version}" >>"$GITHUB_OUTPUT"
+          echo "image=${image}" >>"$GITHUB_OUTPUT"
+
+      - name: Build + push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.image }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Cosign sign (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+          IMAGE_REF: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE_REF"
+
+      - name: Generate SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Attest SBOM (Cosign)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+          IMAGE_REF: ${{ steps.meta.outputs.image }}@${{ steps.build.outputs.digest }}
+        run: |
+          cosign attest --yes \
+            --predicate sbom.spdx.json \
+            --type spdxjson \
+            "$IMAGE_REF"
+
+      - name: Upload source maps as private artefact (§5.11)
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-maps-${{ steps.meta.outputs.version }}
+          path: |
+            .output/**/*.map
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            sbom.spdx.json
