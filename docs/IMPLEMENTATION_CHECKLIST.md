@@ -8,8 +8,8 @@
 
 Scaffolds every tooling rail the later milestones plug into. No PHI-touching code lands here.
 
-- [~] **1A** Repo skeleton + ADR seeding + `.claude/` setup (this commit) — governance docs (`docs/governance/`) deferred to 1O
-- [ ] **1B** TanStack Start + Tailwind v4 scaffold — §4, §6
+- [x] **1A** Repo skeleton + ADR seeding + `.claude/` setup — governance docs (`docs/governance/`) deferred to 1O
+- [x] **1B** TanStack Start + Tailwind v4 scaffold — §4, §6
 - [ ] **1C** shadcn init + first component batch — §6
 - [ ] **1D** ESLint v10 flat config + `jsx-a11y-x` + `@eslint-react` + `react-hooks` v7 — §12.3
 - [ ] **1E** Vitest + `vitest-axe` + Button axe baseline test — §12.4, §24

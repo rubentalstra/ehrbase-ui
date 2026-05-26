@@ -1,0 +1,36 @@
+# pnpm workspace + settings.
+#
+# Settings here override the defaults that ship with pnpm 11. We pin them
+# explicitly to make the supply-chain posture auditable for hospital
+# procurement teams (matches docs/architecture.md §5.12 and §17).
+
+packages:
+  - .
+
+# 24-hour minimum age before a newly-published version is installable.
+# Defends against zero-day publish-and-spread supply-chain attacks
+# (e.g. CVE-2026-45321 TanStack compromise, May 2026).
+# Default in pnpm 11; pinning makes it audit-visible.
+minimumReleaseAge: 1440
+
+# Refuse installs that reference dependencies via exotic protocols
+# (git URLs, etc.) inside sub-dependencies.
+# Default in pnpm 11.
+blockExoticSubdeps: true
+
+# Auto-install peer dependencies declared in installed packages.
+autoInstallPeers: true
+
+# Don't fail on peer-dep mismatches; warn instead. Mismatches are
+# investigated via Dependabot PRs, not by blocking developer workflow.
+strictPeerDependencies: false
+
+# Whitelist of packages whose install scripts may run. Everything else is
+# build-blocked to remove the post-install-script attack surface.
+# Required for Vite's underlying bundlers.
+onlyBuiltDependencies:
+  - esbuild
+  - lightningcss
+
+allowBuilds:
+  esbuild: true
