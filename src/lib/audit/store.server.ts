@@ -39,17 +39,26 @@ const auditLogPath =
 let auditLogger: Logger | undefined
 function getAuditLogger(): Logger {
   if (!auditLogger) {
-    const streams = [
-      { stream: process.stdout },
-      { stream: pino.destination({ dest: auditLogPath, mkdir: true, sync: false }) },
-    ]
+    const fileDest = pino.destination({ dest: auditLogPath, mkdir: true, sync: false })
+    // The destination flushes asynchronously, so a write failure (EACCES, full
+    // disk, …) surfaces on the stream's 'error' event — NOT synchronously where
+    // persistAuditEvent's try/catch could catch it. Without this handler an
+    // unhandled 'error' becomes an uncaughtException that can crash the server.
+    // The NDJSON sink is strictly redundant (the DB is the source of truth), so
+    // we log and carry on.
+    fileDest.on('error', (err: unknown) => {
+      console.error(
+        '[audit] NDJSON sink write failed (DB write already succeeded):',
+        err instanceof Error ? err.message : err,
+      )
+    })
     auditLogger = pino(
       {
         level: 'info',
         base: { stream: 'audit' },
         timestamp: pino.stdTimeFunctions.isoTime,
       },
-      pino.multistream(streams),
+      pino.multistream([{ stream: process.stdout }, { stream: fileDest }]),
     )
   }
   return auditLogger
