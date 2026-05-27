@@ -9,38 +9,147 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
+import { Route as AuthedMeRouteImport } from './routes/_authed/me'
+import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
+import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 
+const AuthedRouteRoute = AuthedRouteRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCspReportRoute = ApiCspReportRouteImport.update({
+  id: '/api/csp-report',
+  path: '/api/csp-report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthedMeRoute = AuthedMeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const ApiEhrbaseSplatRoute = ApiEhrbaseSplatRouteImport.update({
+  id: '/api/ehrbase/$',
+  path: '/api/ehrbase/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
+  id: '/api/auth/callback',
+  path: '/api/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthBreakGlassRoute = ApiAuthBreakGlassRouteImport.update({
+  id: '/api/auth/break-glass',
+  path: '/api/auth/break-glass',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/me': typeof AuthedMeRoute
+  '/api/csp-report': typeof ApiCspReportRoute
+  '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/me': typeof AuthedMeRoute
+  '/api/csp-report': typeof ApiCspReportRoute
+  '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authed': typeof AuthedRouteRouteWithChildren
+  '/_authed/me': typeof AuthedMeRoute
+  '/api/csp-report': typeof ApiCspReportRoute
+  '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/me'
+    | '/api/csp-report'
+    | '/api/auth/break-glass'
+    | '/api/auth/callback'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/ehrbase/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/me'
+    | '/api/csp-report'
+    | '/api/auth/break-glass'
+    | '/api/auth/callback'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/ehrbase/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authed'
+    | '/_authed/me'
+    | '/api/csp-report'
+    | '/api/auth/break-glass'
+    | '/api/auth/callback'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/ehrbase/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
+  ApiCspReportRoute: typeof ApiCspReportRoute
+  ApiAuthBreakGlassRoute: typeof ApiAuthBreakGlassRoute
+  ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_authed': {
+      id: '/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +157,79 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/csp-report': {
+      id: '/api/csp-report'
+      path: '/api/csp-report'
+      fullPath: '/api/csp-report'
+      preLoaderRoute: typeof ApiCspReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/me': {
+      id: '/_authed/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof AuthedMeRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/api/ehrbase/$': {
+      id: '/api/ehrbase/$'
+      path: '/api/ehrbase/$'
+      fullPath: '/api/ehrbase/$'
+      preLoaderRoute: typeof ApiEhrbaseSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/callback': {
+      id: '/api/auth/callback'
+      path: '/api/auth/callback'
+      fullPath: '/api/auth/callback'
+      preLoaderRoute: typeof ApiAuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/break-glass': {
+      id: '/api/auth/break-glass'
+      path: '/api/auth/break-glass'
+      fullPath: '/api/auth/break-glass'
+      preLoaderRoute: typeof ApiAuthBreakGlassRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AuthedRouteRouteChildren {
+  AuthedMeRoute: typeof AuthedMeRoute
+}
+
+const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
+  AuthedMeRoute: AuthedMeRoute,
+}
+
+const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
+  AuthedRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthedRouteRoute: AuthedRouteRouteWithChildren,
+  ApiCspReportRoute: ApiCspReportRoute,
+  ApiAuthBreakGlassRoute: ApiAuthBreakGlassRoute,
+  ApiAuthCallbackRoute: ApiAuthCallbackRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

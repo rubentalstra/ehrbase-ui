@@ -164,3 +164,66 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  e2e-integration:
+    # Full auth-flow E2E against the live stack (Keycloak + Valkey + the audit
+    # database). Brings up the compose services, applies the append-only audit
+    # migration, then runs the gated auth.spec.ts (E2E_FULL_STACK=1).
+    # docs/architecture.md §5, §14; Milestone 2 verification step 7.
+    name: Playwright E2E (full stack)
+    runs-on: ubuntu-24.04
+    needs: quality
+    timeout-minutes: 30
+    env:
+      VALKEY_URL: redis://localhost:6379
+      AUDIT_DB_URL: postgres://audit_writer:audit_writer@localhost:5432/audit
+      AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@localhost:5432/audit
+      AUDIT_PSEUDONYM_SECRET: dev-only-rotate-in-prod
+      KEYCLOAK_ISSUER_URL: http://localhost:8180/realms/ehrbase
+      KEYCLOAK_INTERNAL_ISSUER_URL: http://localhost:8180/realms/ehrbase
+      KEYCLOAK_CLIENT_ID: ehrbase-ui
+      KEYCLOAK_CLIENT_SECRET: dev-only-rotate-in-prod
+      KEYCLOAK_REDIRECT_URI: http://localhost:3000/api/auth/callback
+      EHRBASE_URL: http://localhost:8080/ehrbase/rest/openehr/v1
+      E2E_FULL_STACK: '1'
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages
+        run: pnpm paraglide:compile
+      - name: Build app (the full-stack suite runs against the built server)
+        run: pnpm build
+      - name: Start stack (Keycloak + Valkey + audit DB)
+        run: docker compose up -d --wait platform-db valkey keycloak
+      - name: Apply audit DB migration
+        run: pnpm db:migrate
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run full-stack E2E
+        # NODE_ENV=development so the session cookie is not Secure-only over the
+        # http://localhost test origin (the built bundle is unchanged).
+        env:
+          NODE_ENV: development
+        run: pnpm e2e e2e/auth.spec.ts
+      - if: always()
+        run: docker compose logs --no-color > docker-logs.txt || true
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-integration
+          path: |
+            playwright-report/
+            docker-logs.txt
+          retention-days: 14

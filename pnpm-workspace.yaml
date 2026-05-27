@@ -35,3 +35,6 @@ onlyBuiltDependencies:
 allowBuilds:
   esbuild: true
   msw: true
+
+minimumReleaseAgeExclude:
+  - ioredis@5.11.0

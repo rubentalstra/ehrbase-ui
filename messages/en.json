@@ -2,5 +2,19 @@
   "$schema": "https://inlang.com/schema/inlang-message-format",
   "app_title": "ehrbase-ui",
   "app_subtitle": "The missing open-source UI for EHRbase. Foundation milestone in progress.",
-  "app_checklist_hint": "See docs/IMPLEMENTATION_CHECKLIST.md for milestone status."
+  "app_checklist_hint": "See docs/IMPLEMENTATION_CHECKLIST.md for milestone status.",
+  "nav_sign_in": "Sign in",
+  "nav_sign_out": "Sign out",
+  "auth_error_notice": "Sign-in could not be completed. Please try again.",
+  "me_title": "My account",
+  "me_signed_in_as": "Signed in as {name}",
+  "me_roles_label": "Roles",
+  "me_no_roles": "No roles assigned",
+  "me_emergency_heading": "Emergency access (break-glass)",
+  "me_emergency_warning": "This grants access outside your normal care relationship, writes a special audit entry, and is reviewed by the audit team within 24 hours. Use only for genuine clinical emergencies.",
+  "me_emergency_justification_label": "Justification (minimum 30 characters)",
+  "me_emergency_submit": "Request emergency access",
+  "me_emergency_granted": "Emergency access granted for 60 minutes.",
+  "me_emergency_error": "Emergency access could not be granted.",
+  "me_emergency_forced_logout": "Emergency-access limit reached. You have been signed out and must re-authenticate."
 }

@@ -68,7 +68,13 @@ services:
     ports: ['8080:8080']
     networks: [ehrbase-net]
 
-  keycloak-db:
+  # Shared platform Postgres instance. Hosts BOTH the Keycloak database and
+  # the app-owned `audit` database (Milestone 2 — the app's first owned DB).
+  # The audit DB + its least-privilege roles are created on first boot by the
+  # init script mounted below. AUDIT_DB_URL is a standalone env var so prod
+  # can point the audit DB at a physically separate managed Postgres with no
+  # code change (docs/architecture.md §5, §14; ADR-0013).
+  platform-db:
     image: postgres:18.4-alpine
     environment:
       POSTGRES_USER: keycloak
@@ -76,7 +82,13 @@ services:
       POSTGRES_DB: keycloak
     volumes:
       # Postgres 18+ mount convention (see ehrbase-db above).
-      - keycloak_pg:/var/lib/postgresql
+      - platform_pg:/var/lib/postgresql
+      # First-boot init: create the `audit` database + audit_owner/audit_writer
+      # roles with least-privilege grants. Runs once per fresh volume.
+      - ./platform-db-init:/docker-entrypoint-initdb.d:ro
+    # Exposed for host-side `pnpm dev` + `pnpm db:migrate`. Not exposed in a
+    # production deployment (the app reaches it on the internal network).
+    ports: ['5432:5432']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U keycloak']
       interval: 10s
@@ -89,14 +101,16 @@ services:
     image: quay.io/keycloak/keycloak:26.6.2
     command: start-dev --import-realm
     depends_on:
-      keycloak-db: { condition: service_healthy }
+      platform-db: { condition: service_healthy }
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://platform-db:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Keycloak 26 renamed the bootstrap-admin vars; the old KEYCLOAK_ADMIN*
+      # names are deprecated (KC-SERVICES0110).
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: 'false'
       KC_HEALTH_ENABLED: 'true'
     volumes:
@@ -128,6 +142,8 @@ services:
     command: ['valkey-server', '--appendonly', 'yes']
     volumes:
       - valkey_data:/data
+    # Exposed for host-side `pnpm dev`. Not exposed in production.
+    ports: ['6379:6379']
     networks: [ehrbase-net]
     healthcheck:
       test: ['CMD', 'valkey-cli', 'ping']
@@ -183,17 +199,28 @@ services:
       ehrbase: { condition: service_started }
       keycloak: { condition: service_healthy }
       valkey: { condition: service_healthy }
+      platform-db: { condition: service_healthy }
     environment:
       NODE_ENV: production
       PORT: '3000'
       EHRBASE_URL: http://ehrbase:8080/ehrbase/rest/openehr/v1
-      KEYCLOAK_REALM_URL: http://keycloak:8080/realms/ehrbase
+      # Browser-facing Keycloak URL (redirects) vs internal URL (token/JWKS).
+      # The issuer is pinned stable via KC_HOSTNAME so token validation agrees
+      # on both sides (docs/architecture.md §5.4; the classic docker OIDC gotcha).
+      KEYCLOAK_ISSUER_URL: http://localhost:8180/realms/ehrbase
+      KEYCLOAK_INTERNAL_ISSUER_URL: http://keycloak:8080/realms/ehrbase
       KEYCLOAK_CLIENT_ID: ehrbase-ui
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       KEYCLOAK_REDIRECT_URI: http://localhost:3000/api/auth/callback
       VALKEY_URL: redis://valkey:6379
+      # Runtime audit writes use the least-privilege audit_writer role (INSERT+
+      # SELECT only). Migrations use the owner URL (see .env.example).
+      AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
+      AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@platform-db:5432/audit
       AUDIT_LOG_PATH: /var/log/ehrbase-ui/audit.ndjson
       AUDIT_PSEUDONYM_SECRET: ${AUDIT_PSEUDONYM_SECRET:-dev-only-rotate-in-prod}
+      SESSION_IDLE_TIMEOUT_SECONDS: '900'
+      SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info
       # OTel kept off in dev until M7.
       OTEL_ENABLED: 'false'
@@ -208,7 +235,7 @@ services:
 
 volumes:
   ehrbase_pg:
-  keycloak_pg:
+  platform_pg:
   valkey_data:
   audit_logs:
   # tempo_data:

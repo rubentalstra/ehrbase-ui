@@ -111,6 +111,20 @@ export default defineConfig([
         'error',
         { checksVoidReturn: { attributes: false } },
       ],
+
+      // The BFF pattern (docs/architecture.md §10) deliberately throws Response
+      // objects to short-circuit with a structured { code, correlationId }
+      // body, and TanStack's redirect() returns `Response & {…}` which is also
+      // thrown. Both are intentional control flow, not error misuse.
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        {
+          allow: [
+            { from: 'lib', name: 'Response' },
+            { from: 'package', package: '@tanstack/router-core', name: 'Redirect' },
+          ],
+        },
+      ],
     },
     settings: {
       'jsx-a11y-x': {
@@ -135,6 +149,10 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/consistent-type-assertions': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
+      // Test doubles emulate libraries that throw/reject with non-Error values
+      // (e.g. rate-limiter-flexible rejects with a RateLimiterRes).
+      '@typescript-eslint/only-throw-error': 'off',
+      '@typescript-eslint/prefer-promise-reject-errors': 'off',
     },
   },
 

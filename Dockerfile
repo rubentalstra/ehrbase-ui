@@ -35,6 +35,13 @@ RUN apk add --no-cache curl tini && \
     addgroup -S -g 1001 nodejs && \
     adduser -S -u 1001 -G nodejs ehrbase-ui
 
+# Pre-create the audit-log mount point owned by the app user. The audit_logs
+# named volume mounts here; an empty named volume inherits the ownership of the
+# image directory it covers, so this is what makes the volume writable by the
+# non-root ehrbase-ui user (otherwise Docker creates it root-owned → EACCES on
+# the NDJSON audit sink). docs/architecture.md §14.3.
+RUN mkdir -p /var/log/ehrbase-ui && chown -R ehrbase-ui:nodejs /var/log/ehrbase-ui
+
 # Copy build output + manifest.
 COPY --from=builder --chown=ehrbase-ui:nodejs /app/.output ./.output
 COPY --from=builder --chown=ehrbase-ui:nodejs /app/package.json ./
