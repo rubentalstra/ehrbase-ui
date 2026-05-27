@@ -33,7 +33,7 @@ regexes = [
   '''replace-me-with-openssl-rand-hex-32''',
   '''DevClinician123!''',
   '''DevAdmin123!''',
-  '''KEYCLOAK_ADMIN_PASSWORD:\s*admin''',
+  '''KC_BOOTSTRAP_ADMIN_PASSWORD:\s*admin''',
   '''POSTGRES_PASSWORD:\s*(postgres|keycloak)''',
   '''KC_DB_PASSWORD:\s*keycloak''',
   '''EHRBASE_(USER|PASSWORD)(_ADMIN)?:\s*ehrbase(_restricted)?''',

@@ -107,8 +107,10 @@ services:
       KC_DB_URL: jdbc:postgresql://platform-db:5432/keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: keycloak
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Keycloak 26 renamed the bootstrap-admin vars; the old KEYCLOAK_ADMIN*
+      # names are deprecated (KC-SERVICES0110).
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: 'false'
       KC_HEALTH_ENABLED: 'true'
     volumes:
