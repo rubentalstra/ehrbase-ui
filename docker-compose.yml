@@ -213,10 +213,6 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       KEYCLOAK_REDIRECT_URI: http://localhost:3000/api/auth/callback
       VALKEY_URL: redis://valkey:6379
-      # DEV-ONLY: this stack serves the UI over plain HTTP (localhost:3000), so
-      # relax the session-cookie Secure flag or the browser would drop it.
-      # NEVER set this in a real deployment (which must serve HTTPS).
-      SESSION_COOKIE_INSECURE: 'true'
       # Runtime audit writes use the least-privilege audit_writer role (INSERT+
       # SELECT only). Migrations use the owner URL (see .env.example).
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
