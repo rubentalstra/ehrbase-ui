@@ -8,7 +8,7 @@
 
 Scaffolds every tooling rail the later milestones plug into. No PHI-touching code lands here.
 
-- [x] **1A** Repo skeleton + ADR seeding + `.claude/` setup — governance docs (`docs/governance/`) deferred to 1O
+- [x] **1A** Repo skeleton + ADR seeding + `.claude/` setup — governance docs (`docs/governance/`) owned by 1O
 - [x] **1B** TanStack Start + Tailwind v4 scaffold — §4, §6
 - [x] **1C** shadcn init + first component batch — §6
 - [x] **1D** ESLint v10 flat config + `jsx-a11y-x` + `@eslint-react` + `react-hooks` v7 — §12.3
@@ -16,7 +16,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1F** Playwright + `@axe-core/playwright` + smoke E2E — §12.4, §24
 - [x] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
 - [x] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010, verification passed) — §17
-- [x] **1I** Pino app logger, stdout only (audit pipeline deferred to M4) — §13.1
+- [x] **1I** Pino app logger, stdout only (audit write path lands in M2) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
 - [x] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) + realm import — §18, §5.6
 - [x] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml`, CODEOWNERS, PR + issue templates — §20 (semver-tag pinning per ADR-0011)
@@ -24,21 +24,27 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [ ] **1N** `.claude/` — sub-agents, `.mcp.json`, project notes
 - [x] **1O** ADR-0001 (stack) + ADR-0010 (storybook upgrade) + ADR-0011 (action pinning) ratified; PR template + CODEOWNERS shipped in 1L
 
-## Milestone 2 — Auth + BFF (§5)
+## Milestone 2 — Auth + BFF + audit write core (§5, §14.2–14.5)
 
-- [ ] Keycloak realm bootstrap (the export already ships in 1K — this milestone wires the app to it)
-- [ ] Valkey session store — read / write / destroy helpers — §5.3
-- [ ] OIDC login route with PKCE + state — §5.4
-- [ ] OIDC callback route — token exchange, session set — §5.4
-- [ ] `/api/auth/logout` — Keycloak end-session — §5.4
-- [ ] `requireAuth` middleware — §5.5
-- [ ] `requireRole(...)` middleware (clinician / admin / audit-reviewer / researcher) — §5.6
-- [ ] Break-glass emergency-access flow — §5.6
-- [ ] Security-headers middleware (CSP nonce + `strict-dynamic` + HSTS + COOP / COEP) — §5.7
-- [ ] CSRF defense (Origin check + per-form token for high-impact ops) — §5.8
-- [ ] Rate limiting via `rate-limiter-flexible` against Valkey — §5.9
-- [ ] Session timeouts: idle 15 min, absolute 12 h — §5.10
-- [ ] Source maps hidden in production — §5.11
+Single PR. The audit **write path** is built here (not stubbed) because
+break-glass (§5.6) and the BFF proxy depend on a real `logAudit`. ADR-0002,
+0003, 0004, 0005 ratified; ADR-0012 (app DB stack) + ADR-0013 (audit DB
+append-only) added.
+
+- [x] **2A** Audit DB infra — `platform-db` rename + `audit` DB/roles init, Drizzle client, schema, migration (append-only trigger + grants), `db:*` scripts — §14; ADR-0012/0013
+- [x] **2B** Audit write core — `AuditEvent` schema (derived from the table), `logAudit`, pseudonymization, hash chain, durable store, integrity verifier — §14.2–14.5
+- [x] **2C** Valkey session store — read / write / destroy helpers + sliding TTL — §5.3
+- [x] **2D** OIDC login (PKCE + state), callback (token exchange + session set + audited LOGIN), `/api/auth/logout` (Keycloak end-session) — §5.4
+- [x] **2E** `requireAuth` + silent refresh + idle 15 min / absolute 12 h timeouts — §5.5, §5.10
+- [x] **2F** `requireRole(...)` (clinician / admin / audit-reviewer / researcher) + break-glass hint on PHI denials — §5.6
+- [x] **2G** Security-headers middleware (per-request CSP nonce + `strict-dynamic` + HSTS + COOP/COEP + no-store on authed routes) — §5.7
+- [x] **2H** CSRF defense (Origin check + single-use per-form token) — §5.8
+- [x] **2I** Rate limiting via `rate-limiter-flexible` against Valkey (full §5.9 table) — §5.9
+- [x] **2J** BFF EHRbase proxy — authed pass-through, request classification, §5.9 limit, per-call audit, 404/403 conflation — §5, §10, §14.3
+- [x] **2K** Break-glass emergency-access flow — 60-min grant, 3/lifetime ceiling, fully audited — §5.6
+- [x] **2L** Minimal authed UI (`/_authed` + `/me`) + sign-in control — §5
+- [x] **2M** Source maps hidden in production (verified + documented) — §5.11
+- [x] **2N** Tests (unit + gated full-stack E2E with audit-chain assertion), ADR ratification, checklist rewrite, secrets/env/compose/gitleaks wiring
 
 ## Milestone 3 — UI shell + i18n + state (§6, §9, §10, §11, §12)
 
@@ -47,23 +53,25 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [ ] Error boundaries per feature area
 - [ ] TanStack Query global error → toast + correlation ID
 - [ ] Public `/accessibility` statement page — §12.8
-- [ ] `/me/access-log` scaffold (Art. 15 view, fed in M4) — §14.8
+- [ ] `/me/access-log` scaffold (Art. 15 view; fed by the M4 governance milestone) — §14.8
 - [ ] Skip-to-content link, visible focus rings, `scroll-margin-top` for sticky headers — §12.6
 - [ ] Manual NVDA + VoiceOver test report under `docs/accessibility/` — §12.7
 
-## Milestone 4 — Audit log + DPIA scaffolding (§14)
+## Milestone 4 — Audit governance + retention (§14.6–14.13)
 
-- [ ] `AuditEvent` Zod schema — §14.2
-- [ ] `logAudit()` helper (fire-and-forget Pino + Valkey hash chain) — §14.3
-- [ ] Pseudonymization via HMAC-SHA256 + `AUDIT_PSEUDONYM_SECRET` — §14.4
-- [ ] Hash chain integrity — §14.5
-- [ ] Storage architecture: hot (Valkey head) + warm (Postgres) + cold (S3 Object Lock) — §14.6
-- [ ] Retention: 20-year WGBO + tagged purge job — §14.7
+The audit **write path** (schema, `logAudit`, pseudonymization, hash chain,
+warm-tier persistence, integrity verifier) shipped in M2. This milestone owns
+the remaining **governance** chapter — distinct capabilities, each owned here:
+
+- [ ] Cold storage tier: S3 Object Lock (WORM) + cross-region replication — §14.6
+- [ ] Retention: 20-year WGBO enforcement + tagged purge job — §14.7
+- [ ] Scheduled nightly hash-chain integrity job + DPO alerting (extends the M2 verifier) — §14.5
 - [ ] DPIA template populated under `docs/compliance/` — §14.10
 - [ ] DPA template populated — §14.1
 - [ ] RoPA template populated — §14.1
 - [ ] Breach response runbook — §14.9
-- [ ] Audit-review dashboard — §14.13
+- [ ] NEN-7513 sample-of-60 audit-review dashboard — §14.13
+- [ ] Patient-facing Art.15 `/me/access-log` (scaffold from M3, fed here) — §14.8
 - [ ] Audit-log integrity-check runbook
 
 ## Milestone 5 — openEHR forms (§7)

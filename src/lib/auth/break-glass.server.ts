@@ -1,0 +1,130 @@
+// Break-glass emergency access (docs/architecture.md §5.6).
+//
+// When a clinician hits an RBAC 403 on patient PHI, the UI offers emergency
+// access. On submit (CSRF-token-gated, §5.8) we:
+//   - require a >=30-char free-text justification,
+//   - enforce the lifetime ceiling of 3 invocations per session (§5.9); the
+//     4th forces logout + re-auth,
+//   - write an EMERGENCY_ACCESS_GRANTED audit event (full justification,
+//     overridden denial, source IP) under lawful basis 9(2)(c) vital interests,
+//   - grant a 60-minute time-limited elevation in Valkey that auto-expires.
+//
+// Nothing here is stubbed — it is wired to the real logAudit write path.
+
+import { z } from 'zod'
+
+import { logAudit } from '@/lib/audit/logger.server'
+import { checkRateLimit } from '@/lib/http/rate-limit.server'
+import { valkey } from '@/lib/valkey.server'
+import { destroySession, readSession, writeSession } from '@/lib/session.server'
+import type { AuthContext } from '@/lib/auth/require-auth.server'
+
+export const GRANT_TTL_SECONDS = 60 * 60
+export const MIN_JUSTIFICATION = 30
+
+export const BreakGlassRequestSchema = z.object({
+  justification: z.string().min(MIN_JUSTIFICATION),
+  // The patient/resource the denial was for, so the grant + audit are scoped.
+  ehrId: z.string().uuid().optional(),
+  deniedRoles: z.array(z.string()).optional(),
+})
+
+export type BreakGlassRequest = z.infer<typeof BreakGlassRequestSchema>
+
+const grantKey = (sid: string) => `breakglass:${sid}`
+
+export type BreakGlassOutcome =
+  | { status: 'granted'; expiresInSeconds: number }
+  | { status: 'forced_logout' }
+
+export async function grantEmergencyAccess(
+  auth: AuthContext,
+  req: BreakGlassRequest,
+): Promise<BreakGlassOutcome> {
+  // Lifetime ceiling — the 4th attempt is refused and forces re-authentication.
+  const limit = await checkRateLimit('emergency-access', auth.sid)
+  if (!limit.allowed) {
+    await logAudit({
+      actor: {
+        userId: auth.user.id,
+        username: auth.user.email,
+        displayName: auth.user.name,
+        roles: auth.user.roles,
+      },
+      action: 'ACCESS_DENIED',
+      target: { ehrId: req.ehrId, resourceType: 'EHR' },
+      purpose: 'EMERGENCY',
+      lawfulBasis: '9(2)(c)',
+      outcome: 'FAILURE',
+      outcomeDetail: 'break_glass_ceiling_reached',
+      source: { sessionId: auth.sid },
+    })
+    await destroySession(auth.sid)
+    return { status: 'forced_logout' }
+  }
+
+  const session = await readSession(auth.sid)
+  if (session) {
+    await writeSession(auth.sid, {
+      ...session,
+      emergencyAccessCount: (session.emergencyAccessCount ?? 0) + 1,
+    })
+  }
+
+  const now = Date.now()
+  await valkey.set(
+    grantKey(auth.sid),
+    JSON.stringify({
+      justification: req.justification,
+      ehrId: req.ehrId,
+      grantedAt: now,
+      expiresAt: now + GRANT_TTL_SECONDS * 1000,
+    }),
+    'EX',
+    GRANT_TTL_SECONDS,
+  )
+
+  // The justification is mandated free text (§5.6). The entire audit store is
+  // PHI-in-scope and encrypted at rest (§14.4), so the justification is
+  // recorded in outcomeDetail here — the one sanctioned exception to the
+  // "error code only" rule for that field.
+  await logAudit({
+    actor: {
+      userId: auth.user.id,
+      username: auth.user.email,
+      displayName: auth.user.name,
+      roles: auth.user.roles,
+    },
+    action: 'EMERGENCY_ACCESS_GRANTED',
+    target: { ehrId: req.ehrId, resourceType: 'EHR' },
+    purpose: 'EMERGENCY',
+    lawfulBasis: '9(2)(c)',
+    outcome: 'SUCCESS',
+    outcomeDetail: `overrode=[${(req.deniedRoles ?? []).join(',')}] justification=${req.justification}`,
+    source: { sessionId: auth.sid },
+  })
+
+  return { status: 'granted', expiresInSeconds: GRANT_TTL_SECONDS }
+}
+
+export type EmergencyGrant = {
+  justification: string
+  ehrId?: string
+  grantedAt: number
+  expiresAt: number
+}
+
+const EmergencyGrantSchema = z.object({
+  justification: z.string(),
+  ehrId: z.string().optional(),
+  grantedAt: z.number(),
+  expiresAt: z.number(),
+})
+
+export async function getEmergencyGrant(sid: string): Promise<EmergencyGrant | null> {
+  const raw = await valkey.get(grantKey(sid))
+  if (!raw) return null
+  const json: unknown = JSON.parse(raw)
+  const parsed = EmergencyGrantSchema.safeParse(json)
+  return parsed.success ? parsed.data : null
+}

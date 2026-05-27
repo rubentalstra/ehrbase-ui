@@ -21,8 +21,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  // The full-stack auth suite (E2E_FULL_STACK=1) runs against the PRODUCTION
+  // build: the `vite dev` module runner intermittently 500s on the first eval
+  // of an SSR route chunk, making the multi-step login flow flaky. The built
+  // Nitro server has no such race and also exercises the enforcing production
+  // CSP. The fast default suite still uses `pnpm dev`.
   webServer: {
-    command: 'pnpm dev',
+    command:
+      process.env.E2E_FULL_STACK === '1'
+        ? 'node .output/server/index.mjs'
+        : 'pnpm dev',
     url: 'http://localhost:3000',
     timeout: 120_000,
     reuseExistingServer: !process.env.CI,

@@ -21,6 +21,7 @@ paths = [
   '''docker-compose\.yml$''',
   '''keycloak/import/.*\.json$''',
   '''docs/architecture\.md$''',
+  '''platform-db-init/.*\.sql$''',
 ]
 
 # Literal placeholder values used in dev compose / realm exports.
@@ -41,4 +42,7 @@ regexes = [
   '''KC_DB_USERNAME:\s*keycloak''',
   '''POSTGRES_DB:\s*(ehrbase|keycloak)''',
   '''jdbc:postgresql://[a-zA-Z0-9-]+:[0-9]+/[a-zA-Z0-9_-]+''',
+  # M2 audit DB dev roles (least-privilege; rotated in prod via AUDIT_DB_URL).
+  '''(audit_owner|audit_writer)''',
+  '''postgres://(audit_owner|audit_writer):[a-z_]+@[a-zA-Z0-9-]+:[0-9]+/audit''',
 ]
