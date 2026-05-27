@@ -30,6 +30,16 @@ export default defineConfig({
         paraglideVitePlugin({
           project: './project.inlang',
           outdir: './src/paraglide',
+          // URL-prefix routing (docs/architecture.md §11.4). The base locale
+          // (English) stays unprefixed via Paraglide's default urlPatterns;
+          // adding Dutch later is a config-only change (a urlPatterns entry +
+          // a locale in project.inlang/settings.json, §11.6). `cookie` lets a
+          // chosen locale persist; `baseLocale` is the final fallback.
+          // NOTE: strategy is a compiler option, NOT an inlang setting — it
+          // must be set here AND in the `paraglide:compile` script so both
+          // build paths emit an identical runtime (the `paraglide:check` CI
+          // gate asserts no drift).
+          strategy: ['url', 'cookie', 'baseLocale'],
           // Strict mode is on by default; missing keys in any registered
           // locale file fail the build (docs/architecture.md §11.7).
         }),

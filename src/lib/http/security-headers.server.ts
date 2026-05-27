@@ -1,10 +1,11 @@
 // Security response headers + CSP (docs/architecture.md §5.7).
 //
 // A fresh nonce is minted per request (see src/start.ts) and threaded into the
-// SSR document via router.options.ssr.nonce, so React's hydration script and
-// the inline style/meta tags carry it. The CSP uses nonce + 'strict-dynamic'
-// rather than 'unsafe-inline' — OWASP's recommended XSS defense, which SSR
-// makes possible.
+// SSR document via router.options.ssr.nonce, so React's hydration script
+// carries it. script-src uses nonce + 'strict-dynamic' — OWASP's recommended
+// XSS defense, which SSR makes possible. style-src is the one relaxation:
+// 'unsafe-inline' for inline style attributes emitted by Radix + the sidebar
+// (see buildCsp). Scripts remain locked to the nonce.
 //
 // Enforcement posture (§5.7): the enforcing Content-Security-Policy ships in
 // production; in dev/staging we ship Content-Security-Policy-Report-Only so
@@ -23,7 +24,14 @@ function buildCsp(nonce: string): string {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    `style-src 'self' 'nonce-${nonce}'`,
+    // style-src keeps 'unsafe-inline' deliberately: Radix primitives
+    // (dropdown, collapsible, command, tooltip, sheet) and the shadcn sidebar
+    // emit inline `style` ATTRIBUTES for measured positioning/animation that a
+    // nonce cannot cover (nonces apply to <style> elements, not attributes).
+    // This is a style-only relaxation; script-src stays on nonce +
+    // 'strict-dynamic', so XSS via script injection is still blocked. The
+    // tradeoff is recorded in docs/adr/0014-ui-state-and-data-layer.md.
+    `style-src 'self' 'unsafe-inline'`,
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",

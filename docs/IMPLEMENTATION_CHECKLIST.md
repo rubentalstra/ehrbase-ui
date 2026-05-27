@@ -48,14 +48,14 @@ append-only) added.
 
 ## Milestone 3 — UI shell + i18n + state (§6, §9, §10, §11, §12)
 
-- [ ] App shell — sidebar (cookie state) + nav + theme toggle + `Command` palette
-- [ ] `ThemeProvider` with `localStorage` + no-flash inline script
-- [ ] Error boundaries per feature area
-- [ ] TanStack Query global error → toast + correlation ID
-- [ ] Public `/accessibility` statement page — §12.8
-- [ ] `/me/access-log` scaffold (Art. 15 view; fed by the M4 governance milestone) — §14.8
-- [ ] Skip-to-content link, visible focus rings, `scroll-margin-top` for sticky headers — §12.6
-- [ ] Manual NVDA + VoiceOver test report under `docs/accessibility/` — §12.7
+- [x] App shell — sidebar (cookie state) + nav + theme toggle + `Command` palette
+- [x] `ThemeProvider` with `localStorage` + no-flash inline script (next-themes — ADR-0014)
+- [x] Error boundaries per feature area
+- [x] TanStack Query global error → toast + correlation ID
+- [x] Public `/accessibility` statement page — §12.8
+- [x] `/me/access-log` scaffold (Art. 15 view; fed by the M4 governance milestone) — §14.8
+- [x] Skip-to-content link, visible focus rings, `scroll-margin-top` for sticky headers — §12.6
+- [~] Manual NVDA + VoiceOver test report under `docs/accessibility/` — §12.7 (report written 2026-05-27; NVDA/VoiceOver passes PENDING human run before v1.0, M8)
 
 ## Milestone 4 — Audit governance + retention (§14.6–14.13)
 

@@ -9,16 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
+import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
 import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
+import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me.access-log'
 
+const AccessibilityRoute = AccessibilityRouteImport.update({
+  id: '/accessibility',
+  path: '/accessibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedRouteRoute = AuthedRouteRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -37,6 +45,11 @@ const AuthedMeRoute = AuthedMeRouteImport.update({
   id: '/me',
   path: '/me',
   getParentRoute: () => AuthedRouteRoute,
+} as any)
+const ApiLogClientErrorRoute = ApiLogClientErrorRouteImport.update({
+  id: '/api/log/client-error',
+  path: '/api/log/client-error',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEhrbaseSplatRoute = ApiEhrbaseSplatRouteImport.update({
   id: '/api/ehrbase/$',
@@ -63,86 +76,118 @@ const ApiAuthBreakGlassRoute = ApiAuthBreakGlassRouteImport.update({
   path: '/api/auth/break-glass',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedMeAccessLogRoute = AuthedMeAccessLogRouteImport.update({
+  id: '/access-log',
+  path: '/access-log',
+  getParentRoute: () => AuthedMeRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/me': typeof AuthedMeRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/me': typeof AuthedMeRouteWithChildren
   '/api/csp-report': typeof ApiCspReportRoute
+  '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
+  '/api/log/client-error': typeof ApiLogClientErrorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/me': typeof AuthedMeRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/me': typeof AuthedMeRouteWithChildren
   '/api/csp-report': typeof ApiCspReportRoute
+  '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
+  '/api/log/client-error': typeof ApiLogClientErrorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
-  '/_authed/me': typeof AuthedMeRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/_authed/me': typeof AuthedMeRouteWithChildren
   '/api/csp-report': typeof ApiCspReportRoute
+  '/_authed/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
+  '/api/log/client-error': typeof ApiLogClientErrorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accessibility'
     | '/me'
     | '/api/csp-report'
+    | '/me/access-log'
     | '/api/auth/break-glass'
     | '/api/auth/callback'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/ehrbase/$'
+    | '/api/log/client-error'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accessibility'
     | '/me'
     | '/api/csp-report'
+    | '/me/access-log'
     | '/api/auth/break-glass'
     | '/api/auth/callback'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/ehrbase/$'
+    | '/api/log/client-error'
   id:
     | '__root__'
     | '/'
     | '/_authed'
+    | '/accessibility'
     | '/_authed/me'
     | '/api/csp-report'
+    | '/_authed/me/access-log'
     | '/api/auth/break-glass'
     | '/api/auth/callback'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/ehrbase/$'
+    | '/api/log/client-error'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
+  AccessibilityRoute: typeof AccessibilityRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiAuthBreakGlassRoute: typeof ApiAuthBreakGlassRoute
   ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
+  ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/accessibility': {
+      id: '/accessibility'
+      path: '/accessibility'
+      fullPath: '/accessibility'
+      preLoaderRoute: typeof AccessibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed': {
       id: '/_authed'
       path: ''
@@ -170,6 +215,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/me'
       preLoaderRoute: typeof AuthedMeRouteImport
       parentRoute: typeof AuthedRouteRoute
+    }
+    '/api/log/client-error': {
+      id: '/api/log/client-error'
+      path: '/api/log/client-error'
+      fullPath: '/api/log/client-error'
+      preLoaderRoute: typeof ApiLogClientErrorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ehrbase/$': {
       id: '/api/ehrbase/$'
@@ -206,15 +258,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthBreakGlassRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/me/access-log': {
+      id: '/_authed/me/access-log'
+      path: '/access-log'
+      fullPath: '/me/access-log'
+      preLoaderRoute: typeof AuthedMeAccessLogRouteImport
+      parentRoute: typeof AuthedMeRoute
+    }
   }
 }
 
+interface AuthedMeRouteChildren {
+  AuthedMeAccessLogRoute: typeof AuthedMeAccessLogRoute
+}
+
+const AuthedMeRouteChildren: AuthedMeRouteChildren = {
+  AuthedMeAccessLogRoute: AuthedMeAccessLogRoute,
+}
+
+const AuthedMeRouteWithChildren = AuthedMeRoute._addFileChildren(
+  AuthedMeRouteChildren,
+)
+
 interface AuthedRouteRouteChildren {
-  AuthedMeRoute: typeof AuthedMeRoute
+  AuthedMeRoute: typeof AuthedMeRouteWithChildren
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedMeRoute: AuthedMeRoute,
+  AuthedMeRoute: AuthedMeRouteWithChildren,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
@@ -224,22 +295,25 @@ const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
+  AccessibilityRoute: AccessibilityRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiAuthBreakGlassRoute: ApiAuthBreakGlassRoute,
   ApiAuthCallbackRoute: ApiAuthCallbackRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
+  ApiLogClientErrorRoute: ApiLogClientErrorRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

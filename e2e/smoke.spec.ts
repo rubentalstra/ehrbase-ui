@@ -23,3 +23,24 @@ test.describe('Public home page', () => {
     expect(results.violations).toEqual([])
   })
 })
+
+test.describe('Public accessibility statement', () => {
+  test('renders the WCAG 2.2 AA statement', async ({ page }) => {
+    await page.goto('/accessibility', { waitUntil: 'domcontentloaded' })
+    await expect(
+      page.getByRole('heading', { level: 1, name: /accessibility statement/i }),
+    ).toBeVisible()
+  })
+
+  test('has no WCAG 2.2 AA / EN 301 549 violations', async ({ page }) => {
+    await page.goto('/accessibility', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+    const results = await new AxeBuilder({ page })
+      .withTags([...AXE_TAGS])
+      .options({ rules: AXE_RULES })
+      .analyze()
+
+    expect(results.violations).toEqual([])
+  })
+})
