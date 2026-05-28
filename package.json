@@ -101,7 +101,7 @@
     "@vitejs/plugin-react": "5.2.0",
     "@vitest/coverage-v8": "4.1.7",
     "axe-core": "4.11.4",
-    "drizzle-kit": "1.0.0-rc.3",
+    "drizzle-kit": "1.0.0-rc.4-273829f",
     "eslint": "10.4.0",
     "eslint-plugin-jsx-a11y-x": "0.2.0",
     "eslint-plugin-react-hooks": "7.1.1",
