@@ -85,40 +85,7 @@
     }
   ],
   "groups": [],
-  "users": [
-    {
-      "username": "dev-clinician",
-      "enabled": true,
-      "emailVerified": true,
-      "firstName": "Dev",
-      "lastName": "Clinician",
-      "email": "dev-clinician@example.test",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "DevClinician123!",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["clinician"]
-    },
-    {
-      "username": "dev-admin",
-      "enabled": true,
-      "emailVerified": true,
-      "firstName": "Dev",
-      "lastName": "Admin",
-      "email": "dev-admin@example.test",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "DevAdmin123!",
-          "temporary": false
-        }
-      ],
-      "realmRoles": ["admin"]
-    }
-  ],
+  "users": [],
   "smtpServer": {},
   "internationalizationEnabled": true,
   "supportedLocales": ["en", "nl"],

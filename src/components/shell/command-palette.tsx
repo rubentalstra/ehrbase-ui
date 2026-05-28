@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 
 import { m } from '@/paraglide/messages.js'
+import type { AppNavRoute } from '@/lib/router/routes'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -28,13 +29,19 @@ import {
   CommandShortcut,
 } from '@/components/ui/command'
 
-type NavTarget = '/' | '/me' | '/me/access-log' | '/accessibility'
-
-const navItems: { to: NavTarget; label: () => string; icon: LucideIcon }[] = [
+const navItems: { to: AppNavRoute; label: () => string; icon: LucideIcon }[] = [
   { to: '/', label: () => m.app_title(), icon: HomeIcon },
   { to: '/me', label: () => m.nav_account(), icon: UserIcon },
-  { to: '/me/access-log', label: () => m.nav_access_log(), icon: ScrollTextIcon },
-  { to: '/accessibility', label: () => m.footer_accessibility(), icon: AccessibilityIcon },
+  {
+    to: '/me/access-log',
+    label: () => m.nav_access_log(),
+    icon: ScrollTextIcon,
+  },
+  {
+    to: '/accessibility',
+    label: () => m.footer_accessibility(),
+    icon: AccessibilityIcon,
+  },
 ]
 
 export function CommandPalette() {
@@ -52,7 +59,7 @@ export function CommandPalette() {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  function go(to: NavTarget) {
+  function go(to: AppNavRoute) {
     setOpen(false)
     void navigate({ to })
   }

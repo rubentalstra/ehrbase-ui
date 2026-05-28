@@ -1493,7 +1493,7 @@ Two regimes are EU-wide and always apply; everything else is national overlay th
 - `9(2)(c)` — vital interests (emergency access)
 - `9(2)(a)` — explicit consent (research, secondary use)
 
-The UI **must record which basis applies to each access**.
+The lawful basis applicable to each processing activity is recorded in the deployment's **RoPA** (`docs/compliance/RoPA-template.md`) and the **DPIA** (`docs/compliance/DPIA-template.md`), mapped by `purpose` + role + processing activity — NOT embedded as a per-event column on `audit_events`. See the §14.2 note on the removal of the `lawful_basis` column for the reasoning.
 
 ### 14.2 Audit-log schema (NEN 7513:2024)
 
@@ -1576,11 +1576,25 @@ export const AuditEventSchema = z.object({
     'LEGAL_OBLIGATION',
     'SYSTEM_ADMIN',
   ]),
-  lawfulBasis: z.enum(['9(2)(a)', '9(2)(c)', '9(2)(h)', '9(2)(i)', '9(2)(j)']),
 
   // OUTCOME
   outcome: z.enum(['SUCCESS', 'FAILURE', 'PARTIAL']),
   outcomeDetail: z.string().optional(), // error code only — NO PHI
+
+  // RETENTION (§14.7, ADR-0027) — selects which AUDIT_RETENTION_DAYS_* env
+  // var the purge job consults. Default 'AUDIT_LOG'; auth/break-glass emit
+  // 'AUTH_LOG'; clinical writes (M6+) emit 'CLINICAL_RECORD'.
+  retentionPolicy: z.enum([
+    'CLINICAL_RECORD',
+    'AUDIT_LOG',
+    'AUTH_LOG',
+    'APP_LOG',
+    'SESSION',
+  ]),
+  // Set by the retention purge when the warm row archives to cold storage;
+  // EXCLUDED from the canonical hash form so flipping it doesn't break the
+  // §14.5 chain.
+  s3ArchivedAt: z.string().datetime().optional(),
 
   // INTEGRITY (14.5)
   previousHash: z.string().optional(),
@@ -1589,6 +1603,8 @@ export const AuditEventSchema = z.object({
 
 export type AuditEvent = z.infer<typeof AuditEventSchema>
 ```
+
+> **Why no `lawfulBasis` column.** Earlier drafts persisted a `lawful_basis` enum (`9(2)(a)…(j)`) on every row. We removed it (M4 / 2026-05-28) because hard-coding the GDPR Article-9 lawful basis at every audit call site couples clinical code to legal classification — a brittle pattern that propagates legal-policy knowledge across the codebase. The legal basis is **determined by the surrounding context** (`purpose` + the actor's role + the controller's RoPA entry, see the [RoPA template](compliance/RoPA-template.md)). The audit envelope retains `purpose`; legal-basis reporting is reconstructed off-line from the RoPA mapping rather than embedded per-row.
 
 **Mandatory events (must produce an audit record):**
 
@@ -1731,7 +1747,8 @@ A log saying "user X viewed patient Y's HIV status" is itself health data. There
 Every audit event embeds the SHA-256 of the previous event's canonical JSON. Modifying any past event invalidates every hash after it.
 
 - The "head" hash is kept in Valkey (`audit:lastHash`).
-- A **nightly job** recomputes the chain across the entire log file and alerts the DPO on mismatch.
+- A **nightly job** recomputes the chain across the entire warm tier and alerts the DPO on mismatch. M4 ships this as a Nitro scheduled task (ADR-0026) — `tasks/audit/integrity.ts` wraps `src/lib/audit/integrity-job.server.ts::runIntegrityJob()`, which logs `level=error` + POSTs `DPO_ALERT_WEBHOOK` (when set) on a chain break. Manual trigger: `POST /api/admin/audit/tasks/audit:integrity` (role-gated to `audit-reviewer`). Runbook: [`docs/runbooks/audit-log-integrity-check.md`](runbooks/audit-log-integrity-check.md).
+- The `s3_archived_at` column added by M4 is **excluded** from the canonical hash form (see `HASH_EXCLUDED_KEYS` in `src/lib/audit/hash-chain.server.ts::canonicalize`) so the retention purge can flip the archive bookkeeping without breaking the chain.
 - Optional hardening: anchor the daily-final hash to an external immutable store (S3 Object Lock with retention, or RFC 3161 timestamping).
 
 ### 14.6 Storage architecture
@@ -1745,7 +1762,7 @@ TanStack Start (pino)
 ```
 
 - **Hot store**: Loki or OpenSearch. Encrypted at rest. RBAC restricting reads to auditors only.
-- **Cold store**: S3-compatible with Object Lock (WORM mode).
+- **Cold store**: S3-compatible with Object Lock (WORM mode). **Authoritative immutability** for v1.0 lives in the warm Postgres tier (ADR-0013 append-only trigger); the cold tier is regulatory-grade WORM only when paired with AWS S3 or Ceph RGW. **ADR-0027** ships a `ColdStorageProvider` interface with SeaweedFS (dev-default, best-effort) and AWS S3 (production, COMPLIANCE-mode WORM) implementations. Code in `src/lib/audit/cold-store.{server,factory.server}.ts`. Env-driven selection (`COLD_STORAGE_PROVIDER`); see §19.1.
 - **EU/EEA only.** No transfer to third countries without GDPR Art. 46 mechanism.
 - **Separation of duties**: log readers ≠ logged users.
 
@@ -1763,7 +1780,7 @@ Retention is **deployment-configurable**, not hard-coded, because national clini
 
 The national clinical-records law is a more specific law than GDPR's general minimization; Art. 6(1)(c) GDPR ("legal obligation") provides the lawful basis to keep records longer than minimization alone would allow.
 
-A daily purge job evaluates `retentionPolicy` tags and removes records past their date.
+A daily purge job (`src/lib/audit/retention.server.ts::purgeExpiredAuditEvents()`) evaluates the per-event `retention_policy` enum column (`audit_retention_policy`: `CLINICAL_RECORD` / `AUDIT_LOG` / `AUTH_LOG` / `APP_LOG` / `SESSION`) against the matching `AUDIT_RETENTION_DAYS_*` env var (§19.1), archives the warm row to the cold tier via the ADR-0027 provider, verifies the archive landed, then DELETEs the warm row under the `audit_retention` role (the ONE role granted that bypass; the M2 append-only trigger rejects every other column change even for that role). The job runs nightly via Nitro's scheduled-tasks engine (ADR-0026); manual trigger sits behind `requireRole('audit-reviewer')` at `POST /api/admin/audit/tasks/audit:purge`. Source: `src/lib/audit/retention.server.ts` + `tasks/audit/purge.ts`.
 
 ### 14.8 Data-subject rights — required UI features
 
@@ -2002,6 +2019,30 @@ ehrbase-ui/
 ├── vite.config.ts
 └── vitest.config.ts
 ```
+
+### 16.1 Type-sharing pattern — derive, never duplicate
+
+A clinical app rewrites schemas many times over its lifetime; the codebase has to stay correct as columns move, enums grow, and route paths change. The rule is **one source of truth per shape, every other usage derives from it**. Re-declared shapes always drift.
+
+The pattern:
+
+| Shape                                                                                                                            | Source of truth                                                                                         | Derivation                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit-event row + insert types                                                                                                   | Drizzle table `src/db/schema/audit.ts`                                                                  | `createInsertSchema` / `createSelectSchema` from `drizzle-orm/zod` → `AuditEventInsert` / `AuditEventRow` in `src/lib/audit/schema.ts`                    |
+| Audit-event controlled vocabularies (`AuditAction`, `AuditPurpose`, `AuditOutcome`, `AuditResourceType`, `AuditRetentionPolicy`) | the pg enums in `src/db/schema/audit.ts`                                                                | `z.enum(<pgEnum>.enumValues)` in `src/lib/audit/schema.ts`                                                                                                |
+| Caller input for `logAudit()`                                                                                                    | `LogAuditInputSchema` (Zod) in `src/lib/audit/schema.ts`                                                | `z.infer` → `LogAuditInput`                                                                                                                               |
+| Session payload                                                                                                                  | `SessionDataSchema` (Zod) in `src/lib/session.server.ts`                                                | `z.infer` → `SessionData`                                                                                                                                 |
+| Break-glass request + persisted grant                                                                                            | `BreakGlassRequestSchema` + `EmergencyGrantSchema` (Zod)                                                | `z.infer` → `BreakGlassRequest` / `EmergencyGrant`                                                                                                        |
+| Server-function I/O (Art. 15 access-log)                                                                                         | `AccessLogPageInputSchema` + `Pick<AuditEventRow, …>` in `src/server/functions/access-log.functions.ts` | The client-importable `.functions.ts` owns the FULL contract (input schema + output type) so the server module is a consumer; never re-declares the shape |
+| App-route literals                                                                                                               | `routeTree.gen.ts` (TanStack Router auto-generated)                                                     | `Exclude<FileRouteTypes['to'], '/api/...'>` → `AppNavRoute` in `src/lib/router/routes.ts` — used by the sidebar, command palette, breadcrumb resolver     |
+
+Concrete consequences:
+
+- **Adding an audit column** in `src/db/schema/audit.ts` propagates through `createInsertSchema` → `AuditEventInsert` → the `logAudit()` row builder + every consumer that does `Pick<AuditEventRow, …>` — at compile time, not at runtime.
+- **Adding a route** in `src/routes/` regenerates `routeTree.gen.ts` and `AppNavRoute` picks it up — `<Link to="...">` autocompletion in the sidebar + command palette updates automatically.
+- **No hand-written enum unions** like `type OutcomeKey = 'SUCCESS' | 'FAILURE' | 'PARTIAL'` — those are derivable; if a future enum value is added at the DB level, the switch statement that consumes it MUST break compile to force the i18n + UI to catch up.
+
+The rule the reviewer should apply on every PR: **if a new type literal-lists fields or enum values that already exist in a schema, ask whether `Pick<>` / `z.infer` / `<pgEnum>.enumValues` would derive it instead**.
 
 ---
 
@@ -2351,6 +2392,32 @@ Mandatory production secrets:
 - `AUDIT_PSEUDONYM_SECRET` (HMAC key for §14.4)
 - `VALKEY_PASSWORD`
 - DB credentials (managed at the EHRbase layer)
+
+### 19.1 M4 audit-governance env vars (added 2026-05-28)
+
+The retention + cold-storage layer (§14.6 / §14.7, ADR-0027) is fully env-driven so a deployment can pick its provider and tune cutoffs per the applicable national clinical-records law without code changes. The Nitro task schedule (ADR-0026) is also env-overridable so windows can shift per ops calendar.
+
+| Var                                                   | Purpose                                              | Default                              |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------ |
+| `COLD_STORAGE_PROVIDER`                               | `seaweedfs` (dev) / `aws` (prod-WORM) / `none` (off) | `none` (factory log states the mode) |
+| `COLD_STORAGE_BUCKET`                                 | S3 bucket name                                       | `audit-archive`                      |
+| `COLD_STORAGE_REGION`                                 | AWS region (any value for SeaweedFS)                 | `us-east-1`                          |
+| `COLD_STORAGE_ENDPOINT`                               | SeaweedFS / S3-compatible endpoint URL               | unset (required for `seaweedfs`)     |
+| `COLD_STORAGE_ACCESS_KEY` / `COLD_STORAGE_SECRET_KEY` | Credentials                                          | unset (required for any provider)    |
+| `COLD_STORAGE_OBJECT_LOCK_MODE`                       | `COMPLIANCE` / `GOVERNANCE`                          | `COMPLIANCE`                         |
+| `AUDIT_RETENTION_DAYS_CLINICAL_RECORD`                | Warm retention before cold archive                   | `7300` (20y)                         |
+| `AUDIT_RETENTION_DAYS_AUDIT_LOG`                      | "                                                    | `1825` (5y)                          |
+| `AUDIT_RETENTION_DAYS_AUTH_LOG`                       | "                                                    | `365` (1y)                           |
+| `AUDIT_RETENTION_DAYS_APP_LOG`                        | "                                                    | `90`                                 |
+| `AUDIT_RETENTION_DAYS_SESSION`                        | "                                                    | `2`                                  |
+| `AUDIT_PURGE_BATCH_SIZE`                              | Rows processed per inner batch                       | `100`                                |
+| `AUDIT_INTEGRITY_CRON`                                | Nightly integrity task cron expression               | `0 3 * * *` (03:00 daily)            |
+| `AUDIT_PURGE_CRON`                                    | Daily purge task cron expression                     | `0 4 * * *` (04:00 daily)            |
+| `AUDIT_TASKS_DISABLED`                                | Kill-switch — both tasks no-op when `true`           | unset                                |
+| `AUDIT_RETENTION_DB_URL`                              | Retention-role connection (audit_retention)          | dev default                          |
+| `DPO_ALERT_WEBHOOK`                                   | POST target for chain-break alerts                   | unset                                |
+
+The `audit_writer` role (M2 / ADR-0013) has INSERT + SELECT only. The new `audit_retention` role (ADR-0027) is the ONE identity allowed to DELETE warm rows + UPDATE `s3_archived_at`; the BEFORE-trigger rejects every other column change even for that role. Production must rotate the dev passwords for both roles.
 
 ---
 

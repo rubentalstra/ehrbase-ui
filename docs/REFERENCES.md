@@ -95,12 +95,20 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Backend (proxied) & infrastructure
 
-| Service    | Verified                                    | Pinned       | Source                                      |
-| ---------- | ------------------------------------------- | ------------ | ------------------------------------------- |
-| EHRbase    | 2.31.0 (Apr 2026, Java 25)                  | **2.31.0**   | https://github.com/ehrbase/ehrbase/releases |
-| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix) | **≥ 26.6.2** | https://www.keycloak.org/downloads          |
-| Valkey     | 9.1.0 (three use-after-free CVE fixes)      | **≥ 9.1.0**  | https://hub.docker.com/r/valkey/valkey/tags |
-| PostgreSQL | 18.4 (May 14, 2026)                         | **18.4**     | https://www.postgresql.org/docs/release/    |
+| Service    | Verified                                                | Pinned                                  | Source                                      |
+| ---------- | ------------------------------------------------------- | --------------------------------------- | ------------------------------------------- |
+| EHRbase    | 2.31.0 (Apr 2026, Java 25)                              | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases |
+| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)             | **≥ 26.6.2**                            | https://www.keycloak.org/downloads          |
+| Valkey     | 9.1.0 (three use-after-free CVE fixes)                  | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags |
+| PostgreSQL | 18.4 (May 14, 2026)                                     | **18.4**                                | https://www.postgresql.org/docs/release/    |
+| SeaweedFS  | 4.29 (May 26, 2026) — dev cold-store default (ADR-0027) | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs      |
+
+### Audit cold-store dependencies (M4 — ADR-0027)
+
+| Package                | Verified | Pinned       | Source                                                 |
+| ---------------------- | -------- | ------------ | ------------------------------------------------------ |
+| `@aws-sdk/client-s3`   | 3.1054.0 | **3.1054.0** | https://registry.npmjs.org/@aws-sdk/client-s3/latest   |
+| `@aws-sdk/lib-storage` | 3.1054.0 | **3.1054.0** | https://registry.npmjs.org/@aws-sdk/lib-storage/latest |
 
 ---
 

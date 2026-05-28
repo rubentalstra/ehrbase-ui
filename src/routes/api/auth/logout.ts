@@ -36,8 +36,8 @@ export const Route = createFileRoute('/api/auth/logout')({
             action: 'LOGOUT',
             target: { resourceType: 'SYSTEM' },
             purpose: 'TREATMENT',
-            lawfulBasis: '9(2)(h)',
             outcome: 'SUCCESS',
+            retentionPolicy: 'AUTH_LOG',
             source: { sessionId: sid },
           })
         }

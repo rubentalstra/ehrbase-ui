@@ -8,6 +8,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import type { LucideIcon } from 'lucide-react'
 
 import { m } from '@/paraglide/messages.js'
+import type { AppNavRoute } from '@/lib/router/routes'
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -16,12 +17,10 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 
-export type NavTo = '/me' | '/me/access-log'
-
 export type NavItem = {
   label: string
   icon: LucideIcon
-  to?: NavTo
+  to?: AppNavRoute
   disabled?: boolean
 }
 

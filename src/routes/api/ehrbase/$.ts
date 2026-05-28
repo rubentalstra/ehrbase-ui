@@ -20,12 +20,20 @@ import { classifyRequest, extractEhrId } from '@/lib/http/ehrbase-proxy.server'
 import { checkRateLimit, tooManyRequests } from '@/lib/http/rate-limit.server'
 import { resolveAuth, type AuthContext } from '@/lib/auth/require-auth.server'
 
-const EHRBASE_URL = process.env.EHRBASE_URL ?? 'http://localhost:8080/ehrbase/rest/openehr/v1'
+const EHRBASE_URL =
+  process.env.EHRBASE_URL ?? 'http://localhost:8080/ehrbase/rest/openehr/v1'
 
-function json(status: number, body: Record<string, unknown>, correlationId: string): Response {
+function json(
+  status: number,
+  body: Record<string, unknown>,
+  correlationId: string,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId },
+    headers: {
+      'content-type': 'application/json',
+      'x-correlation-id': correlationId,
+    },
   })
 }
 
@@ -79,7 +87,10 @@ async function proxy({
     return json(502, { code: 'UPSTREAM_ERROR' }, correlationId)
   }
 
-  await audit(upstream.ok ? 'SUCCESS' : 'FAILURE', upstream.ok ? undefined : `HTTP ${upstream.status}`)
+  await audit(
+    upstream.ok ? 'SUCCESS' : 'FAILURE',
+    upstream.ok ? undefined : `HTTP ${upstream.status}`,
+  )
 
   // §10 — conflate 404 and 403 (existence of a record is itself sensitive).
   if (upstream.status === 403 || upstream.status === 404) {
@@ -102,9 +113,15 @@ async function proxy({
   const etag = upstream.headers.get('etag')
   if (etag) respHeaders.set('etag', etag)
   respHeaders.set('x-correlation-id', correlationId)
-  respHeaders.set('cache-control', 'no-store, no-cache, must-revalidate, private')
+  respHeaders.set(
+    'cache-control',
+    'no-store, no-cache, must-revalidate, private',
+  )
 
-  return new Response(upstream.body, { status: upstream.status, headers: respHeaders })
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: respHeaders,
+  })
 
   async function audit(outcome: 'SUCCESS' | 'FAILURE', detail?: string) {
     await logAudit({
@@ -117,7 +134,6 @@ async function proxy({
       action: cls.action,
       target: { ehrId: extractEhrId(splat), resourceType: cls.resourceType },
       purpose: 'TREATMENT',
-      lawfulBasis: '9(2)(h)',
       outcome,
       outcomeDetail: detail,
       source: { sessionId: auth.sid, correlationId },

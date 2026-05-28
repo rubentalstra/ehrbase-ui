@@ -17,10 +17,17 @@ import { getCookie } from '@tanstack/react-start/server'
 import { logAudit } from '@/lib/audit/logger.server'
 import { SESSION_COOKIE } from '@/lib/auth/cookie.server'
 import { refreshIfExpiring } from '@/lib/auth/refresh.server'
-import { destroySession, readSession, writeSession, type SessionData } from '@/lib/session.server'
+import {
+  destroySession,
+  readSession,
+  writeSession,
+  type SessionData,
+} from '@/lib/session.server'
 
-const IDLE_TIMEOUT_MS = Number(process.env.SESSION_IDLE_TIMEOUT_SECONDS ?? 900) * 1000
-const ABSOLUTE_TIMEOUT_MS = Number(process.env.SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 43200) * 1000
+const IDLE_TIMEOUT_MS =
+  Number(process.env.SESSION_IDLE_TIMEOUT_SECONDS ?? 900) * 1000
+const ABSOLUTE_TIMEOUT_MS =
+  Number(process.env.SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 43200) * 1000
 
 export type AuthUser = {
   id: string
@@ -62,8 +69,12 @@ export async function resolveAuth(): Promise<AuthContext> {
   }
 
   const now = Date.now()
-  const idleExpired = session.lastSeenAt !== undefined && now - session.lastSeenAt > IDLE_TIMEOUT_MS
-  const absoluteExpired = session.createdAt !== undefined && now - session.createdAt > ABSOLUTE_TIMEOUT_MS
+  const idleExpired =
+    session.lastSeenAt !== undefined &&
+    now - session.lastSeenAt > IDLE_TIMEOUT_MS
+  const absoluteExpired =
+    session.createdAt !== undefined &&
+    now - session.createdAt > ABSOLUTE_TIMEOUT_MS
 
   if (idleExpired || absoluteExpired) {
     await destroySession(sid)
@@ -77,9 +88,9 @@ export async function resolveAuth(): Promise<AuthContext> {
       action: 'SESSION_EXPIRED',
       target: { resourceType: 'SYSTEM' },
       purpose: 'TREATMENT',
-      lawfulBasis: '9(2)(h)',
       outcome: 'SUCCESS',
       outcomeDetail: absoluteExpired ? 'absolute_timeout' : 'idle_timeout',
+      retentionPolicy: 'AUTH_LOG',
       source: { sessionId: sid },
     })
     throw unauthorized('SESSION_EXPIRED')
@@ -91,5 +102,10 @@ export async function resolveAuth(): Promise<AuthContext> {
 
   if (!slid.accessToken) throw unauthorized('UNAUTHENTICATED')
 
-  return { sid, user: userOf(slid), accessToken: slid.accessToken, session: slid }
+  return {
+    sid,
+    user: userOf(slid),
+    accessToken: slid.accessToken,
+    session: slid,
+  }
 }

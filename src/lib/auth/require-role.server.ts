@@ -17,7 +17,10 @@ export type RequireRoleOptions = {
 function forbidden(breakGlassAvailable: boolean): Response {
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (breakGlassAvailable) headers['break-glass'] = 'available'
-  return new Response(JSON.stringify({ code: 'ACCESS_DENIED' }), { status: 403, headers })
+  return new Response(JSON.stringify({ code: 'ACCESS_DENIED' }), {
+    status: 403,
+    headers,
+  })
 }
 
 export async function requireRole(
@@ -38,9 +41,9 @@ export async function requireRole(
     action: 'ACCESS_DENIED',
     target: { resourceType: 'SYSTEM' },
     purpose: 'TREATMENT',
-    lawfulBasis: '9(2)(h)',
     outcome: 'FAILURE',
     outcomeDetail: `requires one of: ${roles.join(', ')}`,
+    retentionPolicy: 'AUTH_LOG',
     source: { sessionId: auth.sid },
   })
 

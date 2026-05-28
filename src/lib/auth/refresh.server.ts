@@ -26,7 +26,9 @@ export async function refreshIfExpiring(
       ...session,
       accessToken: tokens.accessToken(),
       accessTokenExpiresAt: tokens.accessTokenExpiresAt().getTime(),
-      refreshToken: tokens.hasRefreshToken() ? tokens.refreshToken() : session.refreshToken,
+      refreshToken: tokens.hasRefreshToken()
+        ? tokens.refreshToken()
+        : session.refreshToken,
     }
     await writeSession(sid, updated)
 
@@ -40,8 +42,8 @@ export async function refreshIfExpiring(
       action: 'TOKEN_REFRESH',
       target: { resourceType: 'SYSTEM' },
       purpose: 'TREATMENT',
-      lawfulBasis: '9(2)(h)',
       outcome: 'SUCCESS',
+      retentionPolicy: 'AUTH_LOG',
       source: { sessionId: sid },
     })
 

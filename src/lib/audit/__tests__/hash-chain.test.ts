@@ -3,10 +3,9 @@ import { describe, expect, it } from 'vitest'
 import { canonicalize, computeHash } from '@/lib/audit/hash-chain.server'
 import type { AuditEventInsert } from '@/lib/audit/schema'
 
-function baseEvent(overrides: Partial<Omit<AuditEventInsert, 'hash'>> = {}): Omit<
-  AuditEventInsert,
-  'hash'
-> {
+function baseEvent(
+  overrides: Partial<Omit<AuditEventInsert, 'hash'>> = {},
+): Omit<AuditEventInsert, 'hash'> {
   return {
     eventId: '11111111-1111-1111-1111-111111111111',
     timestamp: '2026-05-27T10:00:00.000Z',
@@ -27,7 +26,6 @@ function baseEvent(overrides: Partial<Omit<AuditEventInsert, 'hash'>> = {}): Omi
     targetResourceId: null,
     targetArchetypeId: null,
     purpose: 'TREATMENT',
-    lawfulBasis: '9(2)(h)',
     outcome: 'SUCCESS',
     outcomeDetail: null,
     previousHash: null,
@@ -64,7 +62,9 @@ describe('computeHash', () => {
     const secondHash = computeHash(second)
 
     // Tamper with the first event; recompute its hash.
-    const tamperedFirstHash = computeHash(baseEvent({ outcomeDetail: 'tampered' }))
+    const tamperedFirstHash = computeHash(
+      baseEvent({ outcomeDetail: 'tampered' }),
+    )
     expect(tamperedFirstHash).not.toBe(firstHash)
 
     // The second event still points at the ORIGINAL first hash, so the link

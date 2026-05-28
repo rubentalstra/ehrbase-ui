@@ -12,12 +12,18 @@ import { valkey } from '@/lib/valkey.server'
 
 export const CHAIN_HEAD_KEY = 'audit:lastHash'
 
-// Canonical JSON for a flat audit row, excluding the `hash` field. Keys are
-// sorted so the serialization is stable regardless of property insertion
-// order. The row is flat (only primitives + the actorRoles string array), so
-// the sorted-key-array form of JSON.stringify is fully deterministic.
+// Canonical JSON for a flat audit row, excluding the `hash` field AND any
+// post-insert bookkeeping columns (currently: `s3ArchivedAt` — set by the M4
+// retention purge job when an event lands in cold storage; flipping it must
+// not invalidate the integrity hash chain). Keys are sorted so the
+// serialization is stable regardless of property insertion order. The row is
+// flat (only primitives + the actorRoles string array), so the
+// sorted-key-array form of JSON.stringify is fully deterministic.
+const HASH_EXCLUDED_KEYS = new Set(['s3ArchivedAt'])
 export function canonicalize(row: Record<string, unknown>): string {
-  const keys = Object.keys(row).sort()
+  const keys = Object.keys(row)
+    .filter((k) => !HASH_EXCLUDED_KEYS.has(k))
+    .sort()
   return JSON.stringify(row, keys)
 }
 

@@ -65,7 +65,9 @@ export async function logAudit(input: LogAuditInput): Promise<void> {
         actorOnBehalfOf: parsedInput.actor.onBehalfOf ?? null,
         sourceIpAddress: ipAddress,
         sourceUserAgent:
-          parsedInput.source?.userAgent ?? safeHeader('user-agent') ?? 'unknown',
+          parsedInput.source?.userAgent ??
+          safeHeader('user-agent') ??
+          'unknown',
         sourceSessionId: parsedInput.source?.sessionId ?? 'anonymous',
         sourceCorrelationId:
           parsedInput.source?.correlationId ??
@@ -78,9 +80,10 @@ export async function logAudit(input: LogAuditInput): Promise<void> {
         targetResourceId: parsedInput.target?.resourceId ?? null,
         targetArchetypeId: parsedInput.target?.archetypeId ?? null,
         purpose: parsedInput.purpose,
-        lawfulBasis: parsedInput.lawfulBasis,
         outcome: parsedInput.outcome,
         outcomeDetail: parsedInput.outcomeDetail ?? null,
+        retentionPolicy: parsedInput.retentionPolicy ?? 'AUDIT_LOG',
+        s3ArchivedAt: null,
         previousHash,
       }
 

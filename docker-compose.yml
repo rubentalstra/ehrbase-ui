@@ -135,6 +135,30 @@ services:
       start_period: 30s
     networks: [ehrbase-net]
 
+  # Demo-user seeder — one-shot, gated by the `demo` Compose profile so
+  # production never activates it. See docs/demo-accounts.md. Default
+  # `.env.example` sets COMPOSE_PROFILES=demo so `docker compose up` in dev
+  # picks the four demo users; production sets `COMPOSE_PROFILES=` (empty)
+  # or omits the var, and the service does not start.
+  #
+  # The realm import (keycloak/import/ehrbase.json) carries NO users — it is
+  # the prod-safe baseline. Demo identities are seeded post-startup via
+  # kcadm.sh, idempotently, so they belong to the dev story end-to-end.
+  keycloak-seed-demo-users:
+    image: quay.io/keycloak/keycloak:26.6.2
+    profiles: ['demo']
+    depends_on:
+      keycloak: { condition: service_healthy }
+    environment:
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/scripts:/scripts:ro
+    entrypoint: ['/bin/bash', '/scripts/seed-demo-users.sh']
+    networks: [ehrbase-net]
+    restart: 'no'
+
   # Valkey: BSD-licensed Redis fork. ioredis works against it unchanged.
   # CVE floor 9.1.0 (§5.12).
   valkey:
@@ -150,6 +174,53 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # Audit-log cold-tier archive (M4 — ADR-0027). SeaweedFS is the open-source
+  # dev default; AWS S3 is the production WORM-compliant alternative. The
+  # warm Postgres tier (ADR-0013 trigger) is the AUTHORITATIVE immutability
+  # layer for v1.0 — see ADR-0027 for the SeaweedFS WORM-enforcement gap
+  # (seaweedfs#8350) we accept here in exchange for an Apache-2.0,
+  # actively-maintained, Docker-shippable default.
+  seaweedfs:
+    image: chrislusf/seaweedfs:3.94
+    # One-process `server -s3` runs master + volume + filer + S3 gateway.
+    # The S3 API listens on 8333 and is what @aws-sdk/client-s3 talks to.
+    command: ['server', '-s3', '-dir=/data']
+    volumes:
+      - seaweedfs_data:/data
+    ports:
+      - '8333:8333' # S3 API (host-side `pnpm dev` archive smoke)
+    networks: [ehrbase-net]
+    healthcheck:
+      # /status on the S3 endpoint returns 200 once the gateway is ready.
+      # 127.0.0.1 (not `localhost`) because busybox wget inside this image
+      # resolves localhost to ::1 — but SeaweedFS binds only to IPv4.
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8333/status']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # One-shot bucket-init: creates `audit-archive` with Object Lock enabled at
+  # bucket creation. The Object Lock API surface is exercised end-to-end here
+  # so a regression in the cold-store wiring fails on docker-compose bring-up
+  # rather than at the first archive write. The bucket-creation idempotency
+  # is provided by `|| true` — re-runs are safe.
+  seaweedfs-init:
+    image: amazon/aws-cli:2.17.43
+    depends_on:
+      seaweedfs: { condition: service_healthy }
+    environment:
+      AWS_ACCESS_KEY_ID: dev-access-key
+      AWS_SECRET_ACCESS_KEY: dev-secret-key
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - >-
+        aws --endpoint-url http://seaweedfs:8333
+        s3api create-bucket --bucket audit-archive --object-lock-enabled-for-bucket
+        || true
+    networks: [ehrbase-net]
+    restart: 'no'
 
   # Observability stack — uncomment together once Milestone 7 wires OTel.
   # otel-collector:
@@ -200,6 +271,7 @@ services:
       keycloak: { condition: service_healthy }
       valkey: { condition: service_healthy }
       platform-db: { condition: service_healthy }
+      seaweedfs: { condition: service_healthy }
     environment:
       NODE_ENV: production
       PORT: '3000'
@@ -217,8 +289,18 @@ services:
       # SELECT only). Migrations use the owner URL (see .env.example).
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
       AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@platform-db:5432/audit
+      AUDIT_RETENTION_DB_URL: postgres://audit_retention:audit_retention@platform-db:5432/audit
       AUDIT_LOG_PATH: /var/log/ehrbase-ui/audit.ndjson
       AUDIT_PSEUDONYM_SECRET: ${AUDIT_PSEUDONYM_SECRET:-dev-only-rotate-in-prod}
+      # Cold-tier archive (M4 — ADR-0027). Dev defaults to the SeaweedFS
+      # sidecar; production overrides COLD_STORAGE_PROVIDER=aws + the
+      # corresponding region/credentials.
+      COLD_STORAGE_PROVIDER: ${COLD_STORAGE_PROVIDER:-seaweedfs}
+      COLD_STORAGE_BUCKET: ${COLD_STORAGE_BUCKET:-audit-archive}
+      COLD_STORAGE_ENDPOINT: ${COLD_STORAGE_ENDPOINT:-http://seaweedfs:8333}
+      COLD_STORAGE_REGION: ${COLD_STORAGE_REGION:-us-east-1}
+      COLD_STORAGE_ACCESS_KEY: ${COLD_STORAGE_ACCESS_KEY:-dev-access-key}
+      COLD_STORAGE_SECRET_KEY: ${COLD_STORAGE_SECRET_KEY:-dev-secret-key}
       SESSION_IDLE_TIMEOUT_SECONDS: '900'
       SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info
@@ -238,6 +320,7 @@ volumes:
   platform_pg:
   valkey_data:
   audit_logs:
+  seaweedfs_data:
   # tempo_data:
   # prometheus_data:
 

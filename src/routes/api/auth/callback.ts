@@ -29,13 +29,18 @@ export const Route = createFileRoute('/api/auth/callback')({
 
         const fail = async (detail: string) => {
           await logAudit({
-            actor: { userId: 'anonymous', username: 'anonymous', displayName: 'anonymous', roles: [] },
+            actor: {
+              userId: 'anonymous',
+              username: 'anonymous',
+              displayName: 'anonymous',
+              roles: [],
+            },
             action: 'LOGIN_FAILED',
             target: { resourceType: 'SYSTEM' },
             purpose: 'SYSTEM_ADMIN',
-            lawfulBasis: '9(2)(h)',
             outcome: 'FAILURE',
             outcomeDetail: detail,
+            retentionPolicy: 'AUTH_LOG',
           })
           throw redirect({ href: '/?auth_error=1' })
         }
@@ -49,7 +54,10 @@ export const Route = createFileRoute('/api/auth/callback')({
           return fail('state_mismatch')
         }
 
-        const tokens = await keycloakServer.validateAuthorizationCode(code, pre.codeVerifier)
+        const tokens = await keycloakServer.validateAuthorizationCode(
+          code,
+          pre.codeVerifier,
+        )
         const accessToken = tokens.accessToken()
         const idToken = tokens.idToken()
         const claims = decodeClaims(accessToken, idToken)
@@ -63,7 +71,9 @@ export const Route = createFileRoute('/api/auth/callback')({
           roles: claims.roles,
           accessToken,
           accessTokenExpiresAt: tokens.accessTokenExpiresAt().getTime(),
-          refreshToken: tokens.hasRefreshToken() ? tokens.refreshToken() : undefined,
+          refreshToken: tokens.hasRefreshToken()
+            ? tokens.refreshToken()
+            : undefined,
           idToken: tokens.idToken(),
           createdAt: now,
           lastSeenAt: now,
@@ -85,8 +95,8 @@ export const Route = createFileRoute('/api/auth/callback')({
           action: 'LOGIN',
           target: { resourceType: 'SYSTEM' },
           purpose: 'TREATMENT',
-          lawfulBasis: '9(2)(h)',
           outcome: 'SUCCESS',
+          retentionPolicy: 'AUTH_LOG',
           source: { sessionId: sid },
         })
 

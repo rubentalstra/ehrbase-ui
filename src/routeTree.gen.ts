@@ -21,6 +21,7 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
+import { Route as ApiAdminAuditTasksSplatRouteImport } from './routes/api/admin/audit/tasks/$'
 
 const AccessibilityRoute = AccessibilityRouteImport.update({
   id: '/accessibility',
@@ -81,6 +82,11 @@ const AuthedMeAccessLogRoute = AuthedMeAccessLogRouteImport.update({
   path: '/me/access-log',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const ApiAdminAuditTasksSplatRoute = ApiAdminAuditTasksSplatRouteImport.update({
+  id: '/api/admin/audit/tasks/$',
+  path: '/api/admin/audit/tasks/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/api/admin/audit/tasks/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/api/admin/audit/tasks/$'
   id:
     | '__root__'
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/api/admin/audit/tasks/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
   ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
+  ApiAdminAuditTasksSplatRoute: typeof ApiAdminAuditTasksSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedMeAccessLogRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/api/admin/audit/tasks/$': {
+      id: '/api/admin/audit/tasks/$'
+      path: '/api/admin/audit/tasks/$'
+      fullPath: '/api/admin/audit/tasks/$'
+      preLoaderRoute: typeof ApiAdminAuditTasksSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
   ApiLogClientErrorRoute: ApiLogClientErrorRoute,
+  ApiAdminAuditTasksSplatRoute: ApiAdminAuditTasksSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

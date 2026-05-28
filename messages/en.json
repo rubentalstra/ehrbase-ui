@@ -77,5 +77,20 @@
   "access_log_title": "My access log",
   "access_log_intro": "Under Article 15 GDPR you can see who has accessed your records and when.",
   "access_log_empty_title": "No entries yet",
-  "access_log_empty_body": "Access entries will appear here once the audit-governance milestone is in place."
+  "access_log_empty_body": "Access entries will appear here once you have performed any actions on the system.",
+  "access_log_intro_self": "Every action you have taken on the system, newest first.",
+  "access_log_col_timestamp": "When",
+  "access_log_col_action": "Action",
+  "access_log_col_resource": "Resource",
+  "access_log_col_outcome": "Outcome",
+  "access_log_col_purpose": "Purpose",
+  "access_log_outcome_success": "Success",
+  "access_log_outcome_failure": "Failure",
+  "access_log_outcome_partial": "Partial",
+  "access_log_resource_none": "—",
+  "access_log_load_failed": "Could not load the access log. Please try again.",
+  "access_log_retry": "Try again",
+  "access_log_pagination": "Showing {from}–{to} of {total}",
+  "access_log_prev": "Previous",
+  "access_log_next": "Next"
 }

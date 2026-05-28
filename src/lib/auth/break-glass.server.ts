@@ -54,7 +54,6 @@ export async function grantEmergencyAccess(
       action: 'ACCESS_DENIED',
       target: { ehrId: req.ehrId, resourceType: 'EHR' },
       purpose: 'EMERGENCY',
-      lawfulBasis: '9(2)(c)',
       outcome: 'FAILURE',
       outcomeDetail: 'break_glass_ceiling_reached',
       source: { sessionId: auth.sid },
@@ -98,20 +97,12 @@ export async function grantEmergencyAccess(
     action: 'EMERGENCY_ACCESS_GRANTED',
     target: { ehrId: req.ehrId, resourceType: 'EHR' },
     purpose: 'EMERGENCY',
-    lawfulBasis: '9(2)(c)',
     outcome: 'SUCCESS',
     outcomeDetail: `overrode=[${(req.deniedRoles ?? []).join(',')}] justification=${req.justification}`,
     source: { sessionId: auth.sid },
   })
 
   return { status: 'granted', expiresInSeconds: GRANT_TTL_SECONDS }
-}
-
-export type EmergencyGrant = {
-  justification: string
-  ehrId?: string
-  grantedAt: number
-  expiresAt: number
 }
 
 const EmergencyGrantSchema = z.object({
@@ -121,7 +112,14 @@ const EmergencyGrantSchema = z.object({
   expiresAt: z.number(),
 })
 
-export async function getEmergencyGrant(sid: string): Promise<EmergencyGrant | null> {
+// Derived from the schema so the runtime validator and the static type can
+// never drift — same pattern as BreakGlassRequest above + the audit row
+// schemas in src/lib/audit/schema.ts.
+export type EmergencyGrant = z.infer<typeof EmergencyGrantSchema>
+
+export async function getEmergencyGrant(
+  sid: string,
+): Promise<EmergencyGrant | null> {
   const raw = await valkey.get(grantKey(sid))
   if (!raw) return null
   const json: unknown = JSON.parse(raw)
