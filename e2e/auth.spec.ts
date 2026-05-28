@@ -150,7 +150,7 @@ test.describe('Authenticated flow', () => {
     await expect(page.locator('#main-content')).toBeVisible()
     await expect(page.getByRole('contentinfo')).toBeVisible()
     // Sidebar brand + user menu trigger are present.
-    await expect(page.getByRole('button', { name: /toggle sidebar/i })).toBeVisible()
+    await expect(page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i })).toBeVisible()
   })
 
   test('sidebar open/closed state survives a reload (cookie)', async () => {
@@ -160,7 +160,7 @@ test.describe('Authenticated flow', () => {
       return cookies.find((c) => c.name === 'sidebar_state')?.value
     }
 
-    await page.getByRole('button', { name: /toggle sidebar/i }).click()
+    await page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i }).click()
     // Let the cookie write settle.
     await page.waitForTimeout(200)
     const afterToggle = sidebarStateCookie(await page.context().cookies())
