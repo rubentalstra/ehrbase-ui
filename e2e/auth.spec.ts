@@ -180,7 +180,21 @@ test.describe('Authenticated flow', () => {
     const trigger = page.getByRole('button', { name: /search and commands/i })
     await expect(trigger).toBeVisible()
 
-    await page.keyboard.press('ControlOrMeta+KeyK')
+    // Ctrl+K is a browser-reserved shortcut (focus address bar) so
+    // page.keyboard.press can be intercepted by Chromium before reaching the
+    // page's keydown listener. Dispatch the event directly on the document —
+    // this fires only the JS handler in <CommandPalette>, which is what the
+    // test is meant to verify.
+    await page.evaluate(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'k',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    })
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await expect(dialog.getByPlaceholder(/command or search/i)).toBeVisible()
