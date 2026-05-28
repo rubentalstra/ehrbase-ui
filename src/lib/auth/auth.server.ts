@@ -98,6 +98,11 @@ async function provisionFromKeycloak(args: {
     const parsed = KeycloakRealmAccessSchema.safeParse(payload ?? {})
     return parsed.success ? (parsed.data.realm_access?.roles ?? []) : []
   }
+  // Best-effort mirror onto the `keycloakRoles` column. The authoritative
+  // read path now decodes the linked `account.access_token` JWT on every
+  // request (auth.functions.ts::getSessionWithRoles + require-role); this
+  // write is kept as a denormalised cache for any future query that
+  // wants to filter users by role without a JWT decode per row.
   let roles = extractRoles(args.userInfo)
   if (roles.length === 0 && args.token?.accessToken) {
     roles = extractRoles(decodeJwtPayload(args.token.accessToken))

@@ -14,13 +14,36 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { authDb } from '@/db/auth-client.server'
-import { user as userTable } from '@/db/schema/auth'
+import { account as accountTable } from '@/db/schema/auth'
 import { logAudit } from '@/lib/audit/logger.server'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 
-const KeycloakRolesRowSchema = z.object({
-  keycloakRoles: z.array(z.string()).default([]),
-})
+const RealmAccessSchema = z
+  .object({
+    realm_access: z
+      .object({ roles: z.array(z.string()).default([]) })
+      .partial()
+      .optional(),
+  })
+  .partial()
+
+function decodeJwtPayload(jwt: string | null | undefined): unknown {
+  if (!jwt) return undefined
+  const parts = jwt.split('.')
+  const payload = parts[1]
+  if (!payload) return undefined
+  try {
+    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4)
+    const json = Buffer.from(
+      padded.replace(/-/g, '+').replace(/_/g, '/'),
+      'base64',
+    ).toString('utf8')
+    const parsed: unknown = JSON.parse(json)
+    return parsed
+  } catch {
+    return undefined
+  }
+}
 
 export type RequireRoleOptions = {
   // When true (a patient-PHI route), a denial advertises break-glass.
@@ -63,15 +86,30 @@ export async function requireRole(
   })
   if (!session) throw unauthorized()
 
-  // Read the realm roles fresh from the user row — Better Auth's cached
-  // session-data cookie doesn't reliably carry custom JSONB columns.
-  const row = await authDb
-    .select({ keycloakRoles: userTable.keycloakRoles })
-    .from(userTable)
-    .where(eq(userTable.id, session.user.id))
+  // Decode the realm roles fresh from the linked Keycloak access_token —
+  // see auth.functions.ts::getSessionWithRoles for the same pattern.
+  const accountRow = await authDb
+    .select({
+      accessToken: accountTable.accessToken,
+      idToken: accountTable.idToken,
+    })
+    .from(accountTable)
+    .where(eq(accountTable.userId, session.user.id))
     .limit(1)
-  const parsed = KeycloakRolesRowSchema.safeParse(row[0] ?? {})
-  const keycloakRoles = parsed.success ? parsed.data.keycloakRoles : []
+  const realmAccess = RealmAccessSchema.safeParse(
+    decodeJwtPayload(accountRow[0]?.accessToken) ?? {},
+  )
+  let keycloakRoles = realmAccess.success
+    ? (realmAccess.data.realm_access?.roles ?? [])
+    : []
+  if (keycloakRoles.length === 0) {
+    const idRealm = RealmAccessSchema.safeParse(
+      decodeJwtPayload(accountRow[0]?.idToken) ?? {},
+    )
+    keycloakRoles = idRealm.success
+      ? (idRealm.data.realm_access?.roles ?? [])
+      : []
+  }
   const allowed = roles.some((r) => keycloakRoles.includes(r))
   const ctx: RoleContext = {
     sid: session.session.token,
