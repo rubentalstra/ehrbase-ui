@@ -64,13 +64,13 @@ warm-tier persistence, integrity verifier) shipped in M2. This milestone owns
 the remaining **governance** chapter — distinct capabilities, each owned here:
 
 - [ ] Cold storage tier: S3 Object Lock (WORM) + cross-region replication — §14.6
-- [ ] Retention: 20-year WGBO enforcement + tagged purge job — §14.7
+- [ ] Retention: configurable per national clinical-records law (default 20 y; e.g. NL WGBO, FR CSP R1112-7, DE §10 BO, AT ÄrzteG) + tagged purge job — §14.7
 - [ ] Scheduled nightly hash-chain integrity job + DPO alerting (extends the M2 verifier) — §14.5
 - [ ] DPIA template populated under `docs/compliance/` — §14.10
 - [ ] DPA template populated — §14.1
 - [ ] RoPA template populated — §14.1
 - [ ] Breach response runbook — §14.9
-- [ ] NEN-7513 sample-of-60 audit-review dashboard — §14.13
+- [ ] Audit-review dashboard (sample-of-60 cadence per NL national standard, adopted as EU-baseline review SLA) — §14.13
 - [ ] Patient-facing Art.15 `/me/access-log` (scaffold from M3, fed here) — §14.8
 - [ ] Audit-log integrity-check runbook
 

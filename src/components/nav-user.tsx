@@ -1,7 +1,7 @@
 // Sidebar-footer user menu (adapted from the sidebar-07 block, docs/architecture.md
 // §6). Wired to the session user from the route context — name, email, roles,
 // initials avatar. Menu: My account, Access log, a disabled language switcher
-// placeholder (English today; Dutch lands with the translation task, §11.6),
+// placeholder (English today; further EU languages land with the translation task, §11.6),
 // and Log out. Log out is a plain anchor to the server logout route (a full
 // navigation that clears the session cookie), not a router Link.
 

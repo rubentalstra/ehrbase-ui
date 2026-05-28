@@ -23,11 +23,12 @@ export function getRouter() {
       nonce:
         typeof window === 'undefined' ? globalThis.__ehrbaseGetNonce?.() : undefined,
     },
-    // URL-prefix i18n (docs/architecture.md §11.4). `input` de-localizes an
-    // incoming URL before route matching (e.g. /nl/patients → /patients);
-    // `output` re-localizes generated hrefs. English-only today (default
-    // urlPatterns leave the base locale unprefixed) → this is a pass-through,
-    // but the machinery is live so adding Dutch is config-only (§11.6).
+    // Symmetric URL-prefix i18n (docs/architecture.md §11.4). `input`
+    // de-localizes an incoming URL before route matching (/en/patients →
+    // /patients); `output` re-localizes generated hrefs (/patients →
+    // /en/patients). English-only today, but every locale gets a prefix —
+    // adding any further EU language (Dutch, German, French, …) is
+    // config-only (§11.6).
     rewrite: {
       input: ({ url }) => deLocalizeUrl(url),
       output: ({ url }) => localizeUrl(url),

@@ -1,7 +1,8 @@
 // Subject pseudonymization for audit records (docs/architecture.md §14.4).
 //
 // An audit line like "user X viewed patient Y" is itself health data. We never
-// store a raw patient identifier (BSN, EHR subject id) in the audit log —
+// store a raw patient identifier (any national patient ID — BSN, NIR, KVNR,
+// Codice Fiscale, PESEL, etc. — or EHR subject id) in the audit log —
 // only subjectIdHash = HMAC-SHA256(subjectId, AUDIT_PSEUDONYM_SECRET). The
 // HMAC is deterministic (the same subject always hashes to the same value, so
 // auditors can correlate accesses to one patient) but irreversible without the

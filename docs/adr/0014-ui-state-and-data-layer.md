@@ -31,11 +31,16 @@ run in M3; this stands the layer up for M5/M6. The cache-level `onError` funnels
 failures through `reportClientError` → correlationId + sanitized server log +
 one generic toast (§10).
 
-**i18n — build the §11.4 URL-prefix machinery now, English-only.** The router
-`rewrite` uses Paraglide's `deLocalizeUrl`/`localizeUrl`; a Paraglide request
-middleware in `src/start.ts` establishes the locale `AsyncLocalStorage` context
-so `getLocale()` resolves during SSR. The base locale stays unprefixed via
-Paraglide's default `urlPatterns`, so adding Dutch later is config-only (§11.6).
+**i18n — build the §11.4 URL-prefix machinery now, English-only.** Per the
+**official Paraglide + TanStack Start integration example** (see
+`scripts/paraglide-compile.mjs` and `vite.config.ts` headers for the source
+links): `paraglideMiddleware` wraps the framework's `server-entry` in
+`src/server.ts` to establish the locale `AsyncLocalStorage` context so
+`getLocale()` resolves during SSR; the router `rewrite` uses Paraglide's
+`deLocalizeUrl`/`localizeUrl`. URL scheme is **symmetric** — every locale
+(including English) lives under `/{locale}/...` per the docs' "Prefixing All
+Locales" recipe — so adding any further EU language (Dutch, German, French,
+Spanish, …) is config-only and no locale is privileged at the URL layer (§11.6).
 
 **CSP — `style-src 'unsafe-inline'` (script-src unchanged).** Radix primitives
 (dropdown, collapsible, command, tooltip, sheet) and the shadcn sidebar emit
@@ -49,16 +54,21 @@ CSP-violation console errors under the enforcing policy).
 
 ## Notes on smaller divergences
 
-- **Paraglide `strategy`/`urlPatterns` are compiler options, not inlang
-  settings.** They are set in `vite.config.ts` (the plugin) **and** the
-  `paraglide:compile` script (`--strategy url cookie baseLocale`), not in
-  `project.inlang/settings.json` — the SDK does not read compiler options from
-  settings. Both build paths must agree or the runtime drifts.
+- **Paraglide `strategy` + `urlPatterns` are configured exactly as the
+  official docs prescribe.** They live inline in `vite.config.ts` (per the
+  Paraglide TanStack Start example) and are mirrored inline in
+  `scripts/paraglide-compile.mjs` (the documented programmatic invocation —
+  one of Paraglide's three official entry points, and the only one that
+  accepts `urlPatterns` when the CLI cannot). No custom helper, no dynamic
+  generation from `settings.json` — the configs are pinned in both files so a
+  package update can't silently break them. Adding a locale = editing both
+  files in lockstep (§11.6).
 - **`paraglide:check` is a key-parity gate, not a git-diff gate.** The generated
   Paraglide output under `src/paraglide` is gitignored, so "compile + assert no
   git diff" is a no-op. `scripts/paraglide-check.mjs` instead asserts every
   locale defines the same message keys — the faithful §11.7 completeness intent.
-  English-only today; this makes the Dutch addition safe by construction.
+  English-only today; the same gate catches any added locale missing a key
+  before merge.
 - **The vendored `sidebar-07` block is our code; the pure shadcn primitives are
   not.** The adapted block components (`app-sidebar`, the `nav-*` files,
   `team-switcher`) are fully linted and formatted. The downloaded shadcn
@@ -73,7 +83,8 @@ CSP-violation console errors under the enforcing policy).
 ## Consequences
 
 **Positive:** the shell, theme, data, error, and i18n rails are in place with
-no PHI features yet; accessibility is testable; the Dutch path is config-only.
+no PHI features yet; accessibility is testable; adding any further EU language
+is config-only.
 **Negative:** `style-src 'unsafe-inline'` is a deliberate weakening of the style
 CSP (mitigated: script-src unchanged, E2E-asserted). Carrying the SSR query
 integration before any query exists is mild over-provisioning, accepted to

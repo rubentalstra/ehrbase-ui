@@ -12,95 +12,95 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Runtime & package manager
 
-| Tool | Verified | Pinned | Source |
-|---|---|---|---|
-| Node.js | 24.16.0 (LTS Krypton, released 2026-05-21) | **24.16.0** | https://nodejs.org/en/about/previous-releases |
-| pnpm | 11.3.0 | **11.3.0** | https://registry.npmjs.org/pnpm/latest |
-| Docker engine | 29.4.3 | **≥ 29.0** (for containerd default image store + CVE-2026-32288 fix) | https://docs.docker.com/engine/release-notes/29/ |
+| Tool          | Verified                                   | Pinned                                                               | Source                                           |
+| ------------- | ------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------ |
+| Node.js       | 24.16.0 (LTS Krypton, released 2026-05-21) | **24.16.0**                                                          | https://nodejs.org/en/about/previous-releases    |
+| pnpm          | 11.3.0                                     | **11.3.0**                                                           | https://registry.npmjs.org/pnpm/latest           |
+| Docker engine | 29.4.3                                     | **≥ 29.0** (for containerd default image store + CVE-2026-32288 fix) | https://docs.docker.com/engine/release-notes/29/ |
 
 ### Framework
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `@tanstack/react-start` | 1.168.13 (post-CVE-2026-45321 cleanup) | **1.168.13** | https://registry.npmjs.org/@tanstack/react-start/latest |
-| `@tanstack/react-router` | 1.170.8 | **1.170.8** | https://registry.npmjs.org/@tanstack/react-router/latest |
-| `@tanstack/react-query` | 5.100.14 | **5.100.14** | https://registry.npmjs.org/@tanstack/react-query/latest |
-| `react` / `react-dom` | 19.2.6 | **19.2.6** | https://registry.npmjs.org/react/latest |
-| `vite` | 7.3.3 (v7 line — v8 deliberately not adopted) | **7.3.3** | https://registry.npmjs.org/vite |
-| `typescript` | 6.0.3 | **6.0.3** | https://registry.npmjs.org/typescript/latest |
+| Package                  | Verified                                      | Pinned       | Source                                                   |
+| ------------------------ | --------------------------------------------- | ------------ | -------------------------------------------------------- |
+| `@tanstack/react-start`  | 1.168.13 (post-CVE-2026-45321 cleanup)        | **1.168.13** | https://registry.npmjs.org/@tanstack/react-start/latest  |
+| `@tanstack/react-router` | 1.170.8                                       | **1.170.8**  | https://registry.npmjs.org/@tanstack/react-router/latest |
+| `@tanstack/react-query`  | 5.100.14                                      | **5.100.14** | https://registry.npmjs.org/@tanstack/react-query/latest  |
+| `react` / `react-dom`    | 19.2.6                                        | **19.2.6**   | https://registry.npmjs.org/react/latest                  |
+| `vite`                   | 7.3.3 (v7 line — v8 deliberately not adopted) | **7.3.3**    | https://registry.npmjs.org/vite                          |
+| `typescript`             | 6.0.3                                         | **6.0.3**    | https://registry.npmjs.org/typescript/latest             |
 
 ### UI & styling
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `tailwindcss` | 4.3.0 | **4.3.0** | https://registry.npmjs.org/tailwindcss/latest |
-| shadcn/ui registry | — | latest at install time, components copied in via CLI | https://ui.shadcn.com |
-| `@uiw/react-codemirror` | 4.25.10 | **4.25.10** | https://registry.npmjs.org/@uiw/react-codemirror/latest |
-| `@codemirror/lang-sql` | 6.10.0 | **6.10.0** | https://registry.npmjs.org/@codemirror/lang-sql/latest |
+| Package                 | Verified | Pinned                                               | Source                                                  |
+| ----------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| `tailwindcss`           | 4.3.0    | **4.3.0**                                            | https://registry.npmjs.org/tailwindcss/latest           |
+| shadcn/ui registry      | —        | latest at install time, components copied in via CLI | https://ui.shadcn.com                                   |
+| `@uiw/react-codemirror` | 4.25.10  | **4.25.10**                                          | https://registry.npmjs.org/@uiw/react-codemirror/latest |
+| `@codemirror/lang-sql`  | 6.10.0   | **6.10.0**                                           | https://registry.npmjs.org/@codemirror/lang-sql/latest  |
 
 ### Forms / validation
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `zod` | 4.4.3 | **4.4.3** | https://registry.npmjs.org/zod/latest |
-| `react-hook-form` | 7.76.1 | **7.76.1** | https://registry.npmjs.org/react-hook-form/latest |
-| `@hookform/resolvers` | 5.4.0 | **5.4.0** | https://registry.npmjs.org/@hookform/resolvers/latest |
+| Package               | Verified | Pinned     | Source                                                |
+| --------------------- | -------- | ---------- | ----------------------------------------------------- |
+| `zod`                 | 4.4.3    | **4.4.3**  | https://registry.npmjs.org/zod/latest                 |
+| `react-hook-form`     | 7.76.1   | **7.76.1** | https://registry.npmjs.org/react-hook-form/latest     |
+| `@hookform/resolvers` | 5.4.0    | **5.4.0**  | https://registry.npmjs.org/@hookform/resolvers/latest |
 
 ### i18n
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `@inlang/paraglide-js` | 2.18.1 | **2.18.1** | https://registry.npmjs.org/@inlang/paraglide-js/latest |
+| Package                | Verified | Pinned     | Source                                                 |
+| ---------------------- | -------- | ---------- | ------------------------------------------------------ |
+| `@inlang/paraglide-js` | 2.18.1   | **2.18.1** | https://registry.npmjs.org/@inlang/paraglide-js/latest |
 
 ### Auth, sessions, observability, data
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `arctic` | 3.7.0 | **3.7.0** | https://registry.npmjs.org/arctic/latest |
-| `ioredis` | 5.11.0 | **5.11.0** | https://registry.npmjs.org/ioredis/latest |
-| `pino` | 10.3.1 | **10.3.1** | https://registry.npmjs.org/pino/latest |
-| `@opentelemetry/sdk-node` | 0.218.0 | **0.218.0** | https://registry.npmjs.org/@opentelemetry/sdk-node/latest |
+| Package                   | Verified | Pinned      | Source                                                    |
+| ------------------------- | -------- | ----------- | --------------------------------------------------------- |
+| `arctic`                  | 3.7.0    | **3.7.0**   | https://registry.npmjs.org/arctic/latest                  |
+| `ioredis`                 | 5.11.0   | **5.11.0**  | https://registry.npmjs.org/ioredis/latest                 |
+| `pino`                    | 10.3.1   | **10.3.1**  | https://registry.npmjs.org/pino/latest                    |
+| `@opentelemetry/sdk-node` | 0.218.0  | **0.218.0** | https://registry.npmjs.org/@opentelemetry/sdk-node/latest |
 
 ### Linting
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `eslint` | 10.4.0 | **10.4.0** | https://registry.npmjs.org/eslint/latest |
-| `typescript-eslint` | 8.60.0 | **8.60.0** | https://registry.npmjs.org/typescript-eslint/latest |
-| `@eslint-react/eslint-plugin` | 5.8.5 | **5.8.5** | https://registry.npmjs.org/@eslint-react/eslint-plugin/latest |
-| `eslint-plugin-react-hooks` | 7.1.1 | **7.1.1** | https://registry.npmjs.org/eslint-plugin-react-hooks/latest |
-| `eslint-plugin-jsx-a11y-x` | 0.2.0 | **0.2.0** | https://registry.npmjs.org/eslint-plugin-jsx-a11y-x/latest |
+| Package                       | Verified | Pinned     | Source                                                        |
+| ----------------------------- | -------- | ---------- | ------------------------------------------------------------- |
+| `eslint`                      | 10.4.0   | **10.4.0** | https://registry.npmjs.org/eslint/latest                      |
+| `typescript-eslint`           | 8.60.0   | **8.60.0** | https://registry.npmjs.org/typescript-eslint/latest           |
+| `@eslint-react/eslint-plugin` | 5.8.5    | **5.8.5**  | https://registry.npmjs.org/@eslint-react/eslint-plugin/latest |
+| `eslint-plugin-react-hooks`   | 7.1.1    | **7.1.1**  | https://registry.npmjs.org/eslint-plugin-react-hooks/latest   |
+| `eslint-plugin-jsx-a11y-x`    | 0.2.0    | **0.2.0**  | https://registry.npmjs.org/eslint-plugin-jsx-a11y-x/latest    |
 
 ### Testing
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `vitest` | 4.1.7 | **4.1.7** | https://registry.npmjs.org/vitest/latest |
-| `vitest-axe` | 0.1.0 | **0.1.0** | https://registry.npmjs.org/vitest-axe/latest |
-| `axe-core` | 4.11.4 | **4.11.4** | https://registry.npmjs.org/axe-core/latest |
-| `@axe-core/playwright` | 4.11.3 | **4.11.3** | https://registry.npmjs.org/@axe-core/playwright/latest |
-| `@playwright/test` | 1.60.0 | **1.60.0** | https://registry.npmjs.org/@playwright/test/latest |
+| Package                | Verified | Pinned     | Source                                                 |
+| ---------------------- | -------- | ---------- | ------------------------------------------------------ |
+| `vitest`               | 4.1.7    | **4.1.7**  | https://registry.npmjs.org/vitest/latest               |
+| `vitest-axe`           | 0.1.0    | **0.1.0**  | https://registry.npmjs.org/vitest-axe/latest           |
+| `axe-core`             | 4.11.4   | **4.11.4** | https://registry.npmjs.org/axe-core/latest             |
+| `@axe-core/playwright` | 4.11.3   | **4.11.3** | https://registry.npmjs.org/@axe-core/playwright/latest |
+| `@playwright/test`     | 1.60.0   | **1.60.0** | https://registry.npmjs.org/@playwright/test/latest     |
 
 ### Component library / docs
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `storybook` | 10.4.1 | **10.4.1** (diverges from arch doc §17 which names 9.x — see [ADR-0010](adr/0010-storybook-major-upgrade.md)) | https://registry.npmjs.org/storybook/latest |
+| Package     | Verified | Pinned                                                                                                        | Source                                      |
+| ----------- | -------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `storybook` | 10.4.1   | **10.4.1** (diverges from arch doc §17 which names 9.x — see [ADR-0010](adr/0010-storybook-major-upgrade.md)) | https://registry.npmjs.org/storybook/latest |
 
 ### API generation
 
-| Package | Verified | Pinned | Source |
-|---|---|---|---|
-| `orval` | 8.12.3 | **8.12.3** | https://registry.npmjs.org/orval/latest |
+| Package | Verified | Pinned     | Source                                  |
+| ------- | -------- | ---------- | --------------------------------------- |
+| `orval` | 8.12.3   | **8.12.3** | https://registry.npmjs.org/orval/latest |
 
 ### Backend (proxied) & infrastructure
 
-| Service | Verified | Pinned | Source |
-|---|---|---|---|
-| EHRbase | 2.31.0 (Apr 2026, Java 25) | **2.31.0** | https://github.com/ehrbase/ehrbase/releases |
-| Keycloak | 26.6.2 (CVE-2026-37981 PII-enumeration fix) | **≥ 26.6.2** | https://www.keycloak.org/downloads |
-| Valkey | 9.1.0 (three use-after-free CVE fixes) | **≥ 9.1.0** | https://hub.docker.com/r/valkey/valkey/tags |
-| PostgreSQL | 18.4 (May 14, 2026) | **18.4** | https://www.postgresql.org/docs/release/ |
+| Service    | Verified                                    | Pinned       | Source                                      |
+| ---------- | ------------------------------------------- | ------------ | ------------------------------------------- |
+| EHRbase    | 2.31.0 (Apr 2026, Java 25)                  | **2.31.0**   | https://github.com/ehrbase/ehrbase/releases |
+| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix) | **≥ 26.6.2** | https://www.keycloak.org/downloads          |
+| Valkey     | 9.1.0 (three use-after-free CVE fixes)      | **≥ 9.1.0**  | https://hub.docker.com/r/valkey/valkey/tags |
+| PostgreSQL | 18.4 (May 14, 2026)                         | **18.4**     | https://www.postgresql.org/docs/release/    |
 
 ---
 
@@ -108,11 +108,11 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 Items that have moved since the architecture doc was last touched (2026-05-26) or that we have deliberately pinned away from the doc's value.
 
-| Item | Arch doc says | Pinned to | Reason |
-|---|---|---|---|
-| Node.js | 24.15.0 | 24.16.0 | Newer LTS patch (released 2026-05-21). |
-| Storybook | 9.x | 10.4.1 | User-decided to take latest at scaffold time. Tracked in ADR-0010. Reversal path: fall back to 9.x if Vite 7 plugin compat breaks. |
-| Vite | 7.3.x for v1.0 | 7.3.3 | v8.0.14 stable on npm; intentionally NOT adopted, blocked by TanStack/router#7436 + #7091. Watch for resolution. |
+| Item      | Arch doc says  | Pinned to | Reason                                                                                                                             |
+| --------- | -------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js   | 24.15.0        | 24.16.0   | Newer LTS patch (released 2026-05-21).                                                                                             |
+| Storybook | 9.x            | 10.4.1    | User-decided to take latest at scaffold time. Tracked in ADR-0010. Reversal path: fall back to 9.x if Vite 7 plugin compat breaks. |
+| Vite      | 7.3.x for v1.0 | 7.3.3     | v8.0.14 stable on npm; intentionally NOT adopted, blocked by TanStack/router#7436 + #7091. Watch for resolution.                   |
 
 ---
 
@@ -121,12 +121,14 @@ Items that have moved since the architecture doc was last touched (2026-05-26) o
 The architecture doc lists ~150 external URLs in §27. The full set is replicated here, grouped by concern, so that contributors can look up canonical sources without trawling §27.
 
 ### Runtime & package manager
+
 - Node.js — https://nodejs.org/
 - Node.js release schedule — https://nodejs.org/en/about/previous-releases
 - pnpm — https://pnpm.io/
 - pnpm `minimumReleaseAge` (supply-chain defense) — https://pnpm.io/settings#minimumreleaseage
 
 ### Framework & build
+
 - TanStack Start — https://tanstack.com/start/latest
 - TanStack Start server functions — https://tanstack.com/start/latest/docs/framework/react/guide/server-functions
 - TanStack Start authentication guide — https://tanstack.com/start/latest/docs/framework/react/guide/authentication
@@ -146,6 +148,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - Vitest 4.1 release notes — https://vitest.dev/blog/vitest-4-1
 
 ### UI / styling
+
 - shadcn/ui — https://ui.shadcn.com
 - shadcn/ui TanStack Start setup — https://ui.shadcn.com/docs/installation/tanstack
 - shadcn/ui changelog — https://ui.shadcn.com/docs/changelog
@@ -154,6 +157,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - Radix UI — https://www.radix-ui.com
 
 ### Forms, validation, code editor
+
 - react-hook-form — https://react-hook-form.com
 - @hookform/resolvers — https://github.com/react-hook-form/resolvers
 - Zod v4 — https://zod.dev
@@ -161,6 +165,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - @codemirror/lang-sql — https://www.npmjs.com/package/@codemirror/lang-sql
 
 ### i18n
+
 - Paraglide JS — https://github.com/opral/paraglide-js
 - Paraglide JS docs — https://inlang.com/m/gerre34r/library-inlang-paraglideJs
 - Paraglide TanStack Router guide — https://inlang.com/m/gerre34r/library-inlang-paraglideJs/tanstack-router
@@ -171,6 +176,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - Inlang Fink (translation editor) — https://inlang.com/m/tdozzpar/app-inlang-finkLocalizationEditor
 
 ### Auth, sessions, data store
+
 - Arctic — https://arcticjs.dev
 - Keycloak — https://www.keycloak.org
 - Keycloak 26.6 release notes — https://www.keycloak.org/2026/04/keycloak-2660-released
@@ -179,11 +185,13 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - ioredis (works against Valkey unchanged) — https://github.com/redis/ioredis
 
 ### Database
+
 - PostgreSQL — https://www.postgresql.org
 - PostgreSQL release notes — https://www.postgresql.org/docs/release/
 - PostgreSQL official Docker image — https://hub.docker.com/_/postgres
 
 ### Observability
+
 - OpenTelemetry — https://opentelemetry.io
 - OpenTelemetry status — https://opentelemetry.io/status
 - OpenTelemetry JS SDK — https://opentelemetry.io/docs/languages/js/getting-started/nodejs/
@@ -203,6 +211,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - pino-http — https://github.com/pinojs/pino-http
 
 ### openEHR / EHRbase
+
 - EHRbase — https://ehrbase.org
 - EHRbase repo — https://github.com/ehrbase/ehrbase
 - openEHR specifications — https://specifications.openehr.org
@@ -210,6 +219,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - openEHR Reference Model — https://specifications.openehr.org/releases/RM/latest/
 
 ### Accessibility (legal + tooling)
+
 - European Accessibility Act (Directive EU 2019/882) — https://eur-lex.europa.eu/eli/dir/2019/882/oj
 - EAA overview (European Commission) — https://ec.europa.eu/social/main.jsp?catId=1202
 - EN 301 549 v3.2.1 — https://www.etsi.org/deliver/etsi_en/301500_301599/301549/03.02.01_60/en_301549v030201p.pdf
@@ -224,6 +234,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - NVDA — https://www.nvaccess.org
 
 ### ESLint v10 + plugins
+
 - ESLint v10.0.0 release notes — https://eslint.org/blog/2026/02/eslint-v10.0.0-released/
 - ESLint v10.4.0 release notes — https://eslint.org/blog/2026/05/eslint-v10.4.0-released/
 - ESLint v10 migration guide — https://eslint.org/docs/latest/use/migrate-to-10.0.0
@@ -238,6 +249,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - `eslint-plugin-jsx-a11y` (canonical) — https://github.com/jsx-eslint/eslint-plugin-jsx-a11y
 
 ### Security hardening
+
 - OWASP ASVS 5.0 — https://owasp.org/www-project-application-security-verification-standard/
 - OWASP CSP Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
 - MDN CSP guide — https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP
@@ -248,19 +260,25 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - Storybook — https://storybook.js.org
 - Storybook a11y addon — https://storybook.js.org/addons/@storybook/addon-a11y
 
-### Compliance
+### Compliance — EU baseline
+
 - GDPR — https://eur-lex.europa.eu/eli/reg/2016/679/oj
 - GDPR (Art. 9, 30, 32, 33-34, 35) — https://gdpr-info.eu
-- NEN 7513:2024 — https://www.nen.nl/en/nen-7513-2024-nl-329182
-- Wabvpz — https://wetten.overheid.nl/BWBR0019769
-- Besluit elektronische gegevensverwerking door zorgaanbieders — https://wetten.overheid.nl/BWBR0040076
-- WGBO (Boek 7 BW, art. 446-468) — https://wetten.overheid.nl/BWBR0005290
-- Autoriteit Persoonsgegevens (Dutch DPA) — https://autoriteitpersoonsgegevens.nl
 - EHDS Regulation (EU) 2025/327 — https://eur-lex.europa.eu/eli/reg/2025/327/oj
-- IHE ATNA — https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html
-- ISO 27799 — https://www.iso.org/standard/62777.html
+- ISO 27799 (Health informatics — Information security management) — https://www.iso.org/standard/62777.html
+- IHE ATNA (Audit Trail and Node Authentication) — https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html
+- EDPB (European Data Protection Board) — https://edpb.europa.eu
+
+### Compliance — national overlay (examples; each deployment configures its own)
+
+- **NL:** NEN 7513:2024 — https://www.nen.nl/en/nen-7513-2024-nl-329182 • Wabvpz — https://wetten.overheid.nl/BWBR0019769 • Besluit elektronische gegevensverwerking door zorgaanbieders — https://wetten.overheid.nl/BWBR0040076 • WGBO (Boek 7 BW, art. 446-468) — https://wetten.overheid.nl/BWBR0005290 • Autoriteit Persoonsgegevens (AP) — https://autoriteitpersoonsgegevens.nl
+- **DE:** BfDI — https://www.bfdi.bund.de • IT-Sicherheitsgesetz 2.0 — https://www.bsi.bund.de
+- **FR:** CNIL — https://www.cnil.fr • PGSSI-S — https://esante.gouv.fr/produits-services/pgssi-s
+- **IT:** Garante per la protezione dei dati personali — https://www.garanteprivacy.it
+- **ES:** AEPD — https://www.aepd.es
 
 ### Project governance
+
 - Contributor Covenant — https://www.contributor-covenant.org
 - Developer Certificate of Origin — https://developercertificate.org
 - Apache 2.0 license — https://www.apache.org/licenses/LICENSE-2.0

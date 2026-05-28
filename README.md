@@ -1,6 +1,6 @@
 # ehrbase-ui
 
-> The missing open-source UI for [EHRbase](https://github.com/ehrbase/ehrbase). Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. GDPR & NEN 7513 ready.
+> The missing open-source UI for [EHRbase](https://github.com/ehrbase/ehrbase). Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. Built for EU clinical deployments — GDPR-compliant, with a comprehensive audit-log schema that satisfies EU healthcare audit requirements (ISO 27799 baseline) and meets every member-state national standard we've checked, including NEN 7513 (NL).
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Status: Pre-v1.0](https://img.shields.io/badge/Status-Pre--v1.0-orange)](docs/IMPLEMENTATION_CHECKLIST.md)
