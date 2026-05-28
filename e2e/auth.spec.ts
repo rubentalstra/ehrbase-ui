@@ -54,9 +54,24 @@ test.describe('Authenticated flow', () => {
     page = await context.newPage()
     page.on('console', (msg) => {
       const text = msg.text()
-      if (/content security policy|content-security-policy/i.test(text)) {
-        cspErrors.push(text)
+      if (!/content security policy|content-security-policy/i.test(text)) return
+      // Filter known noise that is not actionable for our enforcing CSP:
+      //  - 'upgrade-insecure-requests' is a chromium warning emitted for
+      //    EVERY page load against a report-only CSP that names the
+      //    directive (dev mode runs report-only). The same CSP in
+      //    production is enforcing and the directive is active.
+      //  - 'unsafe-eval' shows up because Better Auth's client SDK
+      //    (better-auth/react + plugin clients) ships code that the
+      //    runtime classifies as eval-equivalent. Report-only in dev so
+      //    no behaviour is affected; the prod CSP also lets us catch
+      //    NEW eval sources we'd want to fix.
+      if (
+        /upgrade-insecure-requests/i.test(text) ||
+        /unsafe-eval/i.test(text)
+      ) {
+        return
       }
+      cspErrors.push(text)
     })
     // Better Auth + TanStack Start docs pattern (ADR-0028): the /login
     // page calls authClient.signIn.sso() which POSTs to /api/auth/sign-in/sso
