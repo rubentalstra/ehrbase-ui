@@ -10,14 +10,17 @@
 // the 403 additionally carries a `break-glass: available` header so the UI
 // can offer the emergency-access path (§5.6) instead of a dead end.
 
+import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
+import { authDb } from '@/db/auth-client.server'
+import { user as userTable } from '@/db/schema/auth'
 import { logAudit } from '@/lib/audit/logger.server'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 
-const UserShapeSchema = z
-  .object({ keycloakRoles: z.array(z.string()).default([]) })
-  .partial()
+const KeycloakRolesRowSchema = z.object({
+  keycloakRoles: z.array(z.string()).default([]),
+})
 
 export type RequireRoleOptions = {
   // When true (a patient-PHI route), a denial advertises break-glass.
@@ -60,8 +63,15 @@ export async function requireRole(
   })
   if (!session) throw unauthorized()
 
-  const shape = UserShapeSchema.safeParse(session.user)
-  const keycloakRoles = shape.success ? (shape.data.keycloakRoles ?? []) : []
+  // Read the realm roles fresh from the user row — Better Auth's cached
+  // session-data cookie doesn't reliably carry custom JSONB columns.
+  const row = await authDb
+    .select({ keycloakRoles: userTable.keycloakRoles })
+    .from(userTable)
+    .where(eq(userTable.id, session.user.id))
+    .limit(1)
+  const parsed = KeycloakRolesRowSchema.safeParse(row[0] ?? {})
+  const keycloakRoles = parsed.success ? parsed.data.keycloakRoles : []
   const allowed = roles.some((r) => keycloakRoles.includes(r))
   const ctx: RoleContext = {
     sid: session.session.token,

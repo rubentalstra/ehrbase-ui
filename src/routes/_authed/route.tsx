@@ -21,18 +21,8 @@ import {
   redirect,
   useRouterState,
 } from '@tanstack/react-router'
-import { z } from 'zod'
-
-import { getSession } from '@/lib/auth/auth.functions'
+import { getSessionWithRoles } from '@/lib/auth/auth.functions'
 import { getSidebarState } from '@/lib/shell/sidebar-state'
-
-// Better Auth's session.user doesn't carry our custom `keycloakRoles`
-// JSONB column in its base typings — we know the row carries it (the SSO
-// provisionUser hook fills it on every login). Parse it through Zod so
-// the AppSidebar's `roles: string[]` contract is fed safely.
-const UserShapeSchema = z
-  .object({ keycloakRoles: z.array(z.string()).default([]) })
-  .partial()
 import { m } from '@/paraglide/messages.js'
 import { AppSidebar } from '@/components/app-sidebar'
 import { CommandPalette } from '@/components/shell/command-palette'
@@ -50,8 +40,8 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location }) => {
-    const session = await getSession()
-    if (!session) {
+    const result = await getSessionWithRoles()
+    if (!result) {
       throw redirect({
         href: `/login?redirect=${encodeURIComponent(location.href)}`,
       })
@@ -63,13 +53,11 @@ export const Route = createFileRoute('/_authed')({
       typeof document === 'undefined'
         ? (await getSidebarState()).sidebarOpen
         : true
-    const shape = UserShapeSchema.safeParse(session.user)
-    const keycloakRoles = shape.success ? (shape.data.keycloakRoles ?? []) : []
     const user = {
-      id: session.user.id,
-      name: session.user.name ?? '',
-      email: session.user.email ?? '',
-      roles: keycloakRoles,
+      id: result.session.user.id,
+      name: result.session.user.name ?? '',
+      email: result.session.user.email ?? '',
+      roles: result.keycloakRoles,
     }
     return { user, sidebarOpen }
   },
