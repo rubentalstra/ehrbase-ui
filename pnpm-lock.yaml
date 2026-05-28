@@ -57,8 +57,8 @@ importers:
         specifier: 4.3.0
         version: 4.3.0
       drizzle-orm:
-        specifier: 1.0.0-rc.3
-        version: 1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)
+        specifier: 1.0.0-rc.4-273829f
+        version: 1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)
       ioredis:
         specifier: 5.11.0
         version: 5.11.0
@@ -70,7 +70,7 @@ importers:
         version: 0.4.6(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       nitro:
         specifier: npm:nitro-nightly@3.0.260522-beta
-        version: nitro-nightly@3.0.260522-beta(chokidar@5.0.0)(dotenv@17.4.2)(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3))(ioredis@5.11.0)(jiti@2.7.0)(lru-cache@11.5.0)(rollup@4.60.4)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+        version: nitro-nightly@3.0.260522-beta(chokidar@5.0.0)(dotenv@17.4.2)(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3))(ioredis@5.11.0)(jiti@2.7.0)(lru-cache@11.5.0)(rollup@4.60.4)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
       pino:
         specifier: 10.3.1
         version: 10.3.1
@@ -3923,8 +3923,8 @@ packages:
     resolution: {integrity: sha512-lwGIi6GTlEYzrtac1Szecns+zrAxjaOoNysfBCKRQOXQE7nMJ8IU2I2S6ek3FHEm1N30dQb5YrTdqV7zNH6n7A==}
     hasBin: true
 
-  drizzle-orm@1.0.0-rc.3:
-    resolution: {integrity: sha512-akZOa5UxapFbdBG8IDkfBRpSZJpMHaOJtGgp7oi1oHaiU8S3KN92waHo2l5aRuv1D9tMGYpv3BQFOsiGcNjLTQ==}
+  drizzle-orm@1.0.0-rc.4-273829f:
+    resolution: {integrity: sha512-Ivv1KCkrSdgku9K3RGAqwlAqg3wLhv1NG40gOS3RROmL5tE/1p2+I7LJDHQiu8gYxQgTC068m7vRnCQCEAV7jw==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -9938,9 +9938,9 @@ snapshots:
 
   dayjs@1.11.20: {}
 
-  db0@0.3.4(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)):
+  db0@0.3.4(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)):
     optionalDependencies:
-      drizzle-orm: 1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)
+      drizzle-orm: 1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)
 
   debug@4.4.3:
     dependencies:
@@ -10003,7 +10003,7 @@ snapshots:
       get-tsconfig: 4.14.0
       jiti: 2.7.0
 
-  drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3):
+  drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3):
     optionalDependencies:
       postgres: 3.4.9
       zod: 4.4.3
@@ -11108,11 +11108,11 @@ snapshots:
 
   nf3@0.3.17: {}
 
-  nitro-nightly@3.0.260522-beta(chokidar@5.0.0)(dotenv@17.4.2)(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3))(ioredis@5.11.0)(jiti@2.7.0)(lru-cache@11.5.0)(rollup@4.60.4)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)):
+  nitro-nightly@3.0.260522-beta(chokidar@5.0.0)(dotenv@17.4.2)(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3))(ioredis@5.11.0)(jiti@2.7.0)(lru-cache@11.5.0)(rollup@4.60.4)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)):
     dependencies:
       consola: 3.4.2
       crossws: 0.4.5(srvx@0.11.16)
-      db0: 0.3.4(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3))
+      db0: 0.3.4(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3))
       env-runner: 0.1.9
       h3: 2.0.1-rc.22(crossws@0.4.5(srvx@0.11.16))
       hookable: 6.1.1
@@ -11123,7 +11123,7 @@ snapshots:
       rolldown: 1.0.2
       srvx: 0.11.16
       unenv: 2.0.0-rc.24
-      unstorage: 2.0.0-alpha.7(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)))(ioredis@5.11.0)(lru-cache@11.5.0)(ofetch@2.0.0-alpha.3)
+      unstorage: 2.0.0-alpha.7(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)))(ioredis@5.11.0)(lru-cache@11.5.0)(ofetch@2.0.0-alpha.3)
     optionalDependencies:
       dotenv: 17.4.2
       jiti: 2.7.0
@@ -12272,10 +12272,10 @@ snapshots:
       picomatch: 4.0.4
       webpack-virtual-modules: 0.6.2
 
-  unstorage@2.0.0-alpha.7(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3)))(ioredis@5.11.0)(lru-cache@11.5.0)(ofetch@2.0.0-alpha.3):
+  unstorage@2.0.0-alpha.7(chokidar@5.0.0)(db0@0.3.4(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)))(ioredis@5.11.0)(lru-cache@11.5.0)(ofetch@2.0.0-alpha.3):
     optionalDependencies:
       chokidar: 5.0.0
-      db0: 0.3.4(drizzle-orm@1.0.0-rc.3(postgres@3.4.9)(zod@4.4.3))
+      db0: 0.3.4(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3))
       ioredis: 5.11.0
       lru-cache: 11.5.0
       ofetch: 2.0.0-alpha.3
