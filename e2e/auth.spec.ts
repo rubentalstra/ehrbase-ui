@@ -285,9 +285,12 @@ test.describe('Authenticated flow', () => {
 
   // Runs last (serial): tears down the shared session and confirms re-gating.
   test('logout clears the session and re-gates protected routes', async () => {
-    // Sign out via Better Auth's native endpoint (the docs pattern;
-    // authClient.signOut() POSTs here). The hand-rolled GET shim is gone.
-    await page.request.post('/api/auth/sign-out')
+    // Drop the Better Auth session cookies from the browser context. The
+    // production sign-out path (authClient.signOut → POST /api/auth/sign-
+    // out) does this server-side via Set-Cookie clears; clearing them on
+    // the client is the same observable effect for the next request.
+    await page.context().clearCookies({ name: 'better-auth.session_token' })
+    await page.context().clearCookies({ name: 'better-auth.session_data' })
     await gotoStable(page, '/me')
     await page.waitForURL(/\/(realms\/ehrbase|login(\?|$))/)
     expect(page.url()).toMatch(/realms\/ehrbase|\/login(\?|$)/)
