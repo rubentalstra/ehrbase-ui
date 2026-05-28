@@ -66,12 +66,12 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [ ] Cold storage tier: S3 Object Lock (WORM) + cross-region replication — §14.6
 - [ ] Retention: configurable per national clinical-records law (default 20 y; e.g. NL WGBO, FR CSP R1112-7, DE §10 BO, AT ÄrzteG) + tagged purge job — §14.7
 - [ ] Scheduled nightly hash-chain integrity job + DPO alerting (extends the M2 verifier) — §14.5
-- [ ] DPIA template populated under `docs/compliance/` — §14.10
-- [ ] DPA template populated — §14.1
-- [ ] RoPA template populated — §14.1
-- [ ] Breach response runbook — §14.9
+- [x] DPIA template populated under `docs/compliance/` — §14.10
+- [x] DPA template populated — §14.1
+- [x] RoPA template populated — §14.1
+- [x] Breach response runbook — §14.9
 - [ ] Patient-facing Art.15 `/me/access-log` data feed (UI scaffold from M3, fed here) — §14.8
-- [ ] Audit-log integrity-check runbook
+- [x] Audit-log integrity-check runbook
 
 ## Milestone 5 — Observability (§13)
 
