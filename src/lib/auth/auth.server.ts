@@ -32,7 +32,7 @@ import { authDb } from '@/db/auth-client.server'
 import * as authSchema from '@/db/schema/auth'
 import { logAudit } from '@/lib/audit/logger.server'
 
-const KeycloakUserInfoSchema = z
+const KeycloakRealmAccessSchema = z
   .object({
     realm_access: z
       .object({ roles: z.array(z.string()).default([]) })
@@ -40,6 +40,31 @@ const KeycloakUserInfoSchema = z
       .optional(),
   })
   .partial()
+
+// Best-effort JWT payload decode. Keycloak's access_token is a signed JWT;
+// the `realm_access.roles` claim lives in its payload (NOT in the OIDC
+// userinfo endpoint — that returns standard profile/email claims only).
+// We don't verify the signature here — Keycloak just minted the token in
+// response to OUR token-exchange call inside Better Auth's OIDC handler,
+// and we only read it to mirror the role list onto the Better Auth user
+// row. The token's authoritative use is by EHRbase, which validates it
+// against the realm's JWKS.
+function decodeJwtPayload(jwt: string): unknown {
+  const parts = jwt.split('.')
+  const payload = parts[1]
+  if (!payload) return undefined
+  try {
+    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4)
+    const json = Buffer.from(
+      padded.replace(/-/g, '+').replace(/_/g, '/'),
+      'base64',
+    ).toString('utf8')
+    const parsed: unknown = JSON.parse(json)
+    return parsed
+  } catch {
+    return undefined
+  }
+}
 
 const SessionUserShapeSchema = z
   .object({
@@ -62,9 +87,24 @@ const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3000'
 async function provisionFromKeycloak(args: {
   user: { id?: string; email?: string | null }
   userInfo?: unknown
+  token?: { accessToken?: string; idToken?: string }
 }): Promise<void> {
-  const parsed = KeycloakUserInfoSchema.safeParse(args.userInfo ?? {})
-  const roles = parsed.success ? (parsed.data.realm_access?.roles ?? []) : []
+  // Try the userInfo payload first (cheapest path; some OIDC providers
+  // attach realm-role claims there via mappers). Fall back to decoding
+  // the access_token, where Keycloak ships `realm_access.roles` by
+  // default; finally try the id_token. Whichever yields a non-empty
+  // array wins.
+  function extractRoles(payload: unknown): string[] {
+    const parsed = KeycloakRealmAccessSchema.safeParse(payload ?? {})
+    return parsed.success ? (parsed.data.realm_access?.roles ?? []) : []
+  }
+  let roles = extractRoles(args.userInfo)
+  if (roles.length === 0 && args.token?.accessToken) {
+    roles = extractRoles(decodeJwtPayload(args.token.accessToken))
+  }
+  if (roles.length === 0 && args.token?.idToken) {
+    roles = extractRoles(decodeJwtPayload(args.token.idToken))
+  }
   // Persist via Drizzle directly — Better Auth's user-update API would also
   // work but we already have the typed table here.
   if (args.user.id) {
@@ -124,8 +164,15 @@ export const auth = betterAuth({
     // plugin block just wires the lifecycle hooks.
     sso({
       provisionUserOnEveryLogin: true,
-      provisionUser: async ({ user, userInfo }) => {
-        await provisionFromKeycloak({ user, userInfo })
+      provisionUser: async ({ user, userInfo, token }) => {
+        await provisionFromKeycloak({
+          user,
+          userInfo,
+          token: {
+            accessToken: token?.accessToken,
+            idToken: token?.idToken,
+          },
+        })
       },
     }),
     // MUST be last per the Better Auth docs.
