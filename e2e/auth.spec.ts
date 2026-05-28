@@ -173,18 +173,27 @@ test.describe('Authenticated flow', () => {
 
   test('Cmd/Ctrl+K opens the command palette', async () => {
     await gotoStable(page, '/me')
-    // Wait for the palette trigger to mount — proves React has hydrated and
-    // the keydown listener in <CommandPalette> is attached. Without this the
-    // press can fire before useEffect runs (gotoStable resolves at navigation
-    // commit, not load).
+
+    // Hydration gate. gotoStable resolves at navigation commit, before the
+    // client React tree has hydrated; the SSR'd trigger is visible immediately
+    // but neither its onClick nor <CommandPalette>'s document keydown listener
+    // is wired up yet. Clicking the trigger is the simplest reliable signal
+    // that hydration has finished (Playwright's click waits for actionability,
+    // and the dialog only opens once the React onClick has fired).
     const trigger = page.getByRole('button', { name: /search and commands/i })
     await expect(trigger).toBeVisible()
+    const dialog = page.getByRole('dialog')
 
-    // Ctrl+K is a browser-reserved shortcut (focus address bar) so
-    // page.keyboard.press can be intercepted by Chromium before reaching the
-    // page's keydown listener. Dispatch the event directly on the document —
-    // this fires only the JS handler in <CommandPalette>, which is what the
-    // test is meant to verify.
+    await trigger.click()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByPlaceholder(/command or search/i)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // Now that hydration is confirmed, verify the keyboard shortcut path.
+    // Ctrl+K is a browser-reserved shortcut (focus address bar), so synthesised
+    // OS keypresses can be intercepted by Chromium before reaching the page's
+    // document keydown listener — dispatch the event directly instead.
     await page.evaluate(() => {
       document.dispatchEvent(
         new KeyboardEvent('keydown', {
@@ -195,9 +204,7 @@ test.describe('Authenticated flow', () => {
         }),
       )
     })
-    const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByPlaceholder(/command or search/i)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
   })
