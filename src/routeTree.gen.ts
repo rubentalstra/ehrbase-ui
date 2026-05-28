@@ -20,7 +20,7 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
-import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me.access-log'
+import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
 
 const AccessibilityRoute = AccessibilityRouteImport.update({
   id: '/accessibility',
@@ -77,15 +77,15 @@ const ApiAuthBreakGlassRoute = ApiAuthBreakGlassRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedMeAccessLogRoute = AuthedMeAccessLogRouteImport.update({
-  id: '/access-log',
-  path: '/access-log',
-  getParentRoute: () => AuthedMeRoute,
+  id: '/me_/access-log',
+  path: '/me/access-log',
+  getParentRoute: () => AuthedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
-  '/me': typeof AuthedMeRouteWithChildren
+  '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
@@ -98,7 +98,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
-  '/me': typeof AuthedMeRouteWithChildren
+  '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
@@ -113,9 +113,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/accessibility': typeof AccessibilityRoute
-  '/_authed/me': typeof AuthedMeRouteWithChildren
+  '/_authed/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
-  '/_authed/me/access-log': typeof AuthedMeAccessLogRoute
+  '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/auth/callback': typeof ApiAuthCallbackRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -157,7 +157,7 @@ export interface FileRouteTypes {
     | '/accessibility'
     | '/_authed/me'
     | '/api/csp-report'
-    | '/_authed/me/access-log'
+    | '/_authed/me_/access-log'
     | '/api/auth/break-glass'
     | '/api/auth/callback'
     | '/api/auth/login'
@@ -258,34 +258,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthBreakGlassRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/me/access-log': {
-      id: '/_authed/me/access-log'
-      path: '/access-log'
+    '/_authed/me_/access-log': {
+      id: '/_authed/me_/access-log'
+      path: '/me/access-log'
       fullPath: '/me/access-log'
       preLoaderRoute: typeof AuthedMeAccessLogRouteImport
-      parentRoute: typeof AuthedMeRoute
+      parentRoute: typeof AuthedRouteRoute
     }
   }
 }
 
-interface AuthedMeRouteChildren {
+interface AuthedRouteRouteChildren {
+  AuthedMeRoute: typeof AuthedMeRoute
   AuthedMeAccessLogRoute: typeof AuthedMeAccessLogRoute
 }
 
-const AuthedMeRouteChildren: AuthedMeRouteChildren = {
-  AuthedMeAccessLogRoute: AuthedMeAccessLogRoute,
-}
-
-const AuthedMeRouteWithChildren = AuthedMeRoute._addFileChildren(
-  AuthedMeRouteChildren,
-)
-
-interface AuthedRouteRouteChildren {
-  AuthedMeRoute: typeof AuthedMeRouteWithChildren
-}
-
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedMeRoute: AuthedMeRouteWithChildren,
+  AuthedMeRoute: AuthedMeRoute,
+  AuthedMeAccessLogRoute: AuthedMeAccessLogRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
