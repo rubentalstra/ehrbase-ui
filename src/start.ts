@@ -9,6 +9,12 @@
 //   2. csrf — the framework's built-in same-origin guard for server functions.
 //      Providing a start instance replaces the default CSRF middleware, so we
 //      re-register it here (§5.8 layer 2).
+//
+// The Paraglide locale middleware lives in src/server.ts (the outermost fetch
+// handler) per the official Paraglide + TanStack Start integration example —
+// it establishes the locale AsyncLocalStorage context before the framework
+// pipeline runs, so getLocale() works in everything below (SSR, loaders,
+// server fns).
 
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start'
 

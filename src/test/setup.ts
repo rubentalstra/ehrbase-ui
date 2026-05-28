@@ -12,8 +12,23 @@ process.env.KEYCLOAK_REDIRECT_URI ??= 'http://localhost:3000/api/auth/callback'
 
 import '@testing-library/jest-dom/vitest'
 import * as matchers from 'vitest-axe/matchers'
-import { expect, afterEach } from 'vitest'
+import { expect, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+
+// jsdom has no matchMedia; next-themes (and other media-query consumers) need
+// it. Default to "no preference" so theme components mount in tests.
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(() => false),
+  })
+}
 
 expect.extend(matchers)
 

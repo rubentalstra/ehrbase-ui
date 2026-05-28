@@ -41,12 +41,23 @@ test.describe('Authenticated flow', () => {
   test.describe.configure({ mode: 'serial' })
 
   let page: Page
+  // Collects any Content-Security-Policy violation surfaced to the console
+  // while exercising the shell. Under the enforcing prod CSP (the built server)
+  // a missing nonce or a blocked inline style would log here — the shell test
+  // asserts this stays empty (proves the §5.7 nonce + style-src posture).
+  const cspErrors: string[] = []
 
   test.beforeAll(async ({ browser }) => {
     // axe-core/playwright requires an explicit browser context (not the
     // implicit one from browser.newPage()).
     const context = await browser.newContext()
     page = await context.newPage()
+    page.on('console', (msg) => {
+      const text = msg.text()
+      if (/content security policy|content-security-policy/i.test(text)) {
+        cspErrors.push(text)
+      }
+    })
     // `_authed` is a pathless layout, so the protected page's URL is /me.
     // The first hit to a server-route chunk under `vite dev` can race the
     // dev-worker module reload and 500; retry until the login redirect to the
@@ -131,6 +142,115 @@ test.describe('Authenticated flow', () => {
     } finally {
       await sql.end()
     }
+  })
+
+  test('the workspace shell renders its landmarks', async () => {
+    await gotoStable(page, '/me')
+    await expect(page.getByRole('banner')).toBeVisible()
+    await expect(page.locator('#main-content')).toBeVisible()
+    await expect(page.getByRole('contentinfo')).toBeVisible()
+    // Sidebar brand + user menu trigger are present.
+    await expect(page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i })).toBeVisible()
+  })
+
+  test('sidebar open/closed state survives a reload (cookie)', async () => {
+    await gotoStable(page, '/me')
+
+    function sidebarStateCookie(cookies: { name: string; value: string }[]) {
+      return cookies.find((c) => c.name === 'sidebar_state')?.value
+    }
+
+    await page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i }).click()
+    // Let the cookie write settle.
+    await page.waitForTimeout(200)
+    const afterToggle = sidebarStateCookie(await page.context().cookies())
+    expect(afterToggle).toBeDefined()
+
+    await gotoStable(page, '/me')
+    const afterReload = sidebarStateCookie(await page.context().cookies())
+    expect(afterReload).toBe(afterToggle)
+  })
+
+  test('Cmd/Ctrl+K opens the command palette', async () => {
+    await gotoStable(page, '/me')
+
+    // Hydration gate. gotoStable resolves at navigation commit, before the
+    // client React tree has hydrated; the SSR'd trigger is visible immediately
+    // but neither its onClick nor <CommandPalette>'s document keydown listener
+    // is wired up yet. Clicking the trigger is the simplest reliable signal
+    // that hydration has finished (Playwright's click waits for actionability,
+    // and the dialog only opens once the React onClick has fired).
+    const trigger = page.getByRole('button', { name: /search and commands/i })
+    await expect(trigger).toBeVisible()
+    const dialog = page.getByRole('dialog')
+
+    await trigger.click()
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByPlaceholder(/command or search/i)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    // Now that hydration is confirmed, verify the keyboard shortcut path.
+    // Ctrl+K is a browser-reserved shortcut (focus address bar), so synthesised
+    // OS keypresses can be intercepted by Chromium before reaching the page's
+    // document keydown listener — dispatch the event directly instead.
+    await page.evaluate(() => {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'k',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    })
+    await expect(dialog).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+  })
+
+  test('theme choice persists across a reload', async () => {
+    await gotoStable(page, '/me')
+    await page.getByRole('button', { name: /toggle theme/i }).click()
+    await page.getByRole('menuitem', { name: /dark/i }).click()
+    await expect(page.locator('html')).toHaveClass(/dark/)
+
+    await gotoStable(page, '/me')
+    await expect(page.locator('html')).toHaveClass(/dark/)
+  })
+
+  test('skip link moves focus to the main content', async () => {
+    await gotoStable(page, '/me')
+    // The previous serial test left focus on a button (Escape returns focus
+    // to the dialog trigger). Body.click doesn't reset focus because <body>
+    // isn't focusable, so the next Tab would advance from that button and
+    // skip past the (DOM-first) skip-link. Blur whatever is focused so Tab
+    // starts from no-focus → first tabbable = skip-link.
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    })
+    await page.keyboard.press('Tab')
+    const skip = page.getByRole('link', { name: /skip to main content/i })
+    await expect(skip).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(page.locator('#main-content')).toBeFocused()
+  })
+
+  test('/me/access-log renders and is axe-clean', async () => {
+    await gotoStable(page, '/me/access-log')
+    await expect(
+      page.getByRole('heading', { level: 1, name: /my access log/i }),
+    ).toBeVisible()
+    const results = await new AxeBuilder({ page })
+      .withTags([...AXE_TAGS])
+      .options({ rules: AXE_RULES })
+      .analyze()
+    expect(results.violations).toEqual([])
+  })
+
+  test('no CSP violations surfaced while using the shell', () => {
+    // Accumulated across the shell tests above under the enforcing prod CSP.
+    expect(cspErrors).toEqual([])
   })
 
   // Runs last (serial): tears down the shared session and confirms re-gating.

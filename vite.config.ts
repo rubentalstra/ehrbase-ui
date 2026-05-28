@@ -28,9 +28,42 @@ export default defineConfig({
         devtools(),
         nitro({ rollupConfig: { external: [/^@sentry\//] } }),
         paraglideVitePlugin({
+          // Configuration follows the official Paraglide TanStack Start
+          // example: https://github.com/opral/paraglide-js/tree/main/examples/tanstack-start
           project: './project.inlang',
           outdir: './src/paraglide',
-          // Strict mode is on by default; missing keys in any registered
+          // Symmetric URL-prefix routing — every locale lives under its own
+          // /{locale}/... path, INCLUDING the base locale. (docs/architecture.md
+          // §11.4.) The first urlPattern handles the bare `/` so a hit to root
+          // redirects into /en (or the resolved preferred locale); the second
+          // handles every other path.
+          //
+          // Adding a locale (e.g. `nl`, `de`, `fr`) — the recipe is:
+          //   1. Add the locale code to project.inlang/settings.json `locales`.
+          //   2. Add messages/<locale>.json with every key from en.json.
+          //   3. Add a row to BOTH urlPattern entries below:
+          //        ['nl', '/nl']               (first pattern)
+          //        ['nl', '/nl/:path(.*)?']    (second pattern)
+          //   4. Mirror the same urlPattern additions in
+          //      scripts/paraglide-compile.mjs (single source of truth — kept
+          //      in sync because the Paraglide CLI cannot pass urlPatterns,
+          //      and CI needs the same runtime as the Vite build).
+          strategy: ['url', 'cookie', 'preferredLanguage', 'baseLocale'],
+          urlPatterns: [
+            {
+              pattern: '/',
+              localized: [['en', '/en']],
+            },
+            {
+              pattern: '/:path(.*)?',
+              localized: [['en', '/en/:path(.*)?']],
+            },
+          ],
+          // API routes (auth, BFF proxy, telemetry sinks) are NOT pages and
+          // must never be locale-redirected. Documented exclusion pattern:
+          //   https://inlang.com/m/gerre34r/library-inlang-paraglideJs/i18n-routing
+          routeStrategies: [{ match: '/api/:path(.*)?', exclude: true }],
+          // Strict mode is on by default — missing keys in any registered
           // locale file fail the build (docs/architecture.md §11.7).
         }),
         tailwindcss(),

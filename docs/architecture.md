@@ -1,7 +1,7 @@
 # Technical Architecture: Open-Source Web UI for EHRbase
 
 > **Repository:** [`rubentalstra/ehrbase-ui`](https://github.com/rubentalstra/ehrbase-ui)
-> **Description:** The missing open-source UI for EHRbase. Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. GDPR & NEN 7513 ready.
+> **Description:** The missing open-source UI for EHRbase. Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. Built for EU clinical deployments — GDPR-compliant, with a comprehensive audit-log schema that satisfies the EU healthcare-audit baseline (ISO 27799) and the national standards we've checked (NEN 7513 in NL among them).
 > **License:** Apache-2.0
 > **Version 3.4** — Full version re-verification pass against npm / official release pages. Every entry in the stack table now has both its tracking line (e.g. `v11.3.x`) and the concrete latest verified version stamped next to it (e.g. `current 11.3.0, May 2026`). Six entries got tightened from vague "latest" or major-only to specific minor lines: pnpm `11.x → v11.3.x`, Tailwind `v4.3 → v4.3.x`, Paraglide `latest → v2.18.x`, @eslint-react/eslint-plugin `latest → v5.8.x`, plus CodeMirror precision (`4.x / 6.x → v4.25.x / v6.10.x`) that hadn't persisted across earlier saves. Two entries got hard security floors after verifying recent CVE history: **Keycloak ≥ 26.6.2** (CVE-2026-37981 PII enumeration fix) and **Valkey ≥ 9.1.0** (three use-after-free CVE fixes). Adds new **§5.12 Supply-chain compromise** documenting CVE-2026-45321 (TanStack May 2026 compromise — 84 packages tampered) and the operational defenses that follow: pin TanStack exactly, keep pnpm 11's `minimumReleaseAge: 1440` default on, maintain a CVE-floor list in `package.json` and Dockerfile, run `pnpm audit signatures` in CI. Adds new **"Version-drift discipline"** prose right under the stack table making explicit that the table is a snapshot — the lockfile is the source of truth, Dependabot keeps drift in check, and re-verification happens by web-fetch only, never by recollection. Builds on 3.3 (Pino 10). Supersedes all prior versions.
 
@@ -24,7 +24,7 @@
 11. [Internationalization (i18n)](#11-internationalization-i18n)
 12. [Accessibility (WCAG 2.2 AA + EAA + EN 301 549)](#12-accessibility-wcag-22-aa--eaa--en-301-549)
 13. [Observability — App Logs, Metrics, Tracing](#13-observability--app-logs-metrics-tracing)
-14. [GDPR, NEN 7513 & Healthcare Audit Logging](#14-gdpr-nen-7513--healthcare-audit-logging)
+14. [GDPR & EU Healthcare Audit Logging](#14-gdpr--eu-healthcare-audit-logging)
 15. [Type-Safe API Client](#15-type-safe-api-client)
 16. [Project Structure](#16-project-structure)
 17. [PNPM, Tooling & Conventions](#17-pnpm-tooling--conventions)
@@ -49,33 +49,33 @@ This document describes the architecture of an open-source web UI for the **EHRb
 
 **Stack at a glance** (every version verified against npm/official release page on May 26, 2026 — see §27 for source links; the version-drift discipline that keeps this table honest is described directly below it).
 
-| Concern | Choice | Version |
-|---|---|---|
-| Runtime | **Node.js** (LTS "Krypton") | **24.x** (current 24.15.0, Apr 2026) |
-| Package manager | **pnpm** (security defaults on by default) | **v11.3.x** (current 11.3.0, May 2026) |
-| Framework | **@tanstack/react-start** (RC) | **1.168.13** (May 25, 2026; post-supply-chain-cleanup — see §5.x) |
-| UI runtime | **React** | **19.2.6** (May 2026) |
-| Server-state cache | **@tanstack/react-query** | **5.100.14** (May 2026) |
-| Routing | **@tanstack/react-router** (bundled with Start) | matched |
-| Components | **shadcn/ui** (copied via CLI, no runtime dep) | latest registry |
-| Styling | **Tailwind CSS** (CSS-first `@theme`) | **v4.3.x** (current 4.3.0, May 2026) |
-| Form library | **react-hook-form** + **@hookform/resolvers** | rhf 7.x, resolvers ≥5.1 |
-| Schema validation | **Zod** | **v4** |
-| i18n | **Paraglide JS** (`@inlang/paraglide-js`, compiler-based, TanStack-recommended) | **v2.18.x** (current 2.18.1, May 2026) |
-| Code editor (AQL) | **@uiw/react-codemirror** + `@codemirror/lang-sql` | **v4.25.x** / **v6.10.x** (current 4.25.10 / 6.10.0) |
-| Backend (proxied) | **EHRbase** (pinned, never `:latest`) | **2.31.x** (current 2.31.0, Apr 28 2026 — Java 25) |
-| Identity | **Keycloak** (OIDC + PKCE) | **≥ 26.6.2** (CVE-2026-37981 fix — see §5.x note) |
-| Session + audit-chain store | **Valkey** (BSD-licensed Redis fork, drop-in) | **≥ 9.1.0** (3 CVE fixes — see §5.x note) |
-| Logging | **pino** (separate transports: app, audit) | **v10.x** (current 10.3.x, May 2026) |
-| Database (EHRbase, Keycloak) | **PostgreSQL** | **18.x** (current 18.4, May 14 2026) |
-| Build / dev | **Vite** (Vite 8 GA but blocked on TanStack Start integration bugs; see §17 "Vite version policy") | **v7.3.x** for v1.0 (current 7.3.3, May 2026) |
-| Linter | **ESLint** (flat config) | **v10.x** (current 10.4.0, May 2026) |
-| TypeScript linting | **typescript-eslint** | **v8.x** (current 8.60.0, May 25 2026) |
-| React linting | **`@eslint-react/eslint-plugin`** (`eslint-plugin-react` is still broken on ESLint 10) | **v5.8.x** (current 5.8.5, May 25 2026) |
-| React Hooks linting | **`eslint-plugin-react-hooks`** (v7 has ESLint 10 support) | **v7.x** (current 7.1.1) |
-| Accessibility linting | **`eslint-plugin-jsx-a11y-x`** (actively-maintained fork) | latest (recent: May 10 2026) |
-| Container | **Docker / docker-compose** | engine **29.x** (current 29.4.3, May 18 2026; containerd is default image store from 29.0) |
-| License | **Apache 2.0** | — |
+| Concern                      | Choice                                                                                             | Version                                                                                    |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Runtime                      | **Node.js** (LTS "Krypton")                                                                        | **24.x** (current 24.15.0, Apr 2026)                                                       |
+| Package manager              | **pnpm** (security defaults on by default)                                                         | **v11.3.x** (current 11.3.0, May 2026)                                                     |
+| Framework                    | **@tanstack/react-start** (RC)                                                                     | **1.168.13** (May 25, 2026; post-supply-chain-cleanup — see §5.x)                          |
+| UI runtime                   | **React**                                                                                          | **19.2.6** (May 2026)                                                                      |
+| Server-state cache           | **@tanstack/react-query**                                                                          | **5.100.14** (May 2026)                                                                    |
+| Routing                      | **@tanstack/react-router** (bundled with Start)                                                    | matched                                                                                    |
+| Components                   | **shadcn/ui** (copied via CLI, no runtime dep)                                                     | latest registry                                                                            |
+| Styling                      | **Tailwind CSS** (CSS-first `@theme`)                                                              | **v4.3.x** (current 4.3.0, May 2026)                                                       |
+| Form library                 | **react-hook-form** + **@hookform/resolvers**                                                      | rhf 7.x, resolvers ≥5.1                                                                    |
+| Schema validation            | **Zod**                                                                                            | **v4**                                                                                     |
+| i18n                         | **Paraglide JS** (`@inlang/paraglide-js`, compiler-based, TanStack-recommended)                    | **v2.18.x** (current 2.18.1, May 2026)                                                     |
+| Code editor (AQL)            | **@uiw/react-codemirror** + `@codemirror/lang-sql`                                                 | **v4.25.x** / **v6.10.x** (current 4.25.10 / 6.10.0)                                       |
+| Backend (proxied)            | **EHRbase** (pinned, never `:latest`)                                                              | **2.31.x** (current 2.31.0, Apr 28 2026 — Java 25)                                         |
+| Identity                     | **Keycloak** (OIDC + PKCE)                                                                         | **≥ 26.6.2** (CVE-2026-37981 fix — see §5.x note)                                          |
+| Session + audit-chain store  | **Valkey** (BSD-licensed Redis fork, drop-in)                                                      | **≥ 9.1.0** (3 CVE fixes — see §5.x note)                                                  |
+| Logging                      | **pino** (separate transports: app, audit)                                                         | **v10.x** (current 10.3.x, May 2026)                                                       |
+| Database (EHRbase, Keycloak) | **PostgreSQL**                                                                                     | **18.x** (current 18.4, May 14 2026)                                                       |
+| Build / dev                  | **Vite** (Vite 8 GA but blocked on TanStack Start integration bugs; see §17 "Vite version policy") | **v7.3.x** for v1.0 (current 7.3.3, May 2026)                                              |
+| Linter                       | **ESLint** (flat config)                                                                           | **v10.x** (current 10.4.0, May 2026)                                                       |
+| TypeScript linting           | **typescript-eslint**                                                                              | **v8.x** (current 8.60.0, May 25 2026)                                                     |
+| React linting                | **`@eslint-react/eslint-plugin`** (`eslint-plugin-react` is still broken on ESLint 10)             | **v5.8.x** (current 5.8.5, May 25 2026)                                                    |
+| React Hooks linting          | **`eslint-plugin-react-hooks`** (v7 has ESLint 10 support)                                         | **v7.x** (current 7.1.1)                                                                   |
+| Accessibility linting        | **`eslint-plugin-jsx-a11y-x`** (actively-maintained fork)                                          | latest (recent: May 10 2026)                                                               |
+| Container                    | **Docker / docker-compose**                                                                        | engine **29.x** (current 29.4.3, May 18 2026; containerd is default image store from 29.0) |
+| License                      | **Apache 2.0**                                                                                     | —                                                                                          |
 
 ### Version-drift discipline (how this table stays honest)
 
@@ -94,7 +94,7 @@ If you're reading this table more than a few months after the date at its head a
 - **Valkey, not Redis.** Redis Ltd. relicensed Redis to SSPL/AGPL in 2024-2025. The Linux Foundation forked the last BSD-licensed Redis (7.2.4) as **Valkey**, now backed by AWS, Google Cloud, Oracle, and used by Pinterest, Snap and X. Bringing AGPL into an Apache-2.0 open-source clinical app would be a procurement blocker for many hospitals. Valkey is wire-compatible — `ioredis` and every other Redis client just works. No code change required.
 - **PostgreSQL 18, not 16.** Postgres 18 (released Sep 2025) ships async I/O for major performance gains. Postgres 16 is supported until Nov 2028, but we're starting fresh, so we start on the latest. EHRbase itself requires Postgres 15+ and recommends 16+; 18 is also supported.
 
-**Deployment context.** Designed for self-hosted clinical environments inside the EU (initial target: Netherlands → GDPR + NEN 7510/7512/7513 + WGBO + EHDS apply). Security and audit logging are *first-class* concerns, not afterthoughts.
+**Deployment context.** Designed for self-hosted clinical environments **across the European Union**. The legal baseline is **GDPR + the European Health Data Space (EHDS) Regulation**, layered with whichever national healthcare-records laws and supervisory-authority rules apply at the deployment site (NL: NEN 7510/7512/7513 + WGBO + AVG; DE: §203 StGB + KHZG + IT-SiG 2.0 + national e-prescription rules; FR: PGSSI-S + Référentiels CNIL santé; and so on). The code makes no NL-specific assumption — retention periods, national patient-identifier formats, supervisory-authority contact details and DPIA boilerplate are all configuration the deployment fills in. Security and audit logging are _first-class_ concerns, not afterthoughts.
 
 **Core design decisions.**
 
@@ -104,12 +104,19 @@ If you're reading this table more than a few months after the date at its head a
 4. **Component ownership** — shadcn/ui components are copied into the repo. Custom code is reserved for openEHR-specific concerns (dynamic forms, composition viewer, AQL editor).
 5. **Audit logging is code-shape, not afterthought** — every PHI-touching server function calls `logAudit()`. The hash chain, pseudonymization, integrity job and persistent store all sit behind that one helper, so server-function code never has to care about how audit gets persisted. Retrofitting audit calls into hundreds of server functions later is how organizations end up in GDPR fine tables; designing the call shape up front avoids that.
 
-**Explicitly NOT in v1.0** (deferred deliberately, not forgotten):
+**Explicitly NOT in v1.0** (deferred deliberately, not forgotten — every item below has a tracking stub in [`docs/v1.x-roadmap.md`](v1.x-roadmap.md)):
 
+- **Scheduling / appointments** (full clinic calendar, room booking, slots, waitlist, recurring appointments). Scheduling is its own product surface — HIX/Epic spend a large share of their UX budget on it. openEHR has no native scheduling model; v1.x scoping will combine ADMIN_ENTRY for the appointment record + PROC for recurring/series logic.
 - **Real-time updates** (WebSocket / SSE for new lab results, new alerts). React Query polling is sufficient at v1.0 scale; real-time is a v2 capability that needs its own DPIA addendum for the persistent-channel risk.
-- **Offline / PWA mode**. Hospital deployments are connected by design. Offline composition entry for home-visit nursing is a separate product configuration.
-- **Server-side PDF generation**. Browser print-to-PDF covers the v1.0 print use cases; server-side PDF adds Chromium attack surface (§6.x).
-- **Federated identity broker config** (UZI-pas, DigiD). The app speaks standard OIDC to Keycloak; configuring the upstream IdP is a hospital deployment concern, not an app-layer one (§5.6).
+- **Embedded DICOM viewer**. v1.0 ships a document viewer (PDF + image) plus a DICOM listing that hands off to the hospital's PACS viewer via external link (ADR-0020). Embedded viewer (Cornerstone.js / OHIF) is v1.x.
+- **AI / LLM clinical decision support.** v1.0 ships deterministic rule-based CDS only (GDL2-aligned, ADR-0021). AI-based CDS triggers separate DPIA + Art. 22 considerations; v1.x.
+- **External Patient Master Index (HL7 v2 ADT) integration.** v1.0 ships the M7 openEHR-spec demographic service as the standalone source-of-truth (ADR-0023). The adapter contract is openEHR-PARTY-shaped, so a v1.x PMI integration plugs in without UI changes.
+- **Real GDL2 execution engine integration.** v1.0's native rule evaluator uses a GDL2-aligned internal format. Real GDL2 engine = v1.x when ecosystem tooling matures.
+- **EHDS cross-border features (MyHealth@EU).** EHDS timeline puts patient-summary / ePrescription / eDispensation exchange at 26 Mar 2029; medical images / lab results / discharge reports at 26 Mar 2031. v1.0 ships the data layer EHDS-compatible (CANONICAL composition export → FHIR Bundle).
+- **Patient portal beyond `/me/access-log`.** Article 15 access log is in v1.0; full patient-facing UI (own record view, messaging with care team, appointment requests, consent management) is v1.x.
+- **Offline / PWA mode.** Hospital deployments are connected by design. Offline composition entry for home-visit nursing is a separate product configuration.
+- **Server-side PDF generation.** Browser print-to-PDF covers the v1.0 print use cases (ADR-0020); server-side PDF adds Chromium attack surface and the PDF/A archive concern (§6.x). v1.x.
+- **Federated identity broker config** (UZI-pas, DigiD, e-PA, etc.). The app speaks standard OIDC to Keycloak; configuring the upstream IdP is a hospital deployment concern, not an app-layer one (§5.6).
 - **Multi-tenant isolation** (one app instance serving multiple hospitals). Each hospital runs its own instance; multi-tenancy is a v2 product question, not an architectural one.
 - **ML-based anomaly detection** for the audit-review dashboard. v1.0 ships explicit heuristic rules; learned-model anomaly detection (§14.13) is post-v1.0.
 - **Native mobile apps**. The web app must be fully usable on tablet at the bedside (§12 target-size compliance enforces this); a native iOS/Android app is out of scope.
@@ -122,21 +129,25 @@ If you're reading this table more than a few months after the date at its head a
 
 **REST API surface** (mounted at `http(s)://<host>/ehrbase/rest/openehr/v1`):
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/ehr` | POST | Create new EHR |
-| `/ehr/{ehr_id}` | GET / PUT | Retrieve / replace EHR |
-| `/ehr/{ehr_id}/composition` | POST | Create composition (`?format=FLAT` recommended for UI) |
-| `/ehr/{ehr_id}/composition/{uid}` | GET / PUT / DELETE | Manage composition versions |
-| `/query/aql` | POST | Execute AQL query |
-| `/definition/template/adl1.4/{id}` | GET | Operational template; with `Accept: application/json` returns the **web template** used for form generation |
-| `/admin/*` | various | Admin API (requires `ADMIN` role) |
+| Endpoint                           | Method             | Purpose                                                                                                     |
+| ---------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `/ehr`                             | POST               | Create new EHR                                                                                              |
+| `/ehr/{ehr_id}`                    | GET / PUT          | Retrieve / replace EHR                                                                                      |
+| `/ehr/{ehr_id}/composition`        | POST               | Create composition (`?format=FLAT` recommended for UI)                                                      |
+| `/ehr/{ehr_id}/composition/{uid}`  | GET / PUT / DELETE | Manage composition versions                                                                                 |
+| `/query/aql`                       | POST               | Execute AQL query                                                                                           |
+| `/definition/template/adl1.4/{id}` | GET                | Operational template; with `Accept: application/json` returns the **web template** used for form generation |
+| `/admin/*`                         | various            | Admin API (requires `ADMIN` role)                                                                           |
 
 **Three composition formats** — the UI uses **FLAT** for data entry (flat key/value, simplest to map to form state), **STRUCTURED** for read-back, **CANONICAL** for export and inter-system exchange.
 
 **Web Template** = JSON describing the form structure derived from an operational template. Tree of nodes; each leaf has an `rmType` (DV_TEXT, DV_QUANTITY, DV_CODED_TEXT, …) and optional `inputs[]` constraints. This is what the dynamic form renderer consumes (see §7).
 
 **No comprehensive open-source UI exists today.** Validated again in this revision. This project is the first such effort with this stack.
+
+**EHR and Demographic information are logically separate** per the openEHR BASE architecture overview: _"One of the basic principles of openEHR is the complete separation of EHR and demographic information, such that an EHR taken in isolation contains little or no clue as to the identity of the patient it belongs to."_ EHRbase implements only the **EHR side** of the openEHR spec — its REST surface (ITS-REST Release 1.0.3) exposes `/ehr/*`, `/query/aql`, `/definition/template/*`, `/admin/*`, with no `/demographic/*` endpoints. Compositions reference subjects via `PARTY_PROXY` / `PARTY_SELF` / `PARTY_IDENTIFIED` (with `external_ref.id.namespace + value`) — these are references into a demographic store, not the demographic data itself. **We build the openEHR-spec demographic side ourselves as a module in this app** (M7; ADR-0023) — own Postgres schema, own REST surface (`/api/demographic/*`), implementing `PERSON` / `PARTY_IDENTITY` / `CONTACT` / `ADDRESS` / `ROLE` / `PARTY_RELATIONSHIP`.
+
+For the clinical-UI surfaces that consume these data models — the patient banner, problem list, vitals, labs, orders, care plan, discharge, referrals, and the rest — the single source of truth is [`docs/CLINICAL-UI.md`](CLINICAL-UI.md). It maps each EPD surface to its openEHR entry class, CKM archetype IDs, operational template, composition format, AQL queries, audit events, CDS rules, and role gating. **Read it before writing any PHI-touching UI code.**
 
 ---
 
@@ -179,19 +190,19 @@ If you're reading this table more than a few months after the date at its head a
 
 **Service inventory (all containers):**
 
-| Service | Image | Notes |
-|---|---|---|
-| `ui` | this project | TanStack Start + BFF, Node 24 |
-| `valkey` | `valkey/valkey:9-alpine` | Sessions + audit hash-chain head (BSD-licensed Redis fork) |
-| `keycloak` | `quay.io/keycloak/keycloak:26.6` | OIDC provider |
-| `ehrbase` | `ehrbase/ehrbase:2.31.x` (pinned, **never `:latest`**) | openEHR server, requires Java 25 in container |
-| `ehrbase-db` | `postgres:18-alpine` | EHRbase's database |
-| `keycloak-db` | `postgres:18-alpine` | Keycloak's database |
-| `loki` | `grafana/loki:3.x` | Log aggregation (optional in dev) |
-| `grafana` | `grafana/grafana:11.x` | Log/metrics viewer (optional in dev) |
-| `otel-collector` | `otel/opentelemetry-collector-contrib:0.x` | Receives OTLP, redacts PHI, fans out to backends |
-| `tempo` | `grafana/tempo:2.x` | Distributed trace storage (OTLP-native) |
-| `prometheus` | `prom/prometheus:3.x` | Metrics storage (receives via OTLP from collector) |
+| Service          | Image                                                  | Notes                                                      |
+| ---------------- | ------------------------------------------------------ | ---------------------------------------------------------- |
+| `ui`             | this project                                           | TanStack Start + BFF, Node 24                              |
+| `valkey`         | `valkey/valkey:9-alpine`                               | Sessions + audit hash-chain head (BSD-licensed Redis fork) |
+| `keycloak`       | `quay.io/keycloak/keycloak:26.6`                       | OIDC provider                                              |
+| `ehrbase`        | `ehrbase/ehrbase:2.31.x` (pinned, **never `:latest`**) | openEHR server, requires Java 25 in container              |
+| `ehrbase-db`     | `postgres:18-alpine`                                   | EHRbase's database                                         |
+| `keycloak-db`    | `postgres:18-alpine`                                   | Keycloak's database                                        |
+| `loki`           | `grafana/loki:3.x`                                     | Log aggregation (optional in dev)                          |
+| `grafana`        | `grafana/grafana:11.x`                                 | Log/metrics viewer (optional in dev)                       |
+| `otel-collector` | `otel/opentelemetry-collector-contrib:0.x`             | Receives OTLP, redacts PHI, fans out to backends           |
+| `tempo`          | `grafana/tempo:2.x`                                    | Distributed trace storage (OTLP-native)                    |
+| `prometheus`     | `prom/prometheus:3.x`                                  | Metrics storage (receives via OTLP from collector)         |
 
 ---
 
@@ -222,10 +233,10 @@ Public routes (`/`, `/login`, error pages) use default SSR. The OIDC callback us
 
 ### Server functions vs. server routes
 
-| Pattern | Use for |
-|---|---|
-| `createServerFn` | Typed RPC called from client components/loaders. Most business logic lives here. **Note:** in current API the validator chain method is `.inputValidator(...)`. |
-| Server route (file in `src/routes/api/...`) | REST-style endpoints. Used for the OAuth callback (must be a real URL), the EHRbase pass-through proxy, and health/readiness probes. |
+| Pattern                                     | Use for                                                                                                                                                         |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createServerFn`                            | Typed RPC called from client components/loaders. Most business logic lives here. **Note:** in current API the validator chain method is `.inputValidator(...)`. |
+| Server route (file in `src/routes/api/...`) | REST-style endpoints. Used for the OAuth callback (must be a real URL), the EHRbase pass-through proxy, and health/readiness probes.                            |
 
 ---
 
@@ -294,8 +305,8 @@ export type SessionData = {
   postLoginRedirect?: string
 }
 
-export const createSessionId = createServerOnlyFn(
-  () => randomBytes(32).toString('hex'),
+export const createSessionId = createServerOnlyFn(() =>
+  randomBytes(32).toString('hex'),
 )
 
 export async function readSession(sid: string): Promise<SessionData | null> {
@@ -304,7 +315,12 @@ export async function readSession(sid: string): Promise<SessionData | null> {
 }
 
 export async function writeSession(sid: string, data: SessionData) {
-  await valkey.set(`sess:${sid}`, JSON.stringify(data), 'EX', SESSION_TTL_SECONDS)
+  await valkey.set(
+    `sess:${sid}`,
+    JSON.stringify(data),
+    'EX',
+    SESSION_TTL_SECONDS,
+  )
 }
 
 export async function destroySession(sid: string) {
@@ -327,7 +343,10 @@ export const Route = createFileRoute('/api/auth/login')({
         const state = generateState()
         const codeVerifier = generateCodeVerifier()
         const url = keycloak.createAuthorizationURL(state, codeVerifier, [
-          'openid', 'profile', 'email', 'offline_access',
+          'openid',
+          'profile',
+          'email',
+          'offline_access',
         ])
 
         const sid = createSessionId()
@@ -386,20 +405,20 @@ export const requireAuth = createServerFn().handler(async () => {
 
 **Role model (v1.0).** Roles come from Keycloak realm claims; the app reads them off the session. Four roles ship in v1.0:
 
-| Role | Can | Cannot |
-|---|---|---|
-| `clinician` | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients | Read PHI for other patients (without break-glass); manage users; review audit log |
-| `admin` | Manage templates, users, roles, configuration | Read PHI (without break-glass) |
-| `audit-reviewer` | Read the audit log; run the NEN 7513 sample-of-60 review dashboard | Read PHI directly |
-| `researcher` | Read pseudonymized PHI; full AQL access against pseudonymized dataset | Read identifying fields (name, BSN, address) |
+| Role             | Can                                                                                                                                              | Cannot                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `clinician`      | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients                                           | Read PHI for other patients (without break-glass); manage users; review audit log |
+| `admin`          | Manage templates, users, roles, configuration                                                                                                    | Read PHI (without break-glass)                                                    |
+| `audit-reviewer` | Read the audit log; run the sample-of-60 review dashboard (the NL national-standard cadence we adopt as the EU-baseline review SLA — see §14.13) | Read PHI directly                                                                 |
+| `researcher`     | Read pseudonymized PHI; full AQL access against pseudonymized dataset                                                                            | Read identifying fields (name, national patient identifier, address)              |
 
 Enforcement happens at one place: a `requireRole(...roles)` middleware that wraps every server function that touches PHI. The `requireAuth` middleware (already in §5.2) is the parent — `requireRole` builds on it. Pure RBAC denials return 403 and emit an audit event of type `AUTHZ_DENIED`.
 
 **Hospital deployments configure their own role mapping.** A Keycloak realm at one hospital might map LDAP groups to these four roles; another might federate via UZI-pas (smartcard) and derive roles from BIG number role codes. The app does not care — it only sees claims at the OIDC layer.
 
-**Break-glass emergency access (GDPR Art. 9(2)(c) "vital interests").** Required by Dutch hospital convention for life-threatening situations where the clinician needs records of a patient outside their normal care relationship.
+**Break-glass emergency access (GDPR Art. 9(2)(c) "vital interests").** A standard EU clinical-operations pattern (IHE BPPC, ISO/TS 22600 "Privilege management and access control") used by every national hospital regime we've checked: a clinician must be able to reach records of a patient outside their normal care relationship in life-threatening situations, with an auditable trail of justification.
 
-The pattern, per IHE BPPC and EHRbase deployments at Dutch academic hospitals:
+The pattern, per IHE BPPC and EHRbase deployments at EU academic hospitals:
 
 1. When a clinician hits an RBAC 403 on a patient-PHI route, the response includes a `break-glass: available` hint instead of just a generic denial.
 2. The UI shows a "Request emergency access" button with a clear warning: "This will grant access, write a special audit entry, and notify the audit-reviewer team within 24h. Use only for genuine clinical emergencies."
@@ -408,7 +427,7 @@ The pattern, per IHE BPPC and EHRbase deployments at Dutch academic hospitals:
 5. Hard ceiling: max **3 emergency-access invocations per session**; the 4th forces logout + re-authentication with a re-typed justification.
 6. The audit-reviewer dashboard (§14) highlights all `EMERGENCY_ACCESS_GRANTED` events and surfaces them for the mandatory **24h human review SLA**.
 
-This is not optional. Dutch hospitals using EHR systems without a documented break-glass pattern have failed NEN 7510 audits. The pattern needs to exist in the code from day one of clinical use, not bolted on later.
+This is not optional. EU clinical deployments without a documented break-glass pattern fail their national IT-security audits — NL deployments have failed NEN 7510 audits on this specific point, and the equivalent finding shows up under ISO 27799 / national audit regimes elsewhere. The pattern needs to exist in the code from day one of clinical use, not bolted on later.
 
 ### 5.7 Security headers
 
@@ -459,16 +478,16 @@ The OAuth callback uses the OAuth `state` parameter as already described in §5.
 
 All rate limits are Valkey-backed sliding windows. Keys are scoped per session ID (authenticated) or per source IP (unauthenticated). Implementation: `rate-limiter-flexible` npm package against the Valkey instance from §5.3.
 
-| Endpoint class | Limit | Action on breach |
-|---|---|---|
-| Login (Keycloak realm config, not app-layer) | 5 failed attempts / 15 min / username | Realm-level lockout, configurable per hospital |
-| AQL query execution | **60 / minute / session** | 429 + 60s cooldown |
-| AQL query complexity (>200 ms server-side time) | **10 / minute / session** | 429 + advice to refine query |
-| Composition write (POST/PUT) | **120 / minute / session** | 429 |
-| Read APIs (patient view, EHR fetch) | **600 / minute / session** | 429 |
-| Audit-log export | **1 / hour / session** | 429 + audit event |
-| Emergency-access invocation | **3 / session, lifetime** | Force logout + re-auth |
-| `/api/csp-report` (anonymous) | **30 / minute / source IP** | drop silently |
+| Endpoint class                                  | Limit                                 | Action on breach                               |
+| ----------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
+| Login (Keycloak realm config, not app-layer)    | 5 failed attempts / 15 min / username | Realm-level lockout, configurable per hospital |
+| AQL query execution                             | **60 / minute / session**             | 429 + 60s cooldown                             |
+| AQL query complexity (>200 ms server-side time) | **10 / minute / session**             | 429 + advice to refine query                   |
+| Composition write (POST/PUT)                    | **120 / minute / session**            | 429                                            |
+| Read APIs (patient view, EHR fetch)             | **600 / minute / session**            | 429                                            |
+| Audit-log export                                | **1 / hour / session**                | 429 + audit event                              |
+| Emergency-access invocation                     | **3 / session, lifetime**             | Force logout + re-auth                         |
+| `/api/csp-report` (anonymous)                   | **30 / minute / source IP**           | drop silently                                  |
 
 The reason AQL queries get a stricter limit than ordinary reads: a malicious or buggy query can exhaust EHRbase. We rate-limit at the BFF rather than relying on EHRbase's own throttling, because Valkey latency is sub-millisecond and protects EHRbase from receiving the load at all.
 
@@ -476,12 +495,12 @@ The reason AQL queries get a stricter limit than ordinary reads: a malicious or 
 
 Per OWASP ASVS 5.0 Level 3 (the tier explicitly named for "healthcare platforms", banking, military, and critical infrastructure):
 
-| Timeout | Value | Rationale |
-|---|---|---|
-| **Idle timeout** | **15 minutes** | Stricter than ASVS L3's 30 min — matches Dutch hospital convention. Clinical workstations are often left unattended; an idle session is the easiest exfiltration vector. |
-| **Absolute (re-auth) timeout** | **12 hours** | Matches OWASP ASVS L3 v5.0.0 §3.3.2. Even an actively-used session forces re-authentication once per shift. |
-| **Token refresh window** | **5 minutes** before access-token expiry | App refreshes silently while the user is active. |
-| **Logout grace period** | **0 seconds** | Server-side session deletion is immediate (§5.3 — we chose Valkey over iron-session specifically for this). |
+| Timeout                        | Value                                    | Rationale                                                                                                                                                                                                                                                    |
+| ------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Idle timeout**               | **15 minutes**                           | Stricter than ASVS L3's 30 min — matches the common EU clinical-workstation convention (ISO 27799 guidance + most national hospital security policies). Clinical workstations are often left unattended; an idle session is the easiest exfiltration vector. |
+| **Absolute (re-auth) timeout** | **12 hours**                             | Matches OWASP ASVS L3 v5.0.0 §3.3.2. Even an actively-used session forces re-authentication once per shift.                                                                                                                                                  |
+| **Token refresh window**       | **5 minutes** before access-token expiry | App refreshes silently while the user is active.                                                                                                                                                                                                             |
+| **Logout grace period**        | **0 seconds**                            | Server-side session deletion is immediate (§5.3 — we chose Valkey over iron-session specifically for this).                                                                                                                                                  |
 
 Both timeouts are configurable per deployment via env vars (`SESSION_IDLE_TIMEOUT_SECONDS`, `SESSION_ABSOLUTE_TIMEOUT_SECONDS`), with the v1.0 defaults above as the floor. Hospital deployments can be stricter; they cannot be more lax.
 
@@ -515,7 +534,11 @@ Two real-world events from the months immediately before this document was writt
 
 ---
 
-## 6. UI Layer — shadcn/ui + React 19
+## 6. UI Layer — shadcn/ui + React 19 (patient-centric clinical workspace)
+
+This is a **patient-centric clinical workspace** modelled on HIX-style hospital EPDs (HIX / Epic / Cerner / OpenMRS), built on the openEHR open standard. **Multi-role from day one** — physician, nurse, admin, audit-reviewer, researcher each get a role-specific home screen (ADR-0017) with the same underlying React tree.
+
+The shape of the workspace, the IA, and the per-surface mapping to openEHR are spelled out in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md). §§6.1–6.17 below describe the engineering side of each surface (which shadcn primitives, which custom code, where the data flows). Read CLINICAL-UI.md first; the sub-sections here assume it.
 
 ### Component ownership
 
@@ -549,17 +572,17 @@ Tailwind v4 is what shadcn/ui currently recommends. Configuration is CSS-first (
 
 ### React 19 features we use
 
-- **`useActionState` / `useFormStatus`** — for *simple* server-action-style forms (login, settings, single-button mutations).
+- **`useActionState` / `useFormStatus`** — for _simple_ server-action-style forms (login, settings, single-button mutations).
 - **`useOptimistic`** — for actions where instant feedback matters (e.g. acknowledging an alert).
 - **`use()`** — to read promises in components when integrating with TanStack Query's `suspense` mode.
 
 ### React 19 vs react-hook-form — when to use which
 
-| Form type | Use |
-|---|---|
-| Simple, mostly server-driven (login, single-field) | React 19 Actions + `useActionState` |
-| Complex, dynamic, lots of fields, conditional logic | **react-hook-form** (which is what shadcn `Form` wraps) |
-| **Dynamic openEHR forms (the heart of this UI)** | **react-hook-form** — required for field arrays, async validation, controlled rendering |
+| Form type                                           | Use                                                                                     |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Simple, mostly server-driven (login, single-field)  | React 19 Actions + `useActionState`                                                     |
+| Complex, dynamic, lots of fields, conditional logic | **react-hook-form** (which is what shadcn `Form` wraps)                                 |
+| **Dynamic openEHR forms (the heart of this UI)**    | **react-hook-form** — required for field arrays, async validation, controlled rendering |
 
 The two are not in conflict; they serve different parts of the app. The openEHR form engine in §7 is built entirely on react-hook-form because that pattern handles cardinality and deep nesting cleanly.
 
@@ -573,7 +596,79 @@ Clinical workflows produce paper. A printable patient summary, a printable compo
 - A clear "Print" button in the page header triggers `window.print()`; users print-to-PDF using the OS dialog if they want a file.
 - Print stylesheets are tested in CI via Playwright `page.emulateMedia({ media: 'print' })` + axe pass — confirming the printed version has no contrast or landmark regressions.
 
-**Why not server-side PDF generation (Puppeteer / PDFKit / etc.)** — it adds a server-side Chromium dependency, a measurable attack surface (every CVE in headless Chrome becomes ours), and most of what server-side PDF generation gives you (consistent rendering, headers/footers, page numbers) `@page` CSS already provides in modern browsers. We can revisit post-v1.0 if a specific use case demands it (e.g., automated discharge summaries on a schedule).
+**Why not server-side PDF generation (Puppeteer / PDFKit / etc.)** — it adds a server-side Chromium dependency, a measurable attack surface (every CVE in headless Chrome becomes ours), and most of what server-side PDF generation gives you (consistent rendering, headers/footers, page numbers) `@page` CSS already provides in modern browsers. We can revisit post-v1.0 if a specific use case demands it (e.g., automated discharge summaries on a schedule). ADR-0020 records this.
+
+### Clinical-UI surface catalogue (§§6.1–6.17)
+
+These sub-sections describe the _engineering_ of each clinical surface — the shadcn primitives + custom code + data-flow. The clinical / functional contract (purpose, role, openEHR archetypes, audit fields, CDS hooks) lives in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md); these §-numbers cross-reference its screen-catalogue entries.
+
+#### 6.1 Workspace IA + patient routing — ADR-0015
+
+Patient-bound surfaces all live under `/{locale}/_authed/patients/$patientId/<surface>`. The `$patientId` segment is the openEHR `ehr_id`. The `patients/$patientId/` layout route fetches the patient header banner once via the M7 demographic service + a summary AQL query and renders the child surface inside it. Shareable URLs + deep-linking preserve through OIDC redirects. Symmetric locale prefix per ADR-0014. Cross-cutting surfaces (`/inbox`, `/aql`, `/me`, `/admin/*`) sit outside the patient layout.
+
+#### 6.2 Role-specific home — ADR-0017
+
+`/_authed/home` resolves to the active role's home screen — physician / nurse / admin / audit-reviewer / researcher. Multi-role users hit `/_authed/role-picker` on first login. The choice is stored as a per-user preference in our app DB and switchable via the user menu. RBAC at the BFF still enforces actual permissions; the home choice only affects defaults.
+
+#### 6.3 Patient header banner (M8) — `CLINICAL-UI.md` §7.1
+
+A layout component (not a per-route fetch) that wraps every `patients/$patientId/*` screen. Reads from the M7 demographic service + EHR `ehr_status` + a single AQL query (`patient_summary_header` in `docs/aql-catalogue.md`). Critical allergies render in red via `Badge variant="destructive"`. Care-relationship check via `requireRole`; on miss, surfaces a `BreakGlassButton` (links to §5.6).
+
+#### 6.4 Global patient search + recently-viewed (M8) — `CLINICAL-UI.md` §§7.2–7.3
+
+Search hits the M7 demographic service (`/api/demographic/party?identifier_namespace=...&identifier_value=...`), then cross-checks an EHR exists in EHRbase for the matched PARTY. shadcn `Command` palette (cmdk) + `DataTable` for results. Recently-viewed is a per-user table in our app Postgres (not openEHR — that's UI state, not clinical data).
+
+#### 6.5 Encounter / visit list (M8) — `CLINICAL-UI.md` §7.4
+
+Reads via AQL over `EHR.compositions[]` joined to `DIRECTORY/FOLDER`. Each encounter is a FOLDER containing the compositions written during it. Virtualised `DataTable` (>50 rows uses `@tanstack/react-virtual`).
+
+#### 6.6 Vitals flowsheet (M9) — `CLINICAL-UI.md` §7.5
+
+Grid of vital-sign × time. Custom `VitalsFlowsheet` component (the "small custom code" carve-out from §6 rule). Recharts `LineChart` (ADR-0018) for trends. AQL queries `vitals_latest_*` + `vitals_trend_*` per archetype. Quick-entry drawer for nurse-led data entry. CDS rule `cds_005_critical_bp` fires at write time (ADR-0021).
+
+#### 6.7 Lab results timeline (M9) — `CLINICAL-UI.md` §7.6
+
+`DataTable` of recent results, abnormal-flag `Badge`, Recharts `LineChart` for trends. LOINC autocomplete via Snowstorm (ADR-0022). CDS rule `cds_003_renal_dose_adjust` cross-references active medications.
+
+#### 6.8 Clinical notes (M10) — `CLINICAL-UI.md` §7.7
+
+Custom `NoteEditor` (TipTap-based rich text + structured-field slots). SOAP layout via openEHR `SECTION`. Saved as `openEHR-EHR-COMPOSITION.encounter.v1` + `EVALUATION.clinical_synopsis.v1`. Autosave drafts encrypted in Valkey (24 h TTL). Signing writes the canonical composition + the dual-layer audit (ADR-0024).
+
+#### 6.9 Problems + medications + allergies + immunisations (M11) — `CLINICAL-UI.md` §§7.8–7.11
+
+Combined view under `/_authed/patients/$patientId/problems`. Each sub-area has its own `DataTable` + `Sheet` for add/edit. Severity `Badge` on allergies. Drug-allergy interaction fires via CDS rule `cds_001_drug_allergy_match` (ADR-0021) on prescribe or allergy-write. SNOMED CT autocomplete via Snowstorm.
+
+#### 6.10 Orders / CPOE (M12) — `CLINICAL-UI.md` §7.12
+
+`OrderSetPicker`, `DataTable` for active orders, per-order `Sheet`. Order sets via openEHR PROC `TASK_PLAN.order_set_id` (ADR-0019 + ADR-0025). CDS alerts surface inline (`Alert` variant by severity); critical alerts block submit until dismissed with documented justification.
+
+#### 6.11 Care plan + tasks (M13) — `CLINICAL-UI.md` §7.13
+
+Tree view of `WORK_PLAN` → `TASK_PLAN` → `PLAN_ITEM`. Checkbox completion writes `ACTION.care_plan` with `workflow_id` linking back to the PLAN_ITEM. Nurse home dashboard reads "active tasks for my ward" via AQL `care_plan_active_tasks`.
+
+#### 6.12 AQL editor + result tables (M14) — `CLINICAL-UI.md` §7.14
+
+CodeMirror 6 + custom AQL language grammar. Stored-query catalogue (`docs/aql-catalogue.md`) for power users to save + share. `DataTable` virtualised for large result sets. Audit logs the named query (or hash of ad-hoc query body), never the body in clear.
+
+#### 6.13 Admin UI — users / roles / audit / CDS (M15) — `CLINICAL-UI.md` §§7.15–7.17
+
+Admin user management proxies to Keycloak admin API via the BFF. Audit-review dashboard implements the sample-of-60 NEN-7513 quarterly review (§14.13). CDS rule authoring is a form-based UI (not raw GDL2 editing) over the GDL2-aligned internal format (ADR-0021).
+
+#### 6.14 Discharge + referrals + document viewer (M16) — `CLINICAL-UI.md` §§7.18–7.20
+
+Discharge-summary editor assembles from existing data (problems / meds / recent results) into `openEHR-EHR-COMPOSITION.discharge_summary.v1`. Referrals via `openEHR-EHR-COMPOSITION.referral.v0`. Document viewer = PDF.js for PDF + standard `<img>` for image attachments. DICOM studies list with external-PACS-viewer launch link (per ADR-0020). Print via Tailwind `print:` variants.
+
+#### 6.15 Inbox / messaging (M17) — `CLINICAL-UI.md` §7.21
+
+Non-openEHR internal Postgres tables (messages are workflow, not clinical data). `DataTable` for thread list, `Sheet` per thread. CDS-driven alerts (e.g. new critical lab result) drop into this same inbox.
+
+#### 6.16 Article 15 access log (M3 / M4) — `CLINICAL-UI.md` §7.22
+
+Patient-facing view at `/_authed/me/access-log`. Reads from the audit DB (not EHRbase). PDF download via browser print. The scaffold landed in M3; M4 wires the audit feed. Forms the v1.0 patient-facing minimum; full patient portal is v1.x.
+
+#### 6.17 Print / PDF (M16 + cross-cutting) — ADR-0020
+
+Tailwind `print:` variants on every printable surface. `page-break-before` / `page-break-inside: avoid` placed deliberately. Print-only header with `{patient name | DOB | MRN | document title | print date}`. Server-side PDF deferred to v1.x.
 
 ---
 
@@ -601,17 +696,17 @@ Web Template JSON  ──► Zod schema generator  ──► react-hook-form
 
 ### `rmType` → shadcn component mapping
 
-| openEHR type | shadcn component | Notes |
-|---|---|---|
-| `DV_TEXT` | `Input` / `Textarea` | textarea if `maxLength > 80` |
-| `DV_CODED_TEXT` | `Select` (≤7 options) / `Combobox` | terminology binding metadata stored in form state |
-| `DV_QUANTITY` | `Input type=number` + `Select` for units | composite control |
-| `DV_COUNT` | `Input type=number` | integer step |
-| `DV_BOOLEAN` | `Switch` | label inline |
-| `DV_DATE_TIME` / `DV_DATE` | shadcn `DatePicker` | + time `Input` for full datetime |
-| `DV_ORDINAL` | `RadioGroup` | each option = ordinal symbol + value |
-| `DV_PROPORTION` | two `Input`s + slash | composite |
-| `DV_MULTIMEDIA` | custom file uploader | wraps shadcn `Input type=file` |
+| openEHR type               | shadcn component                         | Notes                                             |
+| -------------------------- | ---------------------------------------- | ------------------------------------------------- |
+| `DV_TEXT`                  | `Input` / `Textarea`                     | textarea if `maxLength > 80`                      |
+| `DV_CODED_TEXT`            | `Select` (≤7 options) / `Combobox`       | terminology binding metadata stored in form state |
+| `DV_QUANTITY`              | `Input type=number` + `Select` for units | composite control                                 |
+| `DV_COUNT`                 | `Input type=number`                      | integer step                                      |
+| `DV_BOOLEAN`               | `Switch`                                 | label inline                                      |
+| `DV_DATE_TIME` / `DV_DATE` | shadcn `DatePicker`                      | + time `Input` for full datetime                  |
+| `DV_ORDINAL`               | `RadioGroup`                             | each option = ordinal symbol + value              |
+| `DV_PROPORTION`            | two `Input`s + slash                     | composite                                         |
+| `DV_MULTIMEDIA`            | custom file uploader                     | wraps shadcn `Input type=file`                    |
 
 ### Cardinality (repeating elements)
 
@@ -705,14 +800,14 @@ AQL queries can contain PHI in `WHERE` clauses. The full query text is logged (�
 
 We deliberately ship **no general-purpose state library**. The stack already has the right tool for each job; adding one more is a dependency a hospital security team will ask about, for no gain.
 
-| Kind of state | Where it lives | Why |
-|---|---|---|
-| Server data (EHRs, compositions, query results, templates) | **TanStack Query** | What it's built for: caching, refetch, invalidation, retries |
-| URL-driven UI state (active patient, current AQL, pagination, filters) | **TanStack Router search params** | Shareable URLs, browser back/forward, deep-linking; validated with Zod |
-| Form state | **react-hook-form** (via shadcn `Form`) | Performance, field arrays, async validation |
-| **Theme** (light/dark/system) | Small `ThemeProvider` writing to `localStorage` + a class on `<html>` | shadcn's official pattern; no library |
-| **Sidebar collapsed/expanded** | Cookie read on the server during SSR | shadcn `Sidebar` component documents this; avoids flash-of-wrong-layout |
-| Component-local UI (open/closed, hover, input value) | `useState` | Right scope, no over-engineering |
+| Kind of state                                                          | Where it lives                                                        | Why                                                                     |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Server data (EHRs, compositions, query results, templates)             | **TanStack Query**                                                    | What it's built for: caching, refetch, invalidation, retries            |
+| URL-driven UI state (active patient, current AQL, pagination, filters) | **TanStack Router search params**                                     | Shareable URLs, browser back/forward, deep-linking; validated with Zod  |
+| Form state                                                             | **react-hook-form** (via shadcn `Form`)                               | Performance, field arrays, async validation                             |
+| **Theme** (light/dark/system)                                          | Small `ThemeProvider` writing to `localStorage` + a class on `<html>` | shadcn's official pattern; no library                                   |
+| **Sidebar collapsed/expanded**                                         | Cookie read on the server during SSR                                  | shadcn `Sidebar` component documents this; avoids flash-of-wrong-layout |
+| Component-local UI (open/closed, hover, input value)                   | `useState`                                                            | Right scope, no over-engineering                                        |
 
 ### Theme provider — the shadcn pattern
 
@@ -835,7 +930,7 @@ Clinical software has specific error rules. **PHI must never leak through error 
 
 ## 11. Internationalization (i18n)
 
-**v1 ships English-only**, but the i18n architecture is in place from day one so adding Dutch (and other languages) later is mechanical, not architectural.
+**v1 ships English-only**, but the i18n architecture is in place from day one so adding any further EU language (Dutch, German, French, Spanish, Italian, Polish, …) later is mechanical, not architectural. The URL scheme is **symmetric** — every locale gets its own `/{locale}/...` prefix, including English — so no locale is privileged and switching deployments to a different primary language is configuration, not a redesign.
 
 ### 11.1 Library — Paraglide JS
 
@@ -843,7 +938,7 @@ We use **Paraglide JS** (`@inlang/paraglide-js`, MIT-licensed). This is the i18n
 
 Three reasons it's a good fit for a clinical app, not just for TanStack alignment:
 
-1. **Compile-time tree-shaking → smaller bundles.** Paraglide is a *compiler*, not a runtime. The CLI reads message files (JSON) and emits typed message functions; your bundler then tree-shakes any message not actually imported. The team reports up to **70% smaller i18n bundle size** vs runtime libraries like `react-i18next` or `react-intl` (47 KB vs 205 KB in their benchmark). For a clinical workstation app where every kilobyte over WAN matters, this is real.
+1. **Compile-time tree-shaking → smaller bundles.** Paraglide is a _compiler_, not a runtime. The CLI reads message files (JSON) and emits typed message functions; your bundler then tree-shakes any message not actually imported. The team reports up to **70% smaller i18n bundle size** vs runtime libraries like `react-i18next` or `react-intl` (47 KB vs 205 KB in their benchmark). For a clinical workstation app where every kilobyte over WAN matters, this is real.
 2. **Fully type-safe.** Calling `m.patient_record_saved()` is a typed function call — a typo becomes a TypeScript compile error, parameters are checked at compile time, and IDE autocomplete works out of the box. Compared to `t('patient.record.saved')` where typos surface as missing translations at runtime, this is qualitatively better for a domain where missing labels can confuse a clinician under time pressure.
 3. **Production-grade adopters.** Used in production by Disney, Bose, Kraft Heinz, ETH Zurich, Brave, Michelin — meaning the corner cases of plurals, RTL, formatting, and large message catalogues are battle-tested, not theoretical.
 
@@ -892,11 +987,12 @@ export default {
 
 ### 11.4 Routing strategy — URL prefixes via TanStack Router rewrite
 
-We use URL-prefixed locales (`/en/patients`, `/nl/patients`) rather than cookie-only routing. Reasons:
+We use **symmetric URL-prefixed locales** (`/en/patients`, `/nl/patients`, `/de/patients`, …) rather than cookie-only routing or asymmetric "base locale unprefixed" setups. Reasons:
 
-- Shareable URLs preserve the locale (a Dutch clinician sharing a link to a colleague keeps Dutch)
+- Shareable URLs preserve the locale (a clinician sharing a link to a colleague keeps the original locale)
+- Every locale is equal-class — no "default-special" semantics that would make later promoting another language to primary a breaking URL change
 - Search-engine indexing per locale works correctly (relevant for our public marketing routes only — clinical routes are behind auth)
-- Audit logs and access-log URLs (`/me/access-log`) carry locale context naturally
+- Audit logs and access-log URLs (`/{locale}/me/access-log`) carry locale context naturally
 
 The integration uses TanStack Router's `rewrite` option with Paraglide's `localizeUrl`/`deLocalizeUrl` helpers:
 
@@ -909,8 +1005,8 @@ import { deLocalizeUrl, localizeUrl } from './paraglide/runtime'
 export const router = createRouter({
   routeTree,
   rewrite: {
-    input: ({ url }) => deLocalizeUrl(url),   // strip /nl prefix before route matching
-    output: ({ url }) => localizeUrl(url),    // add /nl prefix when generating Links
+    input: ({ url }) => deLocalizeUrl(url), // strip /{locale} prefix before route matching
+    output: ({ url }) => localizeUrl(url), // add /{locale} prefix when generating Links
   },
 })
 ```
@@ -928,25 +1024,34 @@ Route definitions use TanStack's optional path parameter syntax (`/{-$locale}/pa
     "patients_in_view": "{count, plural, one {# patient} other {# patients}}"
   }
   ```
-- **Pluralization** uses the built-in `plural` formatter (`Intl.PluralRules` under the hood) — handles English/Dutch correctly and also locales with more complex rules (Russian, Arabic, Polish) without extra config.
+- **Pluralization** uses the built-in `plural` formatter (`Intl.PluralRules` under the hood) — handles the simple Germanic / Romance plural cases (English, Dutch, German, French, Spanish, Italian) and locales with more complex plural rules (Polish, Russian, Arabic) without extra config.
 - **Number/date formatting** uses the built-in `number` and `datetime` formatters (`Intl.NumberFormat`, `Intl.DateTimeFormat`) keyed off the active locale. We do not roll our own.
 - **Namespacing by feature** is by message-key convention (e.g., `auth_login_button`, `patients_list_title`, `aql_query_run`) — Paraglide doesn't have separate namespace files, but the key prefix gives the same organization with one less indirection.
 - **VS Code integration** via the inlang **Sherlock** extension shows inline translation previews and flags missing keys at edit time.
 
-### 11.6 What's needed to add Dutch later
+### 11.6 What's needed to add a new locale
 
-1. Add `messages/nl.json` with translations of every key in `messages/en.json`.
-2. Add `"nl"` to the locale list in `project.inlang/settings.json`.
-3. Run `pnpm dev` — the Paraglide compiler regenerates typed message functions; missing keys are TypeScript errors, surfaced immediately.
-4. Add a language switcher (already a placeholder in the user menu) — it calls `setLocale('nl')` which writes a cookie and navigates to the localized URL.
+The recipe is identical for any EU language — Dutch, German, French, Spanish, Italian, Polish, Portuguese, and so on:
 
-No code changes outside translation files and the locale list. The CI lint gate (next section) ensures we can't ship a release with missing translations.
+1. Add `messages/<locale>.json` with translations of every key in `messages/en.json` (e.g. `messages/nl.json`, `messages/de.json`).
+2. Add the locale code to the `locales` array in `project.inlang/settings.json` (e.g. `"locales": ["en", "nl"]`).
+3. Add the locale's two URL patterns to the `urlPatterns` declarations in **both** `vite.config.ts` and `scripts/paraglide-compile.mjs` — these must stay in lockstep (Paraglide's CLI cannot pass urlPatterns, so the standalone compile uses the official programmatic SDK; both files have the patterns inline per the Paraglide docs). The two-line addition per locale:
+
+   ```ts
+   { pattern: '/',              localized: [['en', '/en'],              ['nl', '/nl']] },
+   { pattern: '/:path(.*)?',    localized: [['en', '/en/:path(.*)?'],   ['nl', '/nl/:path(.*)?']] },
+   ```
+
+4. Run `pnpm paraglide:compile` (or `pnpm dev`) — the Paraglide compiler regenerates typed message functions; missing keys are TypeScript errors, surfaced immediately.
+5. Add the locale to the language switcher in the user menu — it calls `setLocale('<locale>')` which writes a cookie and navigates to the localized URL.
+
+No code changes outside translation files and these three config locations. The CI lint gate (next section) ensures we can't ship a release with missing translations.
 
 ### 11.7 CI safety net
 
 A CI step runs `pnpm paraglide-js compile --strict` which fails the build if:
 
-- A message key exists in `en.json` but is missing from any registered locale (catches incomplete Dutch translations before merge).
+- A message key exists in `en.json` but is missing from any registered locale (catches incomplete translations of any added locale before merge).
 - A `m.<key>()` call in source references a key that doesn't exist in any locale file (this is also a TypeScript error, but the explicit CLI check catches generated code paths the type checker might miss).
 
 There's no `eslint-plugin-i18next` equivalent for Paraglide because the TypeScript compiler catches the same class of errors at a stronger guarantee — calling a non-existent message is a type error, not a runtime missing-key warning.
@@ -984,14 +1089,14 @@ The microenterprise exemption (under 10 employees AND under €2M turnover) **do
 
 ### 12.1a What WCAG 2.2 adds on top of 2.1 — items relevant to us
 
-| SC | Level | What it requires | How we satisfy it |
-|---|---|---|---|
-| **2.4.11 Focus Not Obscured (Minimum)** | AA | When a UI element receives keyboard focus, it must not be entirely hidden by author-created content (sticky headers, dialogs, etc.). | Sticky header/footer use `scroll-margin-top` so focused inputs scroll into view. Verified at runtime by axe. |
-| **2.5.7 Dragging Movements** | AA | Any function operated by dragging must have a single-pointer alternative (click/tap). | The dashboard reordering UI exposes "Move up / Move down" buttons next to every draggable card. |
-| **2.5.8 Target Size (Minimum)** | AA | Pointer targets at least 24×24 CSS pixels (with exceptions). | Our base button is 36px; small/icon variants ≥ 24px enforced via Tailwind token. axe `target-size` rule **explicitly enabled** (it's opt-in in axe-core). |
-| **3.2.6 Consistent Help** | A | Help mechanisms (contact, chat, FAQ) appear in the same relative order on every page. | A single `<SiteFooter>` component renders the help links in the same order on every authed route. |
-| **3.3.7 Redundant Entry** | A | Information previously entered by the user (in the same session, same process) must be auto-populated or available to select — except where re-entry is essential for security. | Multi-step composition forms persist prior-step values in URL state + react-hook-form context; the patient-ID and encounter-ID are auto-filled across related forms in the same workflow. |
-| **3.3.8 Accessible Authentication (Minimum)** | AA | No cognitive function test (memorizing puzzles, transcribing, performing calculations) required to log in. Password managers, copy-paste, and biometrics must work. | Keycloak login form: passwords paste-enabled (no `paste="off"`), no CAPTCHA puzzles, WebAuthn / passkeys supported. |
+| SC                                            | Level | What it requires                                                                                                                                                                | How we satisfy it                                                                                                                                                                         |
+| --------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **2.4.11 Focus Not Obscured (Minimum)**       | AA    | When a UI element receives keyboard focus, it must not be entirely hidden by author-created content (sticky headers, dialogs, etc.).                                            | Sticky header/footer use `scroll-margin-top` so focused inputs scroll into view. Verified at runtime by axe.                                                                              |
+| **2.5.7 Dragging Movements**                  | AA    | Any function operated by dragging must have a single-pointer alternative (click/tap).                                                                                           | The dashboard reordering UI exposes "Move up / Move down" buttons next to every draggable card.                                                                                           |
+| **2.5.8 Target Size (Minimum)**               | AA    | Pointer targets at least 24×24 CSS pixels (with exceptions).                                                                                                                    | Our base button is 36px; small/icon variants ≥ 24px enforced via Tailwind token. axe `target-size` rule **explicitly enabled** (it's opt-in in axe-core).                                 |
+| **3.2.6 Consistent Help**                     | A     | Help mechanisms (contact, chat, FAQ) appear in the same relative order on every page.                                                                                           | A single `<SiteFooter>` component renders the help links in the same order on every authed route.                                                                                         |
+| **3.3.7 Redundant Entry**                     | A     | Information previously entered by the user (in the same session, same process) must be auto-populated or available to select — except where re-entry is essential for security. | Multi-step composition forms persist prior-step values in URL state + react-hook-form context; the patient-ID and encounter-ID are auto-filled across related forms in the same workflow. |
+| **3.3.8 Accessible Authentication (Minimum)** | AA    | No cognitive function test (memorizing puzzles, transcribing, performing calculations) required to log in. Password managers, copy-paste, and biometrics must work.             | Keycloak login form: passwords paste-enabled (no `paste="off"`), no CAPTCHA puzzles, WebAuthn / passkeys supported.                                                                       |
 
 (WCAG 2.2's other new criteria — 2.4.12, 2.4.13, 3.3.9 — are at Level AAA and are aspirational, not required.)
 
@@ -999,11 +1104,11 @@ The microenterprise exemption (under 10 employees AND under €2M turnover) **do
 
 No single tool catches everything. Industry consensus: automated tools catch ~30–40% of accessibility issues; the rest needs manual testing with assistive technology. We do all three layers:
 
-| Layer | When it runs | What it catches |
-|---|---|---|
-| **ESLint (`eslint-plugin-jsx-a11y-x`)** | Every save / every commit | Static issues in JSX: missing `alt`, invalid ARIA, `onClick` on `<div>`, etc. ~30 rule families. |
-| **`axe-core` via Vitest + Playwright** | Every PR / CI | Rendered-DOM issues: color contrast, focus order, landmark roles, ARIA relationships in the live page. |
-| **Manual assistive-technology pass** | Before release tagging | The 60% automation misses: actual screen reader experience, keyboard journeys, cognitive load. |
+| Layer                                   | When it runs              | What it catches                                                                                        |
+| --------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **ESLint (`eslint-plugin-jsx-a11y-x`)** | Every save / every commit | Static issues in JSX: missing `alt`, invalid ARIA, `onClick` on `<div>`, etc. ~30 rule families.       |
+| **`axe-core` via Vitest + Playwright**  | Every PR / CI             | Rendered-DOM issues: color contrast, focus order, landmark roles, ARIA relationships in the live page. |
+| **Manual assistive-technology pass**    | Before release tagging    | The 60% automation misses: actual screen reader experience, keyboard journeys, cognitive load.         |
 
 ### 12.3 ESLint plugin
 
@@ -1100,14 +1205,14 @@ export default defineConfig([
 
 #### Why this package selection (ESLint 10 ecosystem reality, May 2026)
 
-| Concern | What we use | Why not the obvious default |
-|---|---|---|
-| **ESLint core** | `eslint@^10` | ESLint v9 hits EOL on **2026-08-06** — staying on v9 means an unsupported linter in ~10 weeks. v10 is current (v10.4.0 as of May 15, 2026). |
-| **TypeScript support** | `typescript-eslint@^8` | Officially supports `eslint ^8.57 \|\| ^9 \|\| ^10`. The `recommendedTypeChecked` preset + the stable `projectService` parser option is what v8 standardizes on. |
-| **JSX accessibility** | `eslint-plugin-jsx-a11y-x` (fork) | The canonical `eslint-plugin-jsx-a11y` was last published Oct 2024 and has not been updated for ESLint v10. The `-x` fork is actively maintained, supports ESLint v9 and v10 in its `peerDependencies`, and is otherwise rule-compatible. |
-| **React rules** | `@eslint-react/eslint-plugin@^2.13` | `eslint-plugin-react@7.37.5` is **broken on ESLint v10** — it calls the removed `context.getFilename()` API and throws `TypeError: contextOrFilename.getFilename is not a function` on first lint. PR #3979 (the fix) has been blocked since February 2026. `@eslint-react` is a modern rewrite of the same rule set, supports ESLint 8/9/10, and is being adopted as a drop-in by other major projects (e.g., FluidFramework switched in early 2026). |
-| **React Hooks** | `eslint-plugin-react-hooks@^7` | The 7.x line **added native ESLint v10 support** (Facebook PR #35720). Earlier majors had a too-strict `peerDependencies` range that blocks v10 installation. |
-| **Ignore files** | `includeIgnoreFile()` from `eslint/config` | New in ESLint **v10.4.0** — no longer need `@eslint/compat` for this. |
+| Concern                | What we use                                | Why not the obvious default                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ESLint core**        | `eslint@^10`                               | ESLint v9 hits EOL on **2026-08-06** — staying on v9 means an unsupported linter in ~10 weeks. v10 is current (v10.4.0 as of May 15, 2026).                                                                                                                                                                                                                                                                                                            |
+| **TypeScript support** | `typescript-eslint@^8`                     | Officially supports `eslint ^8.57 \|\| ^9 \|\| ^10`. The `recommendedTypeChecked` preset + the stable `projectService` parser option is what v8 standardizes on.                                                                                                                                                                                                                                                                                       |
+| **JSX accessibility**  | `eslint-plugin-jsx-a11y-x` (fork)          | The canonical `eslint-plugin-jsx-a11y` was last published Oct 2024 and has not been updated for ESLint v10. The `-x` fork is actively maintained, supports ESLint v9 and v10 in its `peerDependencies`, and is otherwise rule-compatible.                                                                                                                                                                                                              |
+| **React rules**        | `@eslint-react/eslint-plugin@^2.13`        | `eslint-plugin-react@7.37.5` is **broken on ESLint v10** — it calls the removed `context.getFilename()` API and throws `TypeError: contextOrFilename.getFilename is not a function` on first lint. PR #3979 (the fix) has been blocked since February 2026. `@eslint-react` is a modern rewrite of the same rule set, supports ESLint 8/9/10, and is being adopted as a drop-in by other major projects (e.g., FluidFramework switched in early 2026). |
+| **React Hooks**        | `eslint-plugin-react-hooks@^7`             | The 7.x line **added native ESLint v10 support** (Facebook PR #35720). Earlier majors had a too-strict `peerDependencies` range that blocks v10 installation.                                                                                                                                                                                                                                                                                          |
+| **Ignore files**       | `includeIgnoreFile()` from `eslint/config` | New in ESLint **v10.4.0** — no longer need `@eslint/compat` for this.                                                                                                                                                                                                                                                                                                                                                                                  |
 
 We re-evaluate every six months: if canonical `eslint-plugin-jsx-a11y` ships a v10-compatible release, or if `eslint-plugin-react` PR #3979 lands, we may switch back to the canonical packages.
 
@@ -1175,7 +1280,14 @@ test('Patient detail page meets WCAG 2.2 AA + EN 301 549', async ({ page }) => {
   await page.waitForLoadState('networkidle')
 
   const results = await new AxeBuilder({ page })
-    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'EN-301-549'])
+    .withTags([
+      'wcag2a',
+      'wcag2aa',
+      'wcag21a',
+      'wcag21aa',
+      'wcag22aa',
+      'EN-301-549',
+    ])
     .options({
       rules: { 'target-size': { enabled: true } },
     })
@@ -1230,17 +1342,17 @@ EN 301 549 and EAA both require a public accessibility statement. We ship `/acce
 
 ## 13. Observability — App Logs, Metrics, Tracing
 
-*(Section describes v1.0 target architecture.)*
+_(Section describes v1.0 target architecture.)_
 
 ### 13.1 Logs (v1.0)
 
 Three streams, kept separate:
 
-| Stream | What |
-|---|---|
-| **Audit log** | NEN 7513 events (§14) |
+| Stream              | What                                                     |
+| ------------------- | -------------------------------------------------------- |
+| **Audit log**       | NEN 7513 events (§14)                                    |
 | **Application log** | Debug/info/warn/error from app code (sanitized — no PHI) |
-| **Access log** | HTTP layer (status, latency, route) |
+| **Access log**      | HTTP layer (status, latency, route)                      |
 
 All emit JSON via **Pino v10.x** to stdout (Docker logging driver) and to a separate file mount. Promtail (or Fluent Bit) ships to Loki.
 
@@ -1284,7 +1396,10 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto'
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
 import { Resource } from '@opentelemetry/resources'
-import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions'
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions'
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-node'
 
 const sdk = new NodeSDK({
@@ -1310,7 +1425,9 @@ const sdk = new NodeSDK({
         requestHook: (span, request) => {
           const url = ('url' in request ? request.url : '') as string
           const path = url.split('?')[0].replace(/[0-9a-f-]{36}/gi, ':id')
-          span.updateName(`HTTP ${('method' in request && request.method) || 'GET'} ${path}`)
+          span.updateName(
+            `HTTP ${('method' in request && request.method) || 'GET'} ${path}`,
+          )
         },
         ignoreIncomingRequestHook: (req) => req.url === '/api/health',
       },
@@ -1327,12 +1444,12 @@ The SDK generates W3C `traceparent` headers and propagates them on outbound `fet
 
 **Layered PHI redaction:**
 
-| Layer | What it does |
-|---|---|
-| SDK `requestHook` | Strips query strings; replaces UUIDs in span paths with `:id` |
-| Custom span-attribute filter | Block-list (`http.url.query`, `db.statement`, custom `request.body`) |
-| Collector `attributes` processor | Drops attrs matching `password\|secret\|token\|email\|nhi\|bsn` |
-| Collector `transform` processor | Catch-all UUID → `:id` in span names |
+| Layer                            | What it does                                                                                                                            |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| SDK `requestHook`                | Strips query strings; replaces UUIDs in span paths with `:id`                                                                           |
+| Custom span-attribute filter     | Block-list (`http.url.query`, `db.statement`, custom `request.body`)                                                                    |
+| Collector `attributes` processor | Drops attrs matching `password\|secret\|token\|email` and known national-patient-ID synonyms (`bsn`, `niss`, `nir`, `kvnr`, `pesel`, …) |
+| Collector `transform` processor  | Catch-all UUID → `:id` in span names                                                                                                    |
 
 **Sampling:** head-sample 10% at SDK; tail-sample 100% at collector for errors, slow requests (>p99), `/me/access-log`, admin routes.
 
@@ -1347,23 +1464,22 @@ Metrics flow via the same OTel SDK → Collector → Prometheus (which now nativ
 
 ---
 
-## 14. GDPR, NEN 7513 & Healthcare Audit Logging
+## 14. GDPR & EU Healthcare Audit Logging
 
-> **This section is mandatory reading.** The deployment context (Groningen, Netherlands → EU) means GDPR applies in full and Dutch healthcare law (Wabvpz + NEN 7510/7512/7513) is legally binding. Non-compliance penalties: up to **€20M or 4% of global turnover** under GDPR Art. 83. The Portuguese DPA fined Hospital do Barreiro €400,000 in 2018 specifically for inadequate access controls and missing audit trails — that is exactly the kind of fine this section exists to prevent.
+> **This section is mandatory reading.** Every EU clinical deployment must satisfy **GDPR** in full and the national healthcare-records law at the deployment site. Non-compliance penalties under GDPR Art. 83 reach **€20M or 4 % of global turnover**. The Portuguese DPA fined Hospital do Barreiro €400 000 in 2018 specifically for inadequate access controls and missing audit trails — exactly the kind of failure this section exists to prevent. National laws (e.g. NL: Wabvpz + NEN 7510/7512/7513 + WGBO; DE: §203 StGB + Bundesärzteordnung; FR: PGSSI-S + Code de la santé publique L1110-4) add their own requirements on top — the architecture treats those as configuration over a common EU baseline, not as the baseline itself.
 
-> **What this section is and isn't.** This is the **v1.0 compliance target architecture**. None of it is legally binding *now* because there are no real patients, no real data, and no operating clinical environment yet. The section exists so we know what v1.0 must look like by the time it ships — schema, hash chain, integrity job, pseudonymization, purge job, DPIA, DPA, retention enforcement, breach runbook all spelled out in one place.
+> **What this section is and isn't.** This is the **v1.0 compliance target architecture**. None of it is legally binding _now_ because there are no real patients, no real data, and no operating clinical environment yet. The section exists so we know what v1.0 must look like by the time it ships — schema, hash chain, integrity job, pseudonymization, purge job, DPIA, DPA, retention enforcement, breach runbook all spelled out in one place.
 
 ### 14.1 Legal framework
 
-Four overlapping regimes apply simultaneously and the UI must satisfy all of them:
+Two regimes are EU-wide and always apply; everything else is national overlay that the deployment configures.
 
-| Regime | Source | What it requires |
-|---|---|---|
-| **GDPR (EU 2016/679)** | Art. 5, 9, 25, 30, 32, 33–34, 35 | Lawful basis, security by design, RoPA, 72-hour breach notification, DPIA for health data |
-| **Wabvpz + Besluit elektronische gegevensuitwisseling** | Dutch law | EHR systems must be certified against NEN 7510/7512/7513 |
-| **NEN 7513:2024** | Dutch standard | Specific log-record schema for every access to patient data |
-| **WGBO** | NL Civil Code Boek 7 art. 446–468 | **20 years** retention of medical records from last entry |
-| **EHDS** (EU 2025/327) | In force 25 Mar 2025, applies from 26 Mar 2027 | EHR systems must be certified for interoperability + logging |
+| Regime                              | Source                                                                                                                                                                                                           | What it requires                                                                                                                                                                                                                                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **GDPR (EU 2016/679)**              | Art. 5, 9, 25, 30, 32, 33–34, 35                                                                                                                                                                                 | Lawful basis, security by design, RoPA, 72-hour breach notification, DPIA for health data                                                                                                                                                                      |
+| **EHDS** (EU 2025/327)              | In force 25 Mar 2025, applies from 26 Mar 2027                                                                                                                                                                   | EHR systems must be certified for interoperability + logging                                                                                                                                                                                                   |
+| **National healthcare-records law** | Member-state specific                                                                                                                                                                                            | Retention period, audit-log schema, certification scheme. NL examples: Wabvpz + Besluit elektronische gegevensuitwisseling; NEN 7510/7512/7513; WGBO 20-year retention. DE: §203 StGB + national e-prescription rules. FR: PGSSI-S. Configured per deployment. |
+| **Audit-log schema**                | NEN 7513:2024 (NL national standard, chosen as our technical implementation because it is the most comprehensive published schema and is a strict superset of ISO 27799 + GDPR Art. 32 requirements — see §14.2) | Specific log-record fields for every access to patient data                                                                                                                                                                                                    |
 
 **Who is who (GDPR Art. 4):**
 
@@ -1372,13 +1488,16 @@ Four overlapping regimes apply simultaneously and the UI must satisfy all of the
 - **DPA (Art. 28)** must be signed between controller and processor before any PHI is touched.
 
 **Lawful basis for health data (Art. 9):**
+
 - `9(2)(h)` — provision of healthcare or treatment (main basis for clinical workflows)
 - `9(2)(c)` — vital interests (emergency access)
 - `9(2)(a)` — explicit consent (research, secondary use)
 
 The UI **must record which basis applies to each access**.
 
-### 14.2 NEN 7513 mandatory log schema
+### 14.2 Audit-log schema (NEN 7513:2024)
+
+We implement the **NEN 7513:2024** log-record schema as our canonical audit envelope. It is a Dutch national standard, but it is also the **most comprehensive published healthcare-audit-log schema we found** — a strict superset of what ISO 27799 + GDPR Art. 32 require, with every field labelled and validated. Using it means: NL deployments are pre-aligned with national certification; other member-state deployments still satisfy GDPR + ISO 27799 + their national baseline (we have yet to find a national scheme NEN 7513 doesn't cover). If a deployment needs additional national fields, the schema is extended downstream rather than replaced — the EU baseline is fixed.
 
 ```ts
 // src/lib/audit/schema.ts
@@ -1391,8 +1510,8 @@ export const AuditEventSchema = z.object({
 
   // WHO
   actor: z.object({
-    userId: z.string(),                    // Keycloak `sub`
-    username: z.string(),                  // `preferred_username`
+    userId: z.string(), // Keycloak `sub`
+    username: z.string(), // `preferred_username`
     displayName: z.string(),
     roles: z.array(z.string()),
     organization: z.string().optional(),
@@ -1403,41 +1522,65 @@ export const AuditEventSchema = z.object({
   source: z.object({
     ipAddress: z.string(),
     userAgent: z.string(),
-    sessionId: z.string(),                 // internal, NOT the cookie value
+    sessionId: z.string(), // internal, NOT the cookie value
     correlationId: z.string().uuid(),
   }),
 
   // WHAT (action)
   action: z.enum([
-    'READ', 'CREATE', 'UPDATE', 'DELETE',
-    'EXPORT', 'PRINT', 'QUERY',
-    'LOGIN', 'LOGIN_FAILED', 'LOGOUT', 'SESSION_EXPIRED', 'TOKEN_REFRESH',
+    'READ',
+    'CREATE',
+    'UPDATE',
+    'DELETE',
+    'EXPORT',
+    'PRINT',
+    'QUERY',
+    'LOGIN',
+    'LOGIN_FAILED',
+    'LOGOUT',
+    'SESSION_EXPIRED',
+    'TOKEN_REFRESH',
     'ACCESS_DENIED',
-    'CONSENT_GRANT', 'CONSENT_WITHDRAW',
+    'CONSENT_GRANT',
+    'CONSENT_WITHDRAW',
     'ADMIN_CHANGE',
   ]),
 
   // WHAT (target)
-  target: z.object({
-    ehrId: z.string().uuid().optional(),
-    subjectIdHash: z.string().optional(),  // pseudonymized — see 14.4
-    resourceType: z.enum([
-      'EHR', 'COMPOSITION', 'TEMPLATE', 'QUERY', 'FOLDER', 'CONTRIBUTION', 'SYSTEM',
-    ]),
-    resourceId: z.string().optional(),
-    archetypeId: z.string().optional(),
-  }).optional(),
+  target: z
+    .object({
+      ehrId: z.string().uuid().optional(),
+      subjectIdHash: z.string().optional(), // pseudonymized — see 14.4
+      resourceType: z.enum([
+        'EHR',
+        'COMPOSITION',
+        'TEMPLATE',
+        'QUERY',
+        'FOLDER',
+        'CONTRIBUTION',
+        'SYSTEM',
+      ]),
+      resourceId: z.string().optional(),
+      archetypeId: z.string().optional(),
+    })
+    .optional(),
 
   // WHY
   purpose: z.enum([
-    'TREATMENT', 'EMERGENCY', 'BILLING', 'QUALITY_ASSURANCE',
-    'RESEARCH', 'PATIENT_REQUEST', 'LEGAL_OBLIGATION', 'SYSTEM_ADMIN',
+    'TREATMENT',
+    'EMERGENCY',
+    'BILLING',
+    'QUALITY_ASSURANCE',
+    'RESEARCH',
+    'PATIENT_REQUEST',
+    'LEGAL_OBLIGATION',
+    'SYSTEM_ADMIN',
   ]),
   lawfulBasis: z.enum(['9(2)(a)', '9(2)(c)', '9(2)(h)', '9(2)(i)', '9(2)(j)']),
 
   // OUTCOME
   outcome: z.enum(['SUCCESS', 'FAILURE', 'PARTIAL']),
-  outcomeDetail: z.string().optional(),    // error code only — NO PHI
+  outcomeDetail: z.string().optional(), // error code only — NO PHI
 
   // INTEGRITY (14.5)
   previousHash: z.string().optional(),
@@ -1449,15 +1592,15 @@ export type AuditEvent = z.infer<typeof AuditEventSchema>
 
 **Mandatory events (must produce an audit record):**
 
-| Category | Events |
-|---|---|
+| Category       | Events                                                                |
+| -------------- | --------------------------------------------------------------------- |
 | Authentication | `LOGIN`, `LOGIN_FAILED`, `LOGOUT`, `SESSION_EXPIRED`, `TOKEN_REFRESH` |
-| Authorization | `ACCESS_DENIED`, role/permission changes |
-| PHI read | View EHR, view composition, list, search, AQL query |
-| PHI write | Create/update/delete composition, EHR creation |
-| Data export | Download FHIR, canonical JSON, print |
-| Consent | Grant, withdraw, scope change |
-| Admin | Template upload/delete, user role changes, config |
+| Authorization  | `ACCESS_DENIED`, role/permission changes                              |
+| PHI read       | View EHR, view composition, list, search, AQL query                   |
+| PHI write      | Create/update/delete composition, EHR creation                        |
+| Data export    | Download FHIR, canonical JSON, print                                  |
+| Consent        | Grant, withdraw, scope change                                         |
+| Admin          | Template upload/delete, user role changes, config                     |
 
 ### 14.3 Implementation pattern
 
@@ -1477,8 +1620,14 @@ const auditLogger = pino({
   timestamp: pino.stdTimeFunctions.isoTime,
   transport: {
     targets: [
-      { target: 'pino/file', options: { destination: 1 } },              // stdout
-      { target: 'pino/file', options: { destination: process.env.AUDIT_LOG_PATH ?? '/var/log/ehrbase-ui/audit.ndjson' } },
+      { target: 'pino/file', options: { destination: 1 } }, // stdout
+      {
+        target: 'pino/file',
+        options: {
+          destination:
+            process.env.AUDIT_LOG_PATH ?? '/var/log/ehrbase-ui/audit.ndjson',
+        },
+      },
     ],
   },
 })
@@ -1488,8 +1637,10 @@ function canonicalize(obj: unknown): string {
 }
 
 export async function logAudit(
-  partial: Omit<AuditEvent, 'eventId' | 'timestamp' | 'source' | 'hash' | 'previousHash'> &
-    { source?: Partial<AuditEvent['source']> },
+  partial: Omit<
+    AuditEvent,
+    'eventId' | 'timestamp' | 'source' | 'hash' | 'previousHash'
+  > & { source?: Partial<AuditEvent['source']> },
 ): Promise<void> {
   try {
     const previousHash = (await valkey.get('audit:lastHash')) ?? undefined
@@ -1517,7 +1668,10 @@ export async function logAudit(
     const parsed = AuditEventSchema.safeParse(fullEvent)
     if (!parsed.success) {
       // Log the validation failure separately so we still capture *something*
-      auditLogger.error({ schemaError: parsed.error.format(), event: fullEvent })
+      auditLogger.error({
+        schemaError: parsed.error.format(),
+        event: fullEvent,
+      })
     }
 
     auditLogger.info(fullEvent)
@@ -1568,9 +1722,9 @@ In the EHRbase pass-through proxy at `/api/ehrbase/$.ts`, the same `logAudit()` 
 
 A log saying "user X viewed patient Y's HIV status" is itself health data. Therefore:
 
-- The audit store is in scope for GDPR + NEN.
+- The audit store is in scope for GDPR + the applicable national healthcare-data regime.
 - Access to it must be logged (meta-logging — lower volume, separate stream).
-- **Pseudonymize patient identifiers in logs.** Store `subjectIdHash = HMAC-SHA256(BSN, secret)` rather than the BSN. Keep the secret in a separate KMS-protected store. This satisfies Art. 4(5) GDPR.
+- **Pseudonymize patient identifiers in logs.** Store `subjectIdHash = HMAC-SHA256(nationalPatientIdentifier, secret)` rather than the raw identifier — works for any national patient-ID format (NL: BSN; BE: Rijksregisternummer / NISS; FR: NIR / INS; DE: KVNR / eGK; IT: Codice Fiscale; ES: TIS / SIP; PT: NUTS; AT: bPK; PL: PESEL; etc.). Keep the secret in a separate KMS-protected store. This satisfies GDPR Art. 4(5).
 
 ### 14.5 Tamper evidence — hash chain
 
@@ -1595,43 +1749,45 @@ TanStack Start (pino)
 - **EU/EEA only.** No transfer to third countries without GDPR Art. 46 mechanism.
 - **Separation of duties**: log readers ≠ logged users.
 
-### 14.7 Retention — reconciling GDPR minimization with WGBO 20 years
+### 14.7 Retention — reconciling GDPR minimization with national clinical-record laws
 
-| Data type | Retention | Basis |
-|---|---|---|
-| Clinical record (in EHRbase) | **20 years from last entry** | WGBO Art. 7:454 BW |
-| NEN 7513 audit logs | **≥ 5 years from log write** | Besluit elektronische gegevensverwerking door zorgaanbieders |
-| Auth logs (no PHI link) | 1 year | GDPR minimization |
-| App logs (no PHI) | 90 days | GDPR minimization |
-| Session records | Session lifetime + 24 h | GDPR minimization |
+Retention is **deployment-configurable**, not hard-coded, because national clinical-records laws vary widely across the EU (NL: 20 y from last entry under WGBO; DE: 10 y from end of treatment under §10 Berufsordnung, up to 30 y for X-ray records; FR: 20 y from last consultation; UK: pre-Brexit 8 y; AT: 10 y under ÄrzteG; etc.). The defaults below are common European norms; each deployment overrides per the supervisory authority that applies.
 
-WGBO is a more specific law than GDPR's general minimization; Art. 6(1)(c) GDPR ("legal obligation") provides the lawful basis to keep records longer.
+| Data type                    | Default retention                           | Basis                                                                                                                            |
+| ---------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Clinical record (in EHRbase) | **20 years from last entry** (configurable) | National clinical-records law (NL: WGBO Art. 7:454 BW; DE: §10 BO; FR: CSP R1112-7; etc.)                                        |
+| Audit logs                   | **≥ 5 years from log write** (configurable) | National healthcare-audit retention rules (NL: Besluit elektronische gegevensverwerking door zorgaanbieders; ISO 27799 baseline) |
+| Auth logs (no PHI link)      | 1 year                                      | GDPR minimization                                                                                                                |
+| App logs (no PHI)            | 90 days                                     | GDPR minimization                                                                                                                |
+| Session records              | Session lifetime + 24 h                     | GDPR minimization                                                                                                                |
+
+The national clinical-records law is a more specific law than GDPR's general minimization; Art. 6(1)(c) GDPR ("legal obligation") provides the lawful basis to keep records longer than minimization alone would allow.
 
 A daily purge job evaluates `retentionPolicy` tags and removes records past their date.
 
 ### 14.8 Data-subject rights — required UI features
 
-| Right | Article | UI feature |
-|---|---|---|
-| Access | 15 | "My record" + **"Who accessed my record"** page |
-| Rectification | 16 | Edit composition (creates a new version) |
-| Erasure | 17 | Mostly blocked by WGBO; possible for ancillary data |
-| Restriction | 18 | "Lock record" flag |
-| Portability | 20 | Export as canonical openEHR JSON + FHIR Bundle |
-| Object | 21 | Withdraw research/secondary-use consent |
-| No automated decisions | 22 | If AI features added, human-in-the-loop |
+| Right                  | Article | UI feature                                                                                                          |
+| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| Access                 | 15      | "My record" + **"Who accessed my record"** page                                                                     |
+| Rectification          | 16      | Edit composition (creates a new version)                                                                            |
+| Erasure                | 17      | Largely overridden by national clinical-records retention law (legal-obligation basis); possible for ancillary data |
+| Restriction            | 18      | "Lock record" flag                                                                                                  |
+| Portability            | 20      | Export as canonical openEHR JSON + FHIR Bundle                                                                      |
+| Object                 | 21      | Withdraw research/secondary-use consent                                                                             |
+| No automated decisions | 22      | If AI features added, human-in-the-loop                                                                             |
 
 The "right of access to the audit log itself" — patients can see who accessed their record — is required and reinforced by EHDS. `/me/access-log` is therefore a v1.0 must-have, not a nice-to-have.
 
 ### 14.9 Breach notification
 
-- **72 hours** to notify Autoriteit Persoonsgegevens (Dutch DPA) — Art. 33.
+- **72 hours** to notify the competent national supervisory authority — Art. 33 (NL: Autoriteit Persoonsgegevens / AP; DE: BfDI + the relevant Landesbeauftragte; FR: CNIL; etc.; the deployment configures the contact details).
 - Patient notification "without undue delay" if high risk — Art. 34.
 - This makes fast forensic queries over the audit log essential — another reason to ship to Loki/OpenSearch rather than only flat files.
 
 ### 14.10 DPIA — mandatory before go-live
 
-A DPIA under Art. 35 is **mandatory** before this UI touches real patient data, because EHR systems are explicitly on the Dutch DPA's list of mandatory DPIA cases. Revisit when the architecture changes materially (AI features, cross-border sharing under EHDS).
+A DPIA under Art. 35 is **mandatory** before this UI touches real patient data. EHR systems appear on every EU supervisory authority's list of mandatory DPIA cases that we've checked (NL AP, DE BfDI, FR CNIL, IT Garante, ES AEPD, etc.). Revisit when the architecture changes materially (AI features, cross-border sharing under EHDS).
 
 ### 14.11 EHDS — what to prepare for
 
@@ -1645,41 +1801,43 @@ Implication: at v1.0 the data-portability export must support **EEHRxF / FHIR Bu
 
 The "Order" column indicates a relative implementation sequence (1 = must be in place at the first commit that touches PHI; higher numbers = can land later in development but must all be present by v1.0 tag, with the exception of items marked "optional"). The phase plan is tracked outside this document.
 
-| # | Requirement | Priority | Order |
-|---|---|---|---|
-| 1 | NEN 7513 schema, emitted on every PHI access | **CRITICAL** | 1 |
-| 2 | Audit logs separated from app logs, encrypted at rest | **CRITICAL** | 1 |
-| 3 | Tokens stay server-side (BFF) | **CRITICAL** | 1 |
-| 4 | TLS 1.3, HSTS, secure cookies | **CRITICAL** | 1 |
-| 5 | DPIA signed off before real PHI | **CRITICAL** | pre-launch |
-| 6 | DPA signed (controller ↔ processor) | **CRITICAL** | pre-launch |
-| 7 | Hash chain + nightly integrity job | **HIGH** | 2 |
-| 8 | Patient-facing access log view | **HIGH** | 3 |
-| 9 | Portability export (canonical JSON + FHIR) | **HIGH** | 3 |
-| 10 | Pseudonymization of patient IDs in logs | **HIGH** | 2 |
-| 11 | Breach runbook + forensic dashboard | **HIGH** | 4 |
-| 12 | Retention/purge job (5 y audit, 20 y clinical) | **HIGH** | 4 |
-| 13 | NEN 7513 sample-of-60 annual review dashboard | **MEDIUM** | 4 |
-| 14 | Anomaly alerts (off-hours, bulk exports) | **MEDIUM** | 5 |
-| 15 | EEHRxF / FHIR adapter for EHDS | **MEDIUM** | 5 |
-| 16 | Meta-logging of audit log access | **MEDIUM** | 4 |
-| 17 | **Trace span PHI redaction (SDK + collector, layered)** | **HIGH** | 4 |
-| 18 | Consent management UI | **LOW–MEDIUM** | 5 |
-| 19 | RFC 3161 timestamping of daily hash anchors | **LOW** | optional |
+| #   | Requirement                                             | Priority       | Order      |
+| --- | ------------------------------------------------------- | -------------- | ---------- |
+| 1   | NEN 7513 schema, emitted on every PHI access            | **CRITICAL**   | 1          |
+| 2   | Audit logs separated from app logs, encrypted at rest   | **CRITICAL**   | 1          |
+| 3   | Tokens stay server-side (BFF)                           | **CRITICAL**   | 1          |
+| 4   | TLS 1.3, HSTS, secure cookies                           | **CRITICAL**   | 1          |
+| 5   | DPIA signed off before real PHI                         | **CRITICAL**   | pre-launch |
+| 6   | DPA signed (controller ↔ processor)                     | **CRITICAL**   | pre-launch |
+| 7   | Hash chain + nightly integrity job                      | **HIGH**       | 2          |
+| 8   | Patient-facing access log view                          | **HIGH**       | 3          |
+| 9   | Portability export (canonical JSON + FHIR)              | **HIGH**       | 3          |
+| 10  | Pseudonymization of patient IDs in logs                 | **HIGH**       | 2          |
+| 11  | Breach runbook + forensic dashboard                     | **HIGH**       | 4          |
+| 12  | Retention/purge job (5 y audit, 20 y clinical)          | **HIGH**       | 4          |
+| 13  | NEN 7513 sample-of-60 annual review dashboard           | **MEDIUM**     | 4          |
+| 14  | Anomaly alerts (off-hours, bulk exports)                | **MEDIUM**     | 5          |
+| 15  | EEHRxF / FHIR adapter for EHDS                          | **MEDIUM**     | 5          |
+| 16  | Meta-logging of audit log access                        | **MEDIUM**     | 4          |
+| 17  | **Trace span PHI redaction (SDK + collector, layered)** | **HIGH**       | 4          |
+| 18  | Consent management UI                                   | **LOW–MEDIUM** | 5          |
+| 19  | RFC 3161 timestamping of daily hash anchors             | **LOW**        | optional   |
 
 ### 14.13 Audit-log review dashboard
 
-NEN 7513 requires that audit logs be **reviewed**, not just stored. The standard's reference implementation guidance calls for a **sample-of-60** quarterly review (60 randomly-selected access events, examined for legitimacy by a designated reviewer). That review needs a dedicated UI, surfaced to the `audit-reviewer` role from §5.6.
+NEN 7513 requires that audit logs be **reviewed**, not just stored. The standard's reference-implementation guidance calls for a **sample-of-60** quarterly review (60 randomly-selected access events, examined for legitimacy by a designated reviewer). We adopt this cadence as the EU-baseline review SLA (per the doc re-frame in `docs/REFERENCES.md` and the §14.1 framing).
+
+This section **describes the dashboard's data model + routes**. The **UI implementation lives in M15** (per `docs/IMPLEMENTATION_CHECKLIST.md` and `docs/CLINICAL-UI.md` §7.16) — the dashboard is one of the M15 deliverables, not a v1.0-end concern.
 
 Routes (all guarded by `requireRole('audit-reviewer')`):
 
-| Route | Purpose |
-|---|---|
-| `/admin/audit/sample` | Generates a random sample of 60 PHI-access events from the selected quarter. Each row: timestamp, user, patient (pseudonymized initially, with a "reveal" button that itself emits a `META_AUDIT_ACCESS` event), action, justification (if break-glass). Reviewer marks each as `LEGITIMATE`, `QUESTIONABLE`, or `INVESTIGATE`. The decision is persisted as a new audit event. |
-| `/admin/audit/search` | Filter the full log by time range, user, event type, outcome. Always shows pseudonymized patient identifiers; revealing identity emits a `META_AUDIT_ACCESS` event. |
-| `/admin/audit/emergency` | All `EMERGENCY_ACCESS_GRANTED` events from §5.6, sorted by most recent. **24h SLA tracker** highlights events not yet reviewed. This is the most operationally important view; it is the workflow that protects the break-glass pattern from being misused. |
-| `/admin/audit/anomalies` | Surfacing of automated heuristics: off-hours access, bulk reads (>50 patient records per session), repeated 403s on the same patient by the same user (probing). v1.0 ships basic heuristics; the ML/anomaly-detection story is post-v1.0. |
-| `/admin/audit/export` | CSV export of a query result. Rate-limited to 1/hour/session (§5.9). The export operation is itself an audit event of type `AUDIT_EXPORTED`, including the query parameters and row count. |
+| Route                    | Purpose                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/admin/audit/sample`    | Generates a random sample of 60 PHI-access events from the selected quarter. Each row: timestamp, user, patient (pseudonymized initially, with a "reveal" button that itself emits a `META_AUDIT_ACCESS` event), action, justification (if break-glass). Reviewer marks each as `LEGITIMATE`, `QUESTIONABLE`, or `INVESTIGATE`. The decision is persisted as a new audit event. |
+| `/admin/audit/search`    | Filter the full log by time range, user, event type, outcome. Always shows pseudonymized patient identifiers; revealing identity emits a `META_AUDIT_ACCESS` event.                                                                                                                                                                                                             |
+| `/admin/audit/emergency` | All `EMERGENCY_ACCESS_GRANTED` events from §5.6, sorted by most recent. **24h SLA tracker** highlights events not yet reviewed. This is the most operationally important view; it is the workflow that protects the break-glass pattern from being misused.                                                                                                                     |
+| `/admin/audit/anomalies` | Surfacing of automated heuristics: off-hours access, bulk reads (>50 patient records per session), repeated 403s on the same patient by the same user (probing). v1.0 ships basic heuristics; the ML/anomaly-detection story is post-v1.0.                                                                                                                                      |
+| `/admin/audit/export`    | CSV export of a query result. Rate-limited to 1/hour/session (§5.9). The export operation is itself an audit event of type `AUDIT_EXPORTED`, including the query parameters and row count.                                                                                                                                                                                      |
 
 The dashboard does not display PHI in its identifying form by default. Every "unmask" action requires an explicit click and emits a `META_AUDIT_ACCESS` event so that auditing the auditors works. This is the requirement that flows from §14.4 (audit logs are themselves PHI).
 
@@ -1821,7 +1979,7 @@ ehrbase-ui/
 │
 ├── messages/                       # source-of-truth translation files (edited by humans)
 │   ├── en.json
-│   └── nl.json                     # added when Dutch lands
+│   └── <locale>.json               # added when each EU language is enabled (e.g. nl, de, fr, …)
 ├── project.inlang/                 # Paraglide / inlang project config
 │   └── settings.json
 ├── e2e/                            # Playwright
@@ -1870,7 +2028,7 @@ Node 24 is the active LTS line (Apr 2025 → Apr 2028 maintenance). We pin via `
 
 pnpm 11 (released April 2026) ships with **supply-chain defenses on by default** that align perfectly with our clinical-software threat model:
 
-- **`minimumReleaseAge: 1440`** (24 hours). A newly published package version is *not installable* until it has existed on the registry for at least 24 h. This directly mitigates "zero-day publish & spread" attacks like Shai-Hulud (2025) and the TanStack May 2026 compromise (see §27).
+- **`minimumReleaseAge: 1440`** (24 hours). A newly published package version is _not installable_ until it has existed on the registry for at least 24 h. This directly mitigates "zero-day publish & spread" attacks like Shai-Hulud (2025) and the TanStack May 2026 compromise (see §27).
 - **`blockExoticSubdeps: true`** — refuses installs that reference dependencies via exotic protocols (git URLs, etc.) inside sub-dependencies.
 - **Isolated global installs** — `pnpm add -g` no longer pollutes a shared `node_modules`.
 - **Pure ESM**; requires Node 22+.
@@ -1986,20 +2144,20 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ehrbase
-    volumes: [ ehrbase_pg:/var/lib/postgresql/data ]
+    volumes: [ehrbase_pg:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [ ehrbase-net ]
+    networks: [ehrbase-net]
 
   ehrbase:
     # Pin to an exact version. Never use :latest in production or compose.
     image: ehrbase/ehrbase:2.31.0
     depends_on:
       ehrbase-db: { condition: service_healthy }
-      keycloak:   { condition: service_started }
+      keycloak: { condition: service_started }
     environment:
       DB_URL: jdbc:postgresql://ehrbase-db:5432/ehrbase
       DB_USER: postgres
@@ -2007,9 +2165,9 @@ services:
       SECURITY_AUTHTYPE: OAUTH
       SECURITY_OAUTH_ISSUER_URI: http://keycloak:8080/realms/ehrbase
       SECURITY_OAUTH_JWK_SET_URI: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/certs
-      ADMIN_API_ACTIVE: "true"
-    ports: [ "8080:8080" ]
-    networks: [ ehrbase-net ]
+      ADMIN_API_ACTIVE: 'true'
+    ports: ['8080:8080']
+    networks: [ehrbase-net]
 
   keycloak-db:
     image: postgres:18-alpine
@@ -2017,13 +2175,13 @@ services:
       POSTGRES_USER: keycloak
       POSTGRES_PASSWORD: keycloak
       POSTGRES_DB: keycloak
-    volumes: [ keycloak_pg:/var/lib/postgresql/data ]
-    networks: [ ehrbase-net ]
+    volumes: [keycloak_pg:/var/lib/postgresql/data]
+    networks: [ehrbase-net]
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.6
     command: start-dev --import-realm
-    depends_on: [ keycloak-db ]
+    depends_on: [keycloak-db]
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -2031,21 +2189,21 @@ services:
       KC_DB_PASSWORD: keycloak
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_HOSTNAME_STRICT: "false"
-      KC_HEALTH_ENABLED: "true"
-    volumes: [ ./keycloak/import:/opt/keycloak/data/import:ro ]
-    ports: [ "8180:8080" ]
-    networks: [ ehrbase-net ]
+      KC_HOSTNAME_STRICT: 'false'
+      KC_HEALTH_ENABLED: 'true'
+    volumes: [./keycloak/import:/opt/keycloak/data/import:ro]
+    ports: ['8180:8080']
+    networks: [ehrbase-net]
 
   # Valkey is the Linux-Foundation BSD-licensed fork of Redis 7.2.4.
   # Wire-compatible; existing Redis clients (ioredis, etc.) work unchanged.
   valkey:
     image: valkey/valkey:9-alpine
-    command: ["valkey-server", "--appendonly", "yes"]
-    volumes: [ valkey_data:/data ]
-    networks: [ ehrbase-net ]
+    command: ['valkey-server', '--appendonly', 'yes']
+    volumes: [valkey_data:/data]
+    networks: [ehrbase-net]
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ['CMD', 'valkey-cli', 'ping']
       interval: 10s
       timeout: 3s
       retries: 5
@@ -2053,8 +2211,8 @@ services:
   loki:
     image: grafana/loki:3.0.0
     command: -config.file=/etc/loki/local-config.yaml
-    ports: [ "3100:3100" ]
-    networks: [ ehrbase-net ]
+    ports: ['3100:3100']
+    networks: [ehrbase-net]
 
   # ─── OBSERVABILITY STACK (uncomment together; ship as one unit) ────────────
   # otel-collector:
@@ -2089,12 +2247,12 @@ services:
   ui:
     build: { context: ., dockerfile: Dockerfile }
     depends_on:
-      ehrbase:  { condition: service_started }
+      ehrbase: { condition: service_started }
       keycloak: { condition: service_started }
-      valkey:   { condition: service_healthy }
+      valkey: { condition: service_healthy }
     environment:
       NODE_ENV: production
-      PORT: "3000"
+      PORT: '3000'
       EHRBASE_URL: http://ehrbase:8080/ehrbase/rest/openehr/v1
       KEYCLOAK_REALM_URL: http://keycloak:8080/realms/ehrbase
       KEYCLOAK_CLIENT_ID: ehrbase-ui
@@ -2104,17 +2262,17 @@ services:
       AUDIT_LOG_PATH: /var/log/ehrbase-ui/audit.ndjson
       AUDIT_PSEUDONYM_SECRET: ${AUDIT_PSEUDONYM_SECRET}
       # ─── OpenTelemetry (set OTEL_ENABLED=true alongside collector boot) ──
-      OTEL_ENABLED: "false"
+      OTEL_ENABLED: 'false'
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: ehrbase-ui
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
-      OTEL_TRACES_SAMPLER_ARG: "0.1"
+      OTEL_TRACES_SAMPLER_ARG: '0.1'
       OTEL_LOG_LEVEL: warn
       # ─────────────────────────────────────────────────────────────────────
     volumes:
       - audit_logs:/var/log/ehrbase-ui
-    ports: [ "3000:3000" ]
-    networks: [ ehrbase-net ]
+    ports: ['3000:3000']
+    networks: [ehrbase-net]
 
 volumes:
   ehrbase_pg:
@@ -2141,17 +2299,33 @@ export const Route = createFileRoute('/api/ready')({
     handlers: {
       GET: async () => {
         const checks: Record<string, 'ok' | 'fail'> = {}
-        try { await valkey.ping(); checks.valkey = 'ok' } catch { checks.valkey = 'fail' }
         try {
-          const r = await fetch(`${process.env.EHRBASE_URL}/`, { method: 'HEAD' })
+          await valkey.ping()
+          checks.valkey = 'ok'
+        } catch {
+          checks.valkey = 'fail'
+        }
+        try {
+          const r = await fetch(`${process.env.EHRBASE_URL}/`, {
+            method: 'HEAD',
+          })
           checks.ehrbase = r.ok ? 'ok' : 'fail'
-        } catch { checks.ehrbase = 'fail' }
+        } catch {
+          checks.ehrbase = 'fail'
+        }
         try {
-          const r = await fetch(`${process.env.KEYCLOAK_REALM_URL}/.well-known/openid-configuration`)
+          const r = await fetch(
+            `${process.env.KEYCLOAK_REALM_URL}/.well-known/openid-configuration`,
+          )
           checks.keycloak = r.ok ? 'ok' : 'fail'
-        } catch { checks.keycloak = 'fail' }
+        } catch {
+          checks.keycloak = 'fail'
+        }
         const allOk = Object.values(checks).every((v) => v === 'ok')
-        return Response.json({ status: allOk ? 'ready' : 'unready', checks }, { status: allOk ? 200 : 503 })
+        return Response.json(
+          { status: allOk ? 'ready' : 'unready', checks },
+          { status: allOk ? 200 : 503 },
+        )
       },
     },
   },
@@ -2162,16 +2336,17 @@ export const Route = createFileRoute('/api/ready')({
 
 ## 19. Environments & Secrets
 
-| Environment | Purpose | Where |
-|---|---|---|
-| local | dev workstation | docker-compose, plaintext `.env.local` (git-ignored) |
-| ci | tests | GitHub Actions secrets |
-| staging | pre-prod, fake-but-realistic data | secrets manager (Vault / cloud KMS / Doppler) |
-| production | real PHI | secrets manager, mandatory |
+| Environment | Purpose                           | Where                                                |
+| ----------- | --------------------------------- | ---------------------------------------------------- |
+| local       | dev workstation                   | docker-compose, plaintext `.env.local` (git-ignored) |
+| ci          | tests                             | GitHub Actions secrets                               |
+| staging     | pre-prod, fake-but-realistic data | secrets manager (Vault / cloud KMS / Doppler)        |
+| production  | real PHI                          | secrets manager, mandatory                           |
 
 **Never** commit secrets. **Never** put real PHI in non-production. The `.env.example` shipped in the repo only contains placeholders.
 
 Mandatory production secrets:
+
 - `KEYCLOAK_CLIENT_SECRET`
 - `AUDIT_PSEUDONYM_SECRET` (HMAC key for §14.4)
 - `VALKEY_PASSWORD`
@@ -2196,14 +2371,14 @@ CI/CD is **foundation, not polish**. Workflows ship from the first commit. The p
 
 ### 20.2 Workflow inventory
 
-| File | Trigger | Purpose |
-|---|---|---|
-| `.github/workflows/ci.yml` | `pull_request`, `push` to `main` | Lint, typecheck, unit + a11y, build, E2E |
-| `.github/workflows/security.yml` | `pull_request`, weekly schedule | Trivy (FS + image), Semgrep SAST, `pnpm audit`, hidden-secret scan |
-| `.github/workflows/codeql.yml` | `pull_request`, weekly schedule | GitHub-native SAST (JS/TS) |
-| `.github/workflows/release.yml` | Git tag `v*` | Build, push to GHCR, Cosign keyless sign, SBOM attest, GitHub Release |
-| `.github/workflows/dependency-review.yml` | `pull_request` | Block PRs introducing dependencies with HIGH/CRITICAL CVEs |
-| `.github/dependabot.yml` | scheduled | Daily npm, weekly github-actions, weekly docker base-image updates |
+| File                                      | Trigger                          | Purpose                                                               |
+| ----------------------------------------- | -------------------------------- | --------------------------------------------------------------------- |
+| `.github/workflows/ci.yml`                | `pull_request`, `push` to `main` | Lint, typecheck, unit + a11y, build, E2E                              |
+| `.github/workflows/security.yml`          | `pull_request`, weekly schedule  | Trivy (FS + image), Semgrep SAST, `pnpm audit`, hidden-secret scan    |
+| `.github/workflows/codeql.yml`            | `pull_request`, weekly schedule  | GitHub-native SAST (JS/TS)                                            |
+| `.github/workflows/release.yml`           | Git tag `v*`                     | Build, push to GHCR, Cosign keyless sign, SBOM attest, GitHub Release |
+| `.github/workflows/dependency-review.yml` | `pull_request`                   | Block PRs introducing dependencies with HIGH/CRITICAL CVEs            |
+| `.github/dependabot.yml`                  | scheduled                        | Daily npm, weekly github-actions, weekly docker base-image updates    |
 
 ### 20.3 `ci.yml` — main pull-request workflow
 
@@ -2230,21 +2405,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@SHA  # pin to a real SHA when adding
+        uses: step-security/harden-runner@SHA # pin to a real SHA when adding
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@SHA  # actions/checkout@v6
+      - uses: actions/checkout@SHA # actions/checkout@v6
         with:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@SHA  # pnpm/action-setup@v6
+        uses: pnpm/action-setup@SHA # pnpm/action-setup@v6
         with:
           version: 11
 
       - name: Setup Node.js
-        uses: actions/setup-node@SHA  # actions/setup-node@v6
+        uses: actions/setup-node@SHA # actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
@@ -2262,7 +2437,7 @@ jobs:
         run: pnpm vitest run --coverage
 
       - name: Upload coverage
-        uses: actions/upload-artifact@SHA  # actions/upload-artifact@v4
+        uses: actions/upload-artifact@SHA # actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage/
@@ -2324,11 +2499,11 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 6 * * 1'   # Mondays 06:17 UTC
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
 
 permissions:
   contents: read
-  security-events: write   # for SARIF upload to GitHub Security tab
+  security-events: write # for SARIF upload to GitHub Security tab
 
 jobs:
   trivy-fs:
@@ -2469,13 +2644,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
-      contents: write       # create GitHub Release
-      packages: write       # push to GHCR
-      id-token: write       # OIDC for Cosign keyless
-      attestations: write   # provenance attestations
+      contents: write # create GitHub Release
+      packages: write # push to GHCR
+      id-token: write # OIDC for Cosign keyless
+      attestations: write # provenance attestations
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}   # rubentalstra/ehrbase-ui
+      IMAGE_NAME: ${{ github.repository }} # rubentalstra/ehrbase-ui
     steps:
       - uses: step-security/harden-runner@SHA
         with: { egress-policy: audit }
@@ -2594,28 +2769,29 @@ jobs:
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: "/"
+    directory: '/'
     schedule: { interval: daily }
     open-pull-requests-limit: 10
     versioning-strategy: increase-if-necessary
-    labels: ["dependencies", "npm"]
+    labels: ['dependencies', 'npm']
     groups:
       tanstack:
-        patterns: ["@tanstack/*"]
+        patterns: ['@tanstack/*']
       shadcn:
-        patterns: ["@radix-ui/*", "lucide-react", "class-variance-authority"]
+        patterns: ['@radix-ui/*', 'lucide-react', 'class-variance-authority']
       tooling:
-        patterns: ["eslint*", "prettier*", "@types/*", "typescript", "vite*", "vitest*"]
+        patterns:
+          ['eslint*', 'prettier*', '@types/*', 'typescript', 'vite*', 'vitest*']
 
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: '/'
     schedule: { interval: weekly }
-    labels: ["dependencies", "github-actions"]
+    labels: ['dependencies', 'github-actions']
 
   - package-ecosystem: docker
-    directory: "/"
+    directory: '/'
     schedule: { interval: weekly }
-    labels: ["dependencies", "docker"]
+    labels: ['dependencies', 'docker']
 ```
 
 ### 20.9 Verifying release signatures (consumer side)
@@ -2659,16 +2835,16 @@ This will go into `docs/runbooks/verifying-releases.md` so hospital security tea
 
 ## 21. Backup & Disaster Recovery
 
-*(Section describes v1.0 deployment target. During pre-v1.0 development, the docker-compose stack has zero persistence guarantees — wipe it whenever, no migrations, no users to lose.)*
+_(Section describes v1.0 deployment target. During pre-v1.0 development, the docker-compose stack has zero persistence guarantees — wipe it whenever, no migrations, no users to lose.)_
 
-| Asset | Method | RPO | RTO |
-|---|---|---|---|
-| EHRbase Postgres | streaming WAL → object storage; nightly base backup | 5 min | 1 h |
-| Audit logs (cold) | S3 Object Lock, cross-region replication | 0 (synchronous) | n/a (read-only) |
-| Keycloak Postgres | nightly dump + WAL | 1 h | 1 h |
-| Valkey (sessions) | acceptable to lose; users re-login | n/a | n/a |
-| Container images | registry redundancy | n/a | minutes |
-| Configuration (IaC, k8s manifests) | git | n/a | minutes |
+| Asset                              | Method                                              | RPO             | RTO             |
+| ---------------------------------- | --------------------------------------------------- | --------------- | --------------- |
+| EHRbase Postgres                   | streaming WAL → object storage; nightly base backup | 5 min           | 1 h             |
+| Audit logs (cold)                  | S3 Object Lock, cross-region replication            | 0 (synchronous) | n/a (read-only) |
+| Keycloak Postgres                  | nightly dump + WAL                                  | 1 h             | 1 h             |
+| Valkey (sessions)                  | acceptable to lose; users re-login                  | n/a             | n/a             |
+| Container images                   | registry redundancy                                 | n/a             | minutes         |
+| Configuration (IaC, k8s manifests) | git                                                 | n/a             | minutes         |
 
 Post-v1.0: quarterly restore drill — pick a date, restore Postgres to that point on a sandbox cluster, smoke-test EHR retrieval. Document outcome in `docs/runbooks/dr-drill-YYYY-Q.md`.
 
@@ -2676,17 +2852,17 @@ Post-v1.0: quarterly restore drill — pick a date, restore Postgres to that poi
 
 ## 22. Performance Budgets
 
-*(Section describes v1.0 release gates. Budgets are enforced in CI; during early development they are observed but not gated.)*
+_(Section describes v1.0 release gates. Budgets are enforced in CI; during early development they are observed but not gated.)_
 
-| Metric | Budget |
-|---|---|
-| Initial JS bundle (gzip) | ≤ 200 KB |
-| Total JS for first authenticated route (gzip) | ≤ 350 KB |
-| TTFB (cached SSR) | ≤ 200 ms p95 |
-| LCP on patient list | ≤ 2.5 s p95 |
-| INP | ≤ 200 ms p95 |
-| Server function p95 latency (non-AQL) | ≤ 300 ms |
-| AQL query p95 latency | ≤ 2 s (subject to query complexity) |
+| Metric                                        | Budget                              |
+| --------------------------------------------- | ----------------------------------- |
+| Initial JS bundle (gzip)                      | ≤ 200 KB                            |
+| Total JS for first authenticated route (gzip) | ≤ 350 KB                            |
+| TTFB (cached SSR)                             | ≤ 200 ms p95                        |
+| LCP on patient list                           | ≤ 2.5 s p95                         |
+| INP                                           | ≤ 200 ms p95                        |
+| Server function p95 latency (non-AQL)         | ≤ 300 ms                            |
+| AQL query p95 latency                         | ≤ 2 s (subject to query complexity) |
 
 Measured via Lighthouse in CI for a defined set of fixture routes, and in production via Real-User Monitoring (RUM) — `web-vitals` library posting to a metrics endpoint.
 
@@ -2696,11 +2872,11 @@ Measured via Lighthouse in CI for a defined set of fixture routes, and in produc
 
 Hospital workstations are often locked. We commit to:
 
-| Browser | Minimum version | Notes |
-|---|---|---|
-| Chrome / Edge | last 2 stable | primary target |
-| Firefox | last 2 stable | secondary |
-| Safari | 16+ | for staff using iPads |
+| Browser       | Minimum version | Notes                 |
+| ------------- | --------------- | --------------------- |
+| Chrome / Edge | last 2 stable   | primary target        |
+| Firefox       | last 2 stable   | secondary             |
+| Safari        | 16+             | for staff using iPads |
 
 Older browsers see a soft-block landing page with upgrade instructions and a support contact. We do **not** ship legacy ES5 bundles.
 
@@ -2708,15 +2884,15 @@ Older browsers see a soft-block landing page with upgrade instructions and a sup
 
 ## 24. Testing Strategy
 
-| Layer | Tool | What |
-|---|---|---|
-| Unit | **Vitest** | utils, schema generators, FLAT converter, audit hash |
-| Component | Vitest + Testing Library | shadcn-composed forms, dynamic field renderer |
-| Accessibility | `vitest-axe`, `@axe-core/playwright` | every component test, every E2E flow |
-| API contract | Vitest + MSW | server functions mocking EHRbase |
-| E2E | **Playwright** | login flow, create composition, AQL query, patient access log |
-| Load | k6 (optional) | sustained AQL query throughput |
-| Audit chain integrity | dedicated nightly job + Vitest unit | recompute hash, assert no breaks |
+| Layer                 | Tool                                 | What                                                          |
+| --------------------- | ------------------------------------ | ------------------------------------------------------------- |
+| Unit                  | **Vitest**                           | utils, schema generators, FLAT converter, audit hash          |
+| Component             | Vitest + Testing Library             | shadcn-composed forms, dynamic field renderer                 |
+| Accessibility         | `vitest-axe`, `@axe-core/playwright` | every component test, every E2E flow                          |
+| API contract          | Vitest + MSW                         | server functions mocking EHRbase                              |
+| E2E                   | **Playwright**                       | login flow, create composition, AQL query, patient access log |
+| Load                  | k6 (optional)                        | sustained AQL query throughput                                |
+| Audit chain integrity | dedicated nightly job + Vitest unit  | recompute hash, assert no breaks                              |
 
 Coverage gates: 80 % statements on `src/lib`, 60 % overall. Audit and auth modules pinned to 90 %.
 
@@ -2730,9 +2906,9 @@ Coverage gates: 80 % statements on `src/lib`, 60 % overall. Audit and auth modul
 - **Owner (initial):** [`rubentalstra`](https://github.com/rubentalstra) — personal account. Can be transferred to an organization later (the EHRbase team, a foundation, or a dedicated org) once contributors and governance justify it.
 - **Full path:** `github.com/rubentalstra/ehrbase-ui`
 - **Description (GitHub `About` / npm `description` / social previews):**
-  > The missing open-source UI for EHRbase. Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. GDPR & NEN 7513 ready.
-- **GitHub topics** to add for discoverability: `ehrbase`, `openehr`, `electronic-health-record`, `ehr`, `clinical-data`, `tanstack-start`, `react`, `shadcn-ui`, `keycloak`, `gdpr`, `nen-7513`, `healthcare`, `medical-software`
-- **Suggested initial README headline:** *The missing open-source UI for EHRbase.*
+  > The missing open-source UI for EHRbase. Clinical workspace, dynamic openEHR forms, AQL query builder. TanStack Start + React 19 + shadcn/ui + Keycloak. Built for EU clinical deployments — GDPR-compliant, with a comprehensive audit-log schema that satisfies EU healthcare audit requirements (ISO 27799 baseline) and meets every member-state national standard we've checked, including NEN 7513 (NL).
+- **GitHub topics** to add for discoverability: `ehrbase`, `openehr`, `electronic-health-record`, `ehr`, `clinical-data`, `tanstack-start`, `react`, `shadcn-ui`, `keycloak`, `gdpr`, `ehds`, `iso-27799`, `nen-7513`, `healthcare`, `medical-software`
+- **Suggested initial README headline:** _The missing open-source UI for EHRbase._
 
 ### License: **Apache 2.0**
 
@@ -2776,30 +2952,31 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 
 ## 26. Risks & Mitigations
 
-| Risk | Severity | Mitigation |
-|---|---|---|
-| **npm supply-chain attack via compromised dependency** (concrete recent example: TanStack May 2026 — CVE-2026-45321, 42 packages tampered via pull_request_target + cache poisoning + runner memory extraction) | **CRITICAL** | (1) pnpm 11 `minimumReleaseAge: 1440` default — no install of <24h-old versions. (2) Lockfile committed; `pnpm install --frozen-lockfile` in CI. (3) Dependabot PRs reviewed manually. (4) `pnpm audit` gate in CI fails on HIGH/CRITICAL. (5) Trivy + Semgrep scans (§20). (6) Pin TanStack dependencies exactly. (7) Don't use `pull_request_target` in our own workflows. |
-| **TanStack Start still RC; API changes** | MEDIUM | Pin all TanStack deps exactly. Time-box framework debugging in CI. Run upgrade PRs through full E2E. |
-| **Web template parser misses edge cases** | MEDIUM-HIGH | Start with simple archetypes (vitals); add tests as edge cases surface. Allow manual JSON fallback. |
-| **Audit logging slows clinical workflows** | HIGH if it occurs | Fire-and-forget design, in-memory queue, pino async transport. Performance budgets enforce p95 latency. |
-| **PHI leaks in error messages or logs** | CRITICAL | Lint rule + code review checklist for error handling. Application log redaction filter. Periodic log audit. |
-| **Keycloak misconfiguration leaves system open** | CRITICAL | Realm config in version control. Mandatory checks in `/api/ready`. Penetration test before go-live. |
-| **DPIA not done → unlawful processing** | CRITICAL | Pre-launch gate. DPIA template seeded. Legal sign-off required. |
-| **Compliance drift (EHDS milestones, NEN revisions) by the time v1.0 ships** | HIGH | Re-check legal landscape during pre-release hardening, before tagging v1.0. ADR for each material change. |
-| **Audit log itself becomes PHI without protection** | HIGH | Pseudonymization, encrypted-at-rest store, separation of duties on read access. |
-| **WGBO 20-year retention vs GDPR minimization tension** | MEDIUM | Tag-based retention policy. Lawful basis explicit. Document in DPIA. |
-| **Trace spans become an unmanaged second PHI store** (URLs, query params, IDs can be Article 9 special-category data) | **HIGH** | Layered redaction: SDK `requestHook` strips query strings + replaces UUIDs in span names with `:id` placeholders, collector `attributes`/`transform` processors as second line, attribute block-list (no `password|secret|token|email|nhi|bsn`), 30-day default retention (vs 5y for audit), DPIA addendum covers trace data scope, role-gated Tempo access. |
-| **EAA / EN 301 549 non-compliance** — accessibility is legally binding in EU since 28 June 2025; fines up to €100k/violation in some member states | **CRITICAL** | Target **WCAG 2.2 AA** (strict superset of 2.1; future-proof for the EN 301 549 revision in progress). Three-layer defense (§12): `eslint-plugin-jsx-a11y` strict config in CI lint gate (`--max-warnings=0`); axe-core via Vitest on every component + via Playwright on every critical flow, configured with `wcag22aa` + `EN-301-549` tags and `target-size` rule explicitly enabled; manual NVDA + VoiceOver pass before v1.0 tag, results in `docs/accessibility/manual-test-*.md`; public `/accessibility` statement. |
-| **OTel SDK overhead degrades clinical-workflow latency** | MEDIUM | Head-sample 10% by default, async batch export, disable `instrumentation-fs`. Performance budgets (§22) gate new spans. |
-| **Dependency staleness — security debt accruing silently** | MEDIUM | Dependabot daily for npm, weekly for actions/docker. Quarterly dependency review meeting. CI fails on outdated lockfile vs `package.json`. |
-| **Hospital workstation locked to old browsers** | LOW-MEDIUM | Soft-block page; documented support matrix; no IE/legacy support. |
-| **OSS adoption fails — small contributor pool** | MEDIUM | Apache 2.0; clear contribution guide; tag good-first-issues; engage openEHR Discourse and EHRbase community. |
+| Risk                                                                                                                                                                                                            | Severity          | Mitigation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **npm supply-chain attack via compromised dependency** (concrete recent example: TanStack May 2026 — CVE-2026-45321, 42 packages tampered via pull_request_target + cache poisoning + runner memory extraction) | **CRITICAL**      | (1) pnpm 11 `minimumReleaseAge: 1440` default — no install of <24h-old versions. (2) Lockfile committed; `pnpm install --frozen-lockfile` in CI. (3) Dependabot PRs reviewed manually. (4) `pnpm audit` gate in CI fails on HIGH/CRITICAL. (5) Trivy + Semgrep scans (§20). (6) Pin TanStack dependencies exactly. (7) Don't use `pull_request_target` in our own workflows.                                                                                                                                                |
+| **TanStack Start still RC; API changes**                                                                                                                                                                        | MEDIUM            | Pin all TanStack deps exactly. Time-box framework debugging in CI. Run upgrade PRs through full E2E.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **Web template parser misses edge cases**                                                                                                                                                                       | MEDIUM-HIGH       | Start with simple archetypes (vitals); add tests as edge cases surface. Allow manual JSON fallback.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Audit logging slows clinical workflows**                                                                                                                                                                      | HIGH if it occurs | Fire-and-forget design, in-memory queue, pino async transport. Performance budgets enforce p95 latency.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **PHI leaks in error messages or logs**                                                                                                                                                                         | CRITICAL          | Lint rule + code review checklist for error handling. Application log redaction filter. Periodic log audit.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Keycloak misconfiguration leaves system open**                                                                                                                                                                | CRITICAL          | Realm config in version control. Mandatory checks in `/api/ready`. Penetration test before go-live.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| **DPIA not done → unlawful processing**                                                                                                                                                                         | CRITICAL          | Pre-launch gate. DPIA template seeded. Legal sign-off required.                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Compliance drift (EHDS milestones, NEN revisions) by the time v1.0 ships**                                                                                                                                    | HIGH              | Re-check legal landscape during pre-release hardening, before tagging v1.0. ADR for each material change.                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Audit log itself becomes PHI without protection**                                                                                                                                                             | HIGH              | Pseudonymization, encrypted-at-rest store, separation of duties on read access.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **National clinical-records retention (e.g. WGBO 20 y in NL, §10 BO in DE, CSP R1112-7 in FR) vs GDPR minimization tension**                                                                                    | MEDIUM            | Tag-based retention policy, retention period configurable per deployment. Lawful basis explicit (GDPR Art. 6(1)(c) — legal obligation). Document in the deployment's DPIA.                                                                                                                                                                                                                                                                                                                                                  |
+| **Trace spans become an unmanaged second PHI store** (URLs, query params, IDs can be Article 9 special-category data)                                                                                           | **HIGH**          | Layered redaction: SDK `requestHook` strips query strings + replaces UUIDs in span names with `:id` placeholders, collector `attributes`/`transform` processors as second line, attribute block-list (no `password\|secret\|token\|email\|nationalId` and known national-ID synonyms — `bsn`, `niss`, `nir`, `kvnr`, `pesel`, etc.), 30-day default retention (vs 5y for audit), DPIA addendum covers trace data scope, role-gated Tempo access.                                                                            |
+| **EAA / EN 301 549 non-compliance** — accessibility is legally binding in EU since 28 June 2025; fines up to €100k/violation in some member states                                                              | **CRITICAL**      | Target **WCAG 2.2 AA** (strict superset of 2.1; future-proof for the EN 301 549 revision in progress). Three-layer defense (§12): `eslint-plugin-jsx-a11y` strict config in CI lint gate (`--max-warnings=0`); axe-core via Vitest on every component + via Playwright on every critical flow, configured with `wcag22aa` + `EN-301-549` tags and `target-size` rule explicitly enabled; manual NVDA + VoiceOver pass before v1.0 tag, results in `docs/accessibility/manual-test-*.md`; public `/accessibility` statement. |
+| **OTel SDK overhead degrades clinical-workflow latency**                                                                                                                                                        | MEDIUM            | Head-sample 10% by default, async batch export, disable `instrumentation-fs`. Performance budgets (§22) gate new spans.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **Dependency staleness — security debt accruing silently**                                                                                                                                                      | MEDIUM            | Dependabot daily for npm, weekly for actions/docker. Quarterly dependency review meeting. CI fails on outdated lockfile vs `package.json`.                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Hospital workstation locked to old browsers**                                                                                                                                                                 | LOW-MEDIUM        | Soft-block page; documented support matrix; no IE/legacy support.                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **OSS adoption fails — small contributor pool**                                                                                                                                                                 | MEDIUM            | Apache 2.0; clear contribution guide; tag good-first-issues; engage openEHR Discourse and EHRbase community.                                                                                                                                                                                                                                                                                                                                                                                                                |
 
 ---
 
 ## 27. References
 
 ### Runtime & package manager
+
 - Node.js 24 (Krypton LTS) release — https://nodejs.org/en/blog/release/v24.0.0
 - Node.js release schedule — https://nodejs.org/en/about/previous-releases
 - pnpm 11 release notes — https://pnpm.io/blog/releases/11.0
@@ -2807,6 +2984,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - pnpm minimum release age (supply-chain defense) — https://pnpm.io/settings#minimumreleaseage
 
 ### Framework & tooling
+
 - TanStack Start — https://tanstack.com/start/latest
 - TanStack Start server functions — https://tanstack.com/start/latest/docs/framework/react/guide/server-functions
 - TanStack Start authentication guide — https://tanstack.com/start/latest/docs/framework/react/guide/authentication
@@ -2826,6 +3004,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - TanStack/router#7091 — Vite 8 slow cold start in Start SPA mode — https://github.com/TanStack/router/issues/7091
 
 ### UI / styling
+
 - shadcn/ui (official) — https://ui.shadcn.com
 - shadcn/ui TanStack Start setup — https://ui.shadcn.com/docs/installation/tanstack
 - shadcn/ui changelog — https://ui.shadcn.com/docs/changelog
@@ -2834,6 +3013,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - Radix UI — https://www.radix-ui.com
 
 ### Forms / validation / editor
+
 - react-hook-form — https://react-hook-form.com
 - @hookform/resolvers (≥5.1 for Zod v4) — https://github.com/react-hook-form/resolvers
 - Zod v4 — https://zod.dev
@@ -2841,6 +3021,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - @codemirror/lang-sql — https://www.npmjs.com/package/@codemirror/lang-sql
 
 ### Internationalization (i18n)
+
 - Paraglide JS (opral/paraglide-js, MIT-licensed) — https://github.com/opral/paraglide-js
 - Paraglide JS documentation — https://inlang.com/m/gerre34r/library-inlang-paraglideJs
 - Paraglide guide for TanStack Router — https://inlang.com/m/gerre34r/library-inlang-paraglideJs/tanstack-router
@@ -2851,6 +3032,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - Inlang Fink (translation editor for non-developers) — https://inlang.com/m/tdozzpar/app-inlang-finkLocalizationEditor
 
 ### Auth, sessions & data store
+
 - Arctic (OAuth) — https://arcticjs.dev
 - Keycloak 26.6 release notes — https://www.keycloak.org/2026/04/keycloak-2660-released
 - Keycloak — https://www.keycloak.org
@@ -2860,11 +3042,13 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - ioredis (wire-compatible client, works with Valkey unchanged) — https://github.com/redis/ioredis
 
 ### Database
+
 - PostgreSQL 18 — https://www.postgresql.org
 - PostgreSQL release notes — https://www.postgresql.org/docs/release/
 - PostgreSQL Docker official image — https://hub.docker.com/_/postgres
 
 ### Observability
+
 - OpenTelemetry (CNCF graduated) — https://opentelemetry.io
 - OpenTelemetry status — https://opentelemetry.io/status
 - OpenTelemetry JS SDK (Node) — https://opentelemetry.io/docs/languages/js/getting-started/nodejs/
@@ -2885,12 +3069,14 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - pino-http — https://github.com/pinojs/pino-http
 
 ### openEHR / EHRbase
+
 - EHRbase — https://ehrbase.org · https://github.com/ehrbase/ehrbase
 - openEHR specifications — https://specifications.openehr.org
 - AQL specification — https://specifications.openehr.org/releases/QUERY/latest/AQL.html
 - openEHR Reference Model — https://specifications.openehr.org/releases/RM/latest/
 
 ### Accessibility (legal + tooling)
+
 - European Accessibility Act (Directive EU 2019/882) — https://eur-lex.europa.eu/eli/dir/2019/882/oj
 - EAA overview (European Commission) — https://ec.europa.eu/social/main.jsp?catId=1202
 - EN 301 549 v3.2.1 (harmonized standard) — https://www.etsi.org/deliver/etsi_en/301500_301599/301549/03.02.01_60/en_301549v030201p.pdf
@@ -2905,6 +3091,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - NVDA screen reader — https://www.nvaccess.org
 
 ### ESLint v10 + plugins
+
 - ESLint v10.0.0 release notes — https://eslint.org/blog/2026/02/eslint-v10.0.0-released/
 - ESLint v10.4.0 release notes (current, `includeIgnoreFile()` helper) — https://eslint.org/blog/2026/05/eslint-v10.4.0-released/
 - ESLint v10 migration guide — https://eslint.org/docs/latest/use/migrate-to-10.0.0
@@ -2919,6 +3106,7 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - `eslint-plugin-jsx-a11y` (canonical, last published Oct 2024, not yet v10-compatible) — https://github.com/jsx-eslint/eslint-plugin-jsx-a11y
 
 ### Security hardening (headers, CSRF, sessions, file uploads)
+
 - OWASP Application Security Verification Standard (ASVS) 5.0 — https://owasp.org/www-project-application-security-verification-standard/
 - OWASP Content Security Policy Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html
 - MDN — Content Security Policy guide — https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP
@@ -2929,19 +3117,25 @@ Operational procedures: breach response, audit log integrity check, Keycloak rea
 - Storybook — https://storybook.js.org
 - Storybook a11y addon — https://storybook.js.org/addons/@storybook/addon-a11y
 
-### Compliance
+### Compliance — EU baseline
+
 - GDPR — https://eur-lex.europa.eu/eli/reg/2016/679/oj
 - GDPR Art. 9, 30, 32, 33-34, 35 — https://gdpr-info.eu
-- NEN 7513:2024 — https://www.nen.nl/en/nen-7513-2024-nl-329182
-- Wabvpz — https://wetten.overheid.nl/BWBR0019769
-- Besluit elektronische gegevensverwerking door zorgaanbieders — https://wetten.overheid.nl/BWBR0040076
-- WGBO (Boek 7 BW, art. 446-468) — https://wetten.overheid.nl/BWBR0005290
-- Autoriteit Persoonsgegevens (Dutch DPA) — https://autoriteitpersoonsgegevens.nl
 - EHDS Regulation (EU) 2025/327 — https://eur-lex.europa.eu/eli/reg/2025/327/oj
-- IHE ATNA — https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html
-- ISO 27799 — https://www.iso.org/standard/62777.html
+- ISO 27799 (Health informatics — Information security management) — https://www.iso.org/standard/62777.html
+- IHE ATNA (Audit Trail and Node Authentication) — https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html
+- EDPB (European Data Protection Board) — https://edpb.europa.eu
+
+### Compliance — national (examples, not exhaustive — each deployment configures its own)
+
+- **NL:** NEN 7513:2024 — https://www.nen.nl/en/nen-7513-2024-nl-329182 • Wabvpz — https://wetten.overheid.nl/BWBR0019769 • Besluit elektronische gegevensverwerking door zorgaanbieders — https://wetten.overheid.nl/BWBR0040076 • WGBO (Boek 7 BW, art. 446-468) — https://wetten.overheid.nl/BWBR0005290 • Autoriteit Persoonsgegevens (AP) — https://autoriteitpersoonsgegevens.nl
+- **DE:** BfDI — https://www.bfdi.bund.de • IT-Sicherheitsgesetz 2.0 (in healthcare contexts) — https://www.bsi.bund.de
+- **FR:** CNIL — https://www.cnil.fr • PGSSI-S — https://esante.gouv.fr/produits-services/pgssi-s
+- **IT:** Garante per la protezione dei dati personali — https://www.garanteprivacy.it
+- **ES:** AEPD — https://www.aepd.es
 
 ### Project governance
+
 - Contributor Covenant — https://www.contributor-covenant.org
 - Developer Certificate of Origin — https://developercertificate.org
 - Apache 2.0 license — https://www.apache.org/licenses/LICENSE-2.0

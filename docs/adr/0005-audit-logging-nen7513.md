@@ -1,4 +1,4 @@
-# ADR-0005 — Audit logging shape (NEN 7513 write path)
+# ADR-0005 — Audit logging shape (EU healthcare audit write path, NEN 7513 schema)
 
 - **Status:** Accepted
 - **Date:** 2026-05-27
@@ -12,9 +12,19 @@ Architecture-doc reference: §14. The audit **write path** is ratified now, in
 Milestone 2, because two M2 features depend on it: break-glass (§5.6) must
 write a real `EMERGENCY_ACCESS_GRANTED` event, and the BFF proxy must audit
 every PHI call. The broader §14 **governance** chapter (cold S3-Object-Lock
-tier, 20-year purge job, DPIA/DPA/RoPA, the NEN-7513 review dashboard, the
-patient-facing Art.15 access log) is a later, dedicated milestone — this is
-sequencing, not deferral; the write path is 100% complete.
+tier, configurable retention + purge job, DPIA/DPA/RoPA, the audit-review
+dashboard, the patient-facing Art.15 access log) is a later, dedicated
+milestone — this is sequencing, not deferral; the write path is 100% complete.
+
+**Why NEN 7513 as the schema (for an EU-wide deployment).** NEN 7513:2024 is a
+Dutch national standard, but it's the most comprehensive published
+healthcare-audit-log schema we evaluated — every WHO/WHAT/WHERE/WHY/WHEN field
+labelled and typed. It is a strict superset of what GDPR Art. 32 + ISO 27799
+require, so a deployment in any EU member state we've checked satisfies both
+the EU baseline and its national audit-log requirements by using this schema.
+NL deployments get the bonus of being pre-aligned with national certification.
+Picking a single comprehensive schema once, rather than a per-country schema,
+keeps the code path uniform and the test surface manageable.
 
 ## Decision
 

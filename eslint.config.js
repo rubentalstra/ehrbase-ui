@@ -37,6 +37,13 @@ export default defineConfig([
     'src/routeTree.gen.ts',
     'src/lib/api/ehrbase-generated/**',
     '.storybook/**',
+    // Vendored shadcn/ui primitives — copied verbatim via the shadcn CLI
+    // (docs/architecture.md §6) and not our code to maintain. Excluded from
+    // ESLint entirely (and from Prettier, see .prettierignore) so a routine
+    // `shadcn add` doesn't fail the strict src/** rules. tsc still typechecks
+    // them via tsconfig's `src/**` — they remain type-valid.
+    'src/components/ui/**',
+    'src/hooks/use-mobile.ts',
   ]),
 
   // ───────────────────────────────────────────────────────────────────────
@@ -74,7 +81,10 @@ export default defineConfig([
       ...jsxA11yX.configs.strict.rules,
       'jsx-a11y-x/alt-text': 'error',
       'jsx-a11y-x/anchor-has-content': 'error',
-      'jsx-a11y-x/anchor-is-valid': 'error',
+      // TanStack Router's <Link> renders a real <a> but uses `to` instead of
+      // `href`; tell the rule that `to` is a valid navigable destination so
+      // router links aren't flagged as empty anchors.
+      'jsx-a11y-x/anchor-is-valid': ['error', { specialLink: ['to'] }],
       'jsx-a11y-x/aria-props': 'error',
       'jsx-a11y-x/aria-proptypes': 'error',
       'jsx-a11y-x/aria-role': 'error',
@@ -153,42 +163,6 @@ export default defineConfig([
       // (e.g. rate-limiter-flexible rejects with a RateLimiterRes).
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/prefer-promise-reject-errors': 'off',
-    },
-  },
-
-  // ───────────────────────────────────────────────────────────────────────
-  // Vendored shadcn/ui primitives — copied into the repo via the shadcn
-  // CLI per docs/architecture.md §6, so treated as our code, but the
-  // upstream code uses `as` casts and pre-React-19 patterns by convention.
-  // Linting policy:
-  //   - Allow `as` assertions (we don't want to diverge on every shadcn add).
-  //   - Allow `aria-hidden` on focusable elements (radix patterns rely on it).
-  //   - Lower @eslint-react warnings to off (sidebar uses 18-era patterns).
-  // ───────────────────────────────────────────────────────────────────────
-  {
-    files: ['src/components/ui/**/*.{ts,tsx}', 'src/hooks/use-mobile.ts'],
-    rules: {
-      '@typescript-eslint/consistent-type-assertions': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@eslint-react/no-use-context': 'off',
-      '@eslint-react/no-context-provider': 'off',
-      '@eslint-react/use-state': 'off',
-      '@eslint-react/set-state-in-effect': 'off',
-      '@eslint-react/no-nested-component-definitions': 'off',
-      '@eslint-react/no-array-index-key': 'off',
-      '@eslint-react/dom-no-dangerously-set-innerhtml': 'off',
-      '@typescript-eslint/restrict-template-expressions': 'off',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-      'jsx-a11y-x/no-aria-hidden-on-focusable': 'off',
-      'jsx-a11y-x/prefer-tag-over-role': 'off',
-      'jsx-a11y-x/click-events-have-key-events': 'off',
-      'jsx-a11y-x/no-noninteractive-element-interactions': 'off',
-      'jsx-a11y-x/anchor-has-content': 'off',
     },
   },
 

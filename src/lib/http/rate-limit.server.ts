@@ -19,6 +19,7 @@ export type RateLimitClass =
   | 'audit-export'
   | 'emergency-access'
   | 'csp-report'
+  | 'client-error'
 
 const SESSION_LIFETIME_SECONDS = Number(
   process.env.SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 43200,
@@ -34,6 +35,9 @@ const config: Record<RateLimitClass, { points: number; duration: number }> = {
   // "3 per session, lifetime" — the window is the session's absolute lifetime.
   'emergency-access': { points: 3, duration: SESSION_LIFETIME_SECONDS },
   'csp-report': { points: 30, duration: 60 },
+  // Client-error telemetry sink (§10). A misbehaving client could spam this;
+  // cap per IP so the application log can't be flooded.
+  'client-error': { points: 30, duration: 60 },
 }
 
 const limiters = new Map<RateLimitClass, RateLimiterRedis>()

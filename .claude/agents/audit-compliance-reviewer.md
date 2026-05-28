@@ -29,7 +29,7 @@ For each touched function, verify:
 
 ### 2. Pseudonymization (§14.4)
 
-- Subject IDs are pseudonymized via the `pseudonymize()` helper before landing in the audit log — never raw `ehrId` or `bsn`.
+- Subject IDs are pseudonymized via the `pseudonymize()` helper before landing in the audit log — never the raw `ehrId` or raw national patient identifier (BSN / NIR / KVNR / PESEL / etc.).
 - The HMAC secret is read from env, never hard-coded.
 
 ### 3. Hash chain (§14.5)

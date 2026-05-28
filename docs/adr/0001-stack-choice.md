@@ -10,7 +10,7 @@
 
 EHRbase is a mature Apache-2.0 openEHR server, but no comprehensive, modern, open-source UI exists. Existing options are either commercial (Better Platform), aging demos, or framework-specific component libraries. This project fills the gap.
 
-The chosen deployment context (self-hosted clinical environments inside the EU, initial target Netherlands) imposes GDPR + NEN 7510/7512/7513 + WGBO + EHDS constraints. Security and audit logging are first-class. Versions need to be pinned exactly because supply-chain attacks have already hit our dependency tree (CVE-2026-45321, May 2026 TanStack compromise).
+The chosen deployment context (self-hosted clinical environments **across the EU**) imposes GDPR + EHDS as the EU baseline, plus whichever national healthcare-records regime applies at the deployment site (NL examples include NEN 7510/7512/7513 + WGBO; DE has §203 StGB + national e-prescription rules; FR has PGSSI-S; etc. — see architecture.md §14). Security and audit logging are first-class. Versions need to be pinned exactly because supply-chain attacks have already hit our dependency tree (CVE-2026-45321, May 2026 TanStack compromise).
 
 ## Decision
 
@@ -44,16 +44,19 @@ See `docs/architecture.md` §1 "Stack at a glance" and §17 "PNPM, Tooling & Con
 ## Consequences
 
 **Positive:**
+
 - Foundation rails are in place for every later milestone (auth, audit, forms, AQL, observability) to plug into cleanly.
 - Supply-chain posture is robust by default (pnpm 11 release-age delay, SHA-pinned actions, version-floor list for CVE-fixed deps).
 - Type safety stretches across the entire stack — routes, server functions, queries, forms, i18n messages.
 
 **Negative:**
+
 - Several pinned packages are RC-quality (TanStack Start at v1.168, Storybook 10 just released). Upgrade work is non-zero each cycle.
 - ESLint 10 plugin ecosystem is mid-transition; we're tracking forks until canonical packages catch up.
 - The lockfile must be the source of truth — drift between `docs/REFERENCES.md` and `pnpm-lock.yaml` is possible and requires the version-drift discipline described in `docs/architecture.md` §1.
 
 **Mitigations:**
+
 - Dependabot daily on npm, weekly on actions/Docker (§20.8).
 - CI fails the build if `package.json` and `pnpm-lock.yaml` drift (§20.3).
 - Re-verify the version table at every revision of `docs/architecture.md` by web-fetch, never by recollection.

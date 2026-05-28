@@ -1,3 +1,9 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Vendored shadcn/ui primitives — copied verbatim via the shadcn CLI
+# (docs/architecture.md §6). Left unformatted so a routine `shadcn add` does
+# not produce a noisy reformat diff. Also excluded from ESLint (eslint.config.js).
+src/components/ui/**
+src/hooks/use-mobile.ts

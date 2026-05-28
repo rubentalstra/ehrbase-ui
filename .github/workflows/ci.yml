@@ -69,6 +69,9 @@ jobs:
       - name: Compile Paraglide messages (generated module — gitignored)
         run: pnpm paraglide:compile
 
+      - name: i18n message completeness (§11.7)
+        run: node scripts/paraglide-check.mjs
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -128,6 +131,8 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages (generated module — gitignored)
+        run: pnpm paraglide:compile
       - run: pnpm run storybook:build
       - uses: actions/upload-artifact@v7
         with:
@@ -155,6 +160,12 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages
+        # src/server.ts imports @/paraglide/server.js eagerly (official
+        # Paraglide + TanStack Start integration). On a fresh runner the
+        # generated dir doesn't exist yet; vite dev's plugin compile races
+        # the server-entry resolution and Playwright's webServer times out.
+        run: pnpm paraglide:compile
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e

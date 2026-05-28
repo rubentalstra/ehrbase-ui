@@ -16,5 +16,66 @@
   "me_emergency_submit": "Request emergency access",
   "me_emergency_granted": "Emergency access granted for 60 minutes.",
   "me_emergency_error": "Emergency access could not be granted.",
-  "me_emergency_forced_logout": "Emergency-access limit reached. You have been signed out and must re-authenticate."
+  "me_emergency_forced_logout": "Emergency-access limit reached. You have been signed out and must re-authenticate.",
+  "me_view_access_log": "View my access log",
+
+  "app_brand_tagline": "Clinical workspace",
+
+  "skip_to_content": "Skip to main content",
+
+  "theme_toggle": "Toggle theme",
+  "theme_light": "Light",
+  "theme_dark": "Dark",
+  "theme_system": "System",
+
+  "language_label": "Language",
+  "language_english": "English",
+
+  "nav_section_workspace": "Workspace",
+  "nav_section_clinical": "Clinical",
+  "nav_section_administration": "Administration",
+  "nav_account": "My account",
+  "nav_access_log": "Access log",
+  "nav_patients": "Patients",
+  "nav_aql": "AQL queries",
+  "nav_templates": "Templates",
+  "nav_admin": "Administration",
+  "nav_coming_soon": "Available in a later release",
+
+  "command_open": "Search and commands",
+  "command_placeholder": "Type a command or search…",
+  "command_empty": "No results found.",
+  "command_group_navigation": "Go to",
+  "command_group_shortcuts": "Keyboard shortcuts",
+  "command_shortcut_palette": "Open the command palette",
+  "command_shortcut_sidebar": "Toggle the sidebar",
+
+  "footer_label": "Site help and links",
+  "footer_help": "Help",
+  "footer_accessibility": "Accessibility",
+  "footer_contact": "Contact",
+
+  "error_title": "Something went wrong",
+  "error_generic": "An unexpected error occurred. Please try again.",
+  "error_reference": "Reference for support: {id}",
+  "error_retry": "Try again",
+  "error_home": "Go to start",
+
+  "not_found_title": "Page not found",
+  "not_found_body": "The page you were looking for does not exist or may have moved.",
+
+  "a11y_title": "Accessibility statement",
+  "a11y_intro": "We are committed to making this clinical workspace usable by everyone, including people who rely on assistive technology.",
+  "a11y_standard_heading": "Conformance standard",
+  "a11y_standard_body": "This application targets WCAG 2.2 level AA and the EN 301 549 procurement standard. Accessibility is treated as a release gate, not an afterthought.",
+  "a11y_last_reviewed": "Last reviewed: {date}",
+  "a11y_known_issues_heading": "Known issues",
+  "a11y_known_issues_body": "Screen-reader verification with NVDA and VoiceOver is scheduled before the v1.0 release. If you encounter a barrier, please tell us so we can prioritise a fix.",
+  "a11y_contact_heading": "Feedback and contact",
+  "a11y_contact_body": "Report an accessibility barrier and we will respond within five working days.",
+
+  "access_log_title": "My access log",
+  "access_log_intro": "Under Article 15 GDPR you can see who has accessed your records and when.",
+  "access_log_empty_title": "No entries yet",
+  "access_log_empty_body": "Access entries will appear here once the audit-governance milestone is in place."
 }

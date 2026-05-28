@@ -2,18 +2,22 @@
 // user + realm roles, a sign-out control, and the break-glass path so the
 // emergency-access flow can be exercised end to end. All copy via Paraglide.
 
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 
 import { m } from '@/paraglide/messages.js'
+import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-export const Route = createFileRoute('/_authed/me')({ component: Me })
+export const Route = createFileRoute('/_authed/me')({
+  component: Me,
+  errorComponent: FeatureErrorBoundary,
+})
 
 // Mirrors MIN_JUSTIFICATION in break-glass.server.ts; kept local so this
 // client component never imports the server module. The server re-validates.
@@ -56,23 +60,25 @@ function Me() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-8">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{m.me_title()}</h1>
-        <Button asChild variant="outline">
-          <a href="/api/auth/logout">{m.nav_sign_out()}</a>
-        </Button>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>{m.me_signed_in_as({ name: user.name || user.email })}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm font-medium">{m.me_roles_label()}</p>
-          <p className="text-muted-foreground">
-            {user.roles.length > 0 ? user.roles.join(', ') : m.me_no_roles()}
-          </p>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm font-medium">{m.me_roles_label()}</p>
+            <p className="text-muted-foreground">
+              {user.roles.length > 0 ? user.roles.join(', ') : m.me_no_roles()}
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/me/access-log">{m.me_view_access_log()}</Link>
+          </Button>
         </CardContent>
       </Card>
 
@@ -119,6 +125,6 @@ function Me() {
           ) : null}
         </CardContent>
       </Card>
-    </main>
+    </div>
   )
 }
