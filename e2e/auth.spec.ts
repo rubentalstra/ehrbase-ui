@@ -58,14 +58,26 @@ test.describe('Authenticated flow', () => {
         cspErrors.push(text)
       }
     })
-    // `_authed` is a pathless layout, so the protected page's URL is /me.
-    // The first hit to a server-route chunk under `vite dev` can race the
-    // dev-worker module reload and 500; retry until the login redirect to the
-    // Keycloak form succeeds (a dev-only artifact — the prod server entry is
-    // unaffected).
+    // Better Auth + TanStack Start docs pattern (ADR-0028): the /login
+    // page calls authClient.signIn.sso() which POSTs to /api/auth/sign-in/sso
+    // and follows the returned Keycloak URL. We do the same here without
+    // pulling React in — POST the SSO endpoint, then page.goto() the URL
+    // it returns.
     for (let attempt = 0; attempt < 6; attempt++) {
-      const res = await page.goto('/api/auth/login?redirect=/me')
-      if (res && res.status() < 500) break
+      const ssoResp = await page.request.post(
+        '/api/auth/sign-in/sso',
+        {
+          headers: { 'content-type': 'application/json' },
+          data: { providerId: 'keycloak', callbackURL: '/me' },
+        },
+      )
+      if (ssoResp.status() < 500) {
+        const body = (await ssoResp.json()) as { url?: string }
+        if (body.url) {
+          await page.goto(body.url)
+          break
+        }
+      }
       await page.waitForTimeout(1000)
     }
     await page.fill('#username', 'dev-clinician')
@@ -88,8 +100,11 @@ test.describe('Authenticated flow', () => {
   }) => {
     const fresh = await browser.newPage()
     await gotoStable(fresh, '/me')
-    await fresh.waitForURL(/\/(realms\/ehrbase|api\/auth\/login)/)
-    expect(fresh.url()).toMatch(/realms\/ehrbase|api\/auth\/login/)
+    // Better Auth + TanStack Start docs pattern: protected layout redirects
+    // to /login?redirect=..., which then sends the user to the Keycloak
+    // realm via authClient.signIn.sso.
+    await fresh.waitForURL(/\/(realms\/ehrbase|login(\?|$))/)
+    expect(fresh.url()).toMatch(/realms\/ehrbase|\/login(\?|$)/)
     await fresh.close()
   })
 
@@ -255,10 +270,11 @@ test.describe('Authenticated flow', () => {
 
   // Runs last (serial): tears down the shared session and confirms re-gating.
   test('logout clears the session and re-gates protected routes', async () => {
-    await gotoStable(page, '/api/auth/logout')
-    await page.waitForLoadState('domcontentloaded')
+    // Sign out via Better Auth's native endpoint (the docs pattern;
+    // authClient.signOut() POSTs here). The hand-rolled GET shim is gone.
+    await page.request.post('/api/auth/sign-out')
     await gotoStable(page, '/me')
-    await page.waitForURL(/\/(realms\/ehrbase|api\/auth\/login)/)
-    expect(page.url()).toMatch(/realms\/ehrbase|api\/auth\/login/)
+    await page.waitForURL(/\/(realms\/ehrbase|login(\?|$))/)
+    expect(page.url()).toMatch(/realms\/ehrbase|\/login(\?|$)/)
   })
 })

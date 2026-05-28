@@ -38,3 +38,20 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - ioredis@5.11.0
+
+# Force transitive vulnerabilities pulled in by @better-auth/sso (we use
+# OIDC to Keycloak, not SAML — these saml-only branches still ship in the
+# dep graph). Both fix the listed advisories without changing our runtime
+# (samlify is never imported; uuid is only used inside samlify's SAML
+# assertion path).
+#
+#   samlify >= 2.13.0   → GHSA-34r5-q4jw-r36m  (HIGH      — XML injection
+#                                                          in SAML
+#                                                          AttributeValue)
+#   uuid    >= 11.1.1   → GHSA-w5hq-g745-h8pq  (MODERATE  — missing
+#                                                          buffer-bounds
+#                                                          check in v3/v5/v6
+#                                                          with `buf` arg)
+overrides:
+  samlify: 2.13.1
+  uuid: 11.1.1
