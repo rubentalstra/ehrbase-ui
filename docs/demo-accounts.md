@@ -1,6 +1,8 @@
 # Demo accounts (development only)
 
-> **Development credentials. Never in production.** The realm import file (`keycloak/import/ehrbase.json`) carries NO users — it is the prod-safe baseline. The four identities below are seeded post-startup by a one-shot init container gated by the `demo` Compose profile. Production omits the profile and never sees these credentials. Architecture-doc references: [`§5.4`](architecture.md#54-authorization-code--pkce-flow), [`§5.6`](architecture.md#56-roles-authorization--break-glass-emergency-access).
+> **Development credentials. Never in production.** The realm import file (`keycloak/import/ehrbase.json`) carries NO users — it is the prod-safe baseline. The four identities below are seeded post-startup by a one-shot init container gated by the `demo` Compose profile. Production omits the profile and never sees these credentials. Architecture-doc references: [`§5.4`](architecture.md#54-authorization-code--pkce-flow), [`§5.6`](architecture.md#56-roles-authorization--break-glass-emergency-access), [ADR-0028](adr/0028-better-auth-migration.md).
+
+> **Auth pipeline note (ADR-0028).** The credentials below live in **Keycloak**; the login flow itself routes through **Better Auth** as the OIDC client of Keycloak (SSO plugin). On first sign-in Better Auth JIT-provisions a row in its own `user` table (auth DB, ADR-0029) and mirrors the Keycloak `realm_access.roles` claim into the `keycloakRoles` JSONB column — that's what `requireRole(['clinician'])` reads server-side. Keycloak remains the source of truth for passwords, MFA, brute-force protection, and the realm-role set.
 
 ## What you get
 

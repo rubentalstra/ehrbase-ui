@@ -1,52 +1,26 @@
-// GET /api/auth/logout — destroy the session and end the Keycloak SSO session.
+// GET /api/auth/logout — sign-out bridge for plain `<a>` links
+// (docs/architecture.md §5; ADR-0028).
 //
-// Server-side session deletion is immediate (§5.10 — 0 s grace period), the
-// cookie is expired, and the browser is sent to Keycloak's RP-initiated
-// end-session endpoint so the SSO session is torn down too. Audited as LOGOUT.
+// Better Auth's native sign-out endpoint is POST /api/auth/sign-out, which
+// the navbar dropdown can't reach with a simple anchor. This shim calls
+// auth.api.signOut server-side (clearing the Better Auth session cookies
+// via tanstackStartCookies) and 302s back to the public home page. The
+// LOGOUT audit event is emitted from the auth `hooks.after` middleware.
 
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { deleteCookie, getCookie } from '@tanstack/react-start/server'
 
-import { logAudit } from '@/lib/audit/logger.server'
-import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie.server'
-import { endSessionUrl } from '@/lib/auth/keycloak.server'
-import { destroySession, readSession } from '@/lib/session.server'
-
-const POST_LOGOUT_REDIRECT =
-  process.env.KEYCLOAK_POST_LOGOUT_REDIRECT ?? 'http://localhost:3000/'
+import { auth } from '@/lib/auth/auth.server'
 
 export const Route = createFileRoute('/api/auth/logout')({
   server: {
     handlers: {
-      GET: async () => {
-        const sid = getCookie(SESSION_COOKIE)
-        if (!sid) throw redirect({ href: '/' })
-
-        const session = await readSession(sid)
-        const idToken = session?.idToken
-
-        if (session?.status === 'authenticated') {
-          await logAudit({
-            actor: {
-              userId: session.userId ?? 'unknown',
-              username: session.email ?? 'unknown',
-              displayName: session.name ?? 'unknown',
-              roles: session.roles ?? [],
-            },
-            action: 'LOGOUT',
-            target: { resourceType: 'SYSTEM' },
-            purpose: 'TREATMENT',
-            outcome: 'SUCCESS',
-            retentionPolicy: 'AUTH_LOG',
-            source: { sessionId: sid },
+      GET: async ({ request }: { request: Request }) => {
+        try {
+          await auth.api.signOut({
+            headers: new Headers(request.headers),
           })
-        }
-
-        await destroySession(sid)
-        deleteCookie(SESSION_COOKIE, sessionCookieOptions())
-
-        if (idToken) {
-          throw redirect({ href: endSessionUrl(idToken, POST_LOGOUT_REDIRECT) })
+        } catch {
+          // Already signed out / no session — fall through to the home page.
         }
         throw redirect({ href: '/' })
       },

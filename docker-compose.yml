@@ -284,6 +284,19 @@ services:
       KEYCLOAK_CLIENT_ID: ehrbase-ui
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       KEYCLOAK_REDIRECT_URI: http://localhost:3000/api/auth/callback
+      # Better Auth + SSO plugin (ADR-0028/0029). The SSO_KEYCLOAK_* vars
+      # configure the OIDC provider Better Auth registers in the
+      # `sso_provider` table on first request. KEYCLOAK_INTERNAL_ISSUER_URL
+      # above mirrors the same issuer for the M2 legacy path during the
+      # transition; both can point at the same realm.
+      AUTH_DB_URL: postgres://auth_writer:auth_writer@platform-db:5432/auth
+      AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@platform-db:5432/auth
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-rotate-in-prod}
+      BETTER_AUTH_URL: http://localhost:3000
+      SSO_KEYCLOAK_PROVIDER_ID: keycloak
+      SSO_KEYCLOAK_ISSUER: http://keycloak:8080/realms/ehrbase
+      SSO_KEYCLOAK_CLIENT_ID: ehrbase-ui
+      SSO_KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       VALKEY_URL: redis://valkey:6379
       # Runtime audit writes use the least-privilege audit_writer role (INSERT+
       # SELECT only). Migrations use the owner URL (see .env.example).

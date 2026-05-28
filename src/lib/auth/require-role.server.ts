@@ -1,10 +1,15 @@
-// requireRole — RBAC on top of requireAuth (docs/architecture.md §5.6).
+// requireRole — RBAC on top of requireAuth (docs/architecture.md §5.6;
+// ADR-0028).
 //
 // Roles come from Keycloak realm claims (clinician / admin / audit-reviewer /
-// researcher), read off the session. A pure RBAC denial returns 403 and audits
-// ACCESS_DENIED. For PHI routes the 403 additionally carries a
-// `break-glass: available` header so the UI can offer the emergency-access
-// path (§5.6) instead of a dead end.
+// researcher), mirrored onto the Better Auth user row via the SSO
+// `provisionUser` hook in src/lib/auth/auth.server.ts. Reading from
+// `auth.user.roles` is therefore equivalent to reading the JWT claim
+// directly, but without re-validating the access token every request.
+//
+// A pure RBAC denial returns 403 and audits ACCESS_DENIED. For PHI routes
+// the 403 additionally carries a `break-glass: available` header so the UI
+// can offer the emergency-access path (§5.6) instead of a dead end.
 
 import { logAudit } from '@/lib/audit/logger.server'
 import { resolveAuth, type AuthContext } from '@/lib/auth/require-auth.server'

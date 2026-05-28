@@ -62,6 +62,14 @@ async function proxy({
   const limit = await checkRateLimit(cls.rateLimit, auth.sid)
   if (!limit.allowed) return tooManyRequests(limit)
 
+  // ADR-0028: the Keycloak access token is read from the Better Auth
+  // `account` row. A session without an IdP-linked account can't act on
+  // EHRbase — fail closed.
+  if (!auth.accessToken) {
+    await audit('FAILURE', 'no_provider_access_token')
+    return json(401, { code: 'UNAUTHENTICATED' }, correlationId)
+  }
+
   const headers = new Headers()
   const contentType = request.headers.get('content-type')
   if (contentType) headers.set('content-type', contentType)

@@ -7,10 +7,8 @@
 //          ceiling). The 4th attempt forces logout + re-auth.
 
 import { createFileRoute } from '@tanstack/react-router'
-import { deleteCookie } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
-import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie.server'
 import {
   BreakGlassRequestSchema,
   grantEmergencyAccess,
@@ -56,7 +54,10 @@ export const Route = createFileRoute('/api/auth/break-glass')({
         })
 
         if (outcome.status === 'forced_logout') {
-          deleteCookie(SESSION_COOKIE, sessionCookieOptions())
+          // grantEmergencyAccess() already revoked every active session via
+          // the Better Auth admin API; the browser cookie will fail-closed
+          // on the next request. Surface the forced-reauth signal so the UI
+          // can redirect to /api/auth/sign-in/sso.
           return json(401, { code: 'FORCED_REAUTH' })
         }
         return json(200, { code: 'GRANTED', expiresInSeconds: outcome.expiresInSeconds })

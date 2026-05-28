@@ -13,10 +13,10 @@
 
 import { z } from 'zod'
 
+import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@/lib/audit/logger.server'
 import { checkRateLimit } from '@/lib/http/rate-limit.server'
 import { valkey } from '@/lib/valkey.server'
-import { destroySession, readSession, writeSession } from '@/lib/session.server'
 import type { AuthContext } from '@/lib/auth/require-auth.server'
 
 export const GRANT_TTL_SECONDS = 60 * 60
@@ -58,17 +58,23 @@ export async function grantEmergencyAccess(
       outcomeDetail: 'break_glass_ceiling_reached',
       source: { sessionId: auth.sid },
     })
-    await destroySession(auth.sid)
+    // Force re-auth: revoke every active session for this user via Better
+    // Auth's admin API. The user is signed out of every device and the
+    // M15 audit-reviewer dashboard sees the gap.
+    await betterAuth.api
+      .revokeUserSessions({
+        body: { userId: auth.user.id },
+        headers: new Headers(),
+      })
+      .catch(() => undefined)
     return { status: 'forced_logout' }
   }
 
-  const session = await readSession(auth.sid)
-  if (session) {
-    await writeSession(auth.sid, {
-      ...session,
-      emergencyAccessCount: (session.emergencyAccessCount ?? 0) + 1,
-    })
-  }
+  // Per-session emergency-access counter lives in Valkey alongside the
+  // grant itself; Better Auth's session table doesn't carry custom counts.
+  const counterKey = `breakglass:count:${auth.sid}`
+  await valkey.incr(counterKey)
+  await valkey.expire(counterKey, GRANT_TTL_SECONDS * 4)
 
   const now = Date.now()
   await valkey.set(

@@ -242,6 +242,8 @@ Public routes (`/`, `/login`, error pages) use default SSR. The OIDC callback us
 
 ## 5. Authentication & BFF Pattern
 
+> **Implementation note (2026-05-28).** [ADR-0028](adr/0028-better-auth-migration.md) replaces the M2 Arctic-based stack with **Better Auth** (Drizzle-backed in a dedicated `auth` database, ADR-0029) layered with the **SSO + admin + organization (+ teams)** plugins. Keycloak remains the IdP; Better Auth is the OIDC client. The "Why BFF" rationale below is unchanged — OAuth tokens still live server-side, the browser still holds only an opaque session cookie. The Authorization-Code-+-PKCE handshake is now run by Better Auth's SSO plugin instead of Arctic; the per-endpoint M2 routes (`/api/auth/login`, `/callback`, `/logout`) are replaced by a catch-all at `/api/auth/$` that dispatches to Better Auth's internal router. The §-numbered sections below describe the M2 surface for historical context — current code lives in `src/lib/auth/auth.server.ts` + `src/lib/auth/require-auth.server.ts` + `src/lib/auth/require-role.server.ts`.
+
 ### Why BFF
 
 Browser-side tokens are an unacceptable risk for clinical data. The BFF pattern keeps OAuth tokens **server-side** inside the TanStack Start process. The browser holds only an opaque, encrypted session cookie. XSS becomes a per-session compromise rather than a token-theft incident.

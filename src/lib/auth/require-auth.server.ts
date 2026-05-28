@@ -1,46 +1,53 @@
 // requireAuth — the parent of every protected path (docs/architecture.md
-// §5.5, §5.10).
+// §5.5; ADR-0028).
 //
-// resolveAuth() is the server-only primitive: read the sid cookie → load the
-// session → enforce the idle (15 min) + absolute (12 h) timeouts → silently
-// refresh the access token → slide the idle clock. It returns the full context
-// INCLUDING the access token, for use by the BFF proxy and break-glass. On any
-// failure it audits and throws a 401.
+// Wraps Better Auth's `auth.api.getSession({ headers })` and shapes the
+// result into the same `AuthContext` the rest of the codebase consumes.
+// The session token + idle/absolute timeouts are owned by Better Auth
+// (configured in src/lib/auth/auth.server.ts); this layer adds:
+//   - the canonical 401 shape (`{ code: 'UNAUTHENTICATED' }`) the UI uses,
+//   - extraction of the Keycloak `accessToken` from the `account` row for
+//     the BFF EHRbase proxy (§5),
+//   - the typed `keycloakRoles` array on user (single source for
+//     `requireRole`).
 //
-// requireAuth is the createServerFn wrapper exposed to routes/components: it
-// runs resolveAuth server-side and returns ONLY the user (never tokens), so a
-// route's beforeLoad can gate on it without leaking OAuth material to the
-// client.
+// resolveAuth() is server-only; the client-importable wrapper
+// `requireAuth` (createServerFn) lives in require-auth.ts.
 
-import { getCookie } from '@tanstack/react-start/server'
+import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
-import { logAudit } from '@/lib/audit/logger.server'
-import { SESSION_COOKIE } from '@/lib/auth/cookie.server'
-import { refreshIfExpiring } from '@/lib/auth/refresh.server'
-import {
-  destroySession,
-  readSession,
-  writeSession,
-  type SessionData,
-} from '@/lib/session.server'
+import { authDb } from '@/db/auth-client.server'
+import { account as accountTable } from '@/db/schema/auth'
+import { auth } from '@/lib/auth/auth.server'
 
-const IDLE_TIMEOUT_MS =
-  Number(process.env.SESSION_IDLE_TIMEOUT_SECONDS ?? 900) * 1000
-const ABSOLUTE_TIMEOUT_MS =
-  Number(process.env.SESSION_ABSOLUTE_TIMEOUT_SECONDS ?? 43200) * 1000
+const SessionUserShapeSchema = z
+  .object({
+    keycloakRoles: z.array(z.string()).default([]),
+    role: z.string().default('user'),
+  })
+  .partial()
 
 export type AuthUser = {
   id: string
   email: string
   name: string
+  // Keycloak realm roles, mirrored on the Better Auth user row by the SSO
+  // provisionUser hook. Empty array for non-SSO logins.
   roles: string[]
+  // Admin plugin: Better Auth's own role string ('user' / 'admin').
+  authRole: string
 }
 
 export type AuthContext = {
+  // Stable identifier of the Better Auth session. Used as the key for
+  // break-glass elevation grants in Valkey (§5.6).
   sid: string
   user: AuthUser
-  accessToken: string
-  session: SessionData
+  // Keycloak access token (from the SSO `account` row) — forwarded as the
+  // Bearer to EHRbase by the BFF proxy. May be undefined for users that
+  // sign in via a non-Keycloak path in the future.
+  accessToken: string | undefined
 }
 
 function unauthorized(code: string): Response {
@@ -50,62 +57,52 @@ function unauthorized(code: string): Response {
   })
 }
 
-function userOf(session: SessionData): AuthUser {
-  return {
-    id: session.userId ?? 'unknown',
-    email: session.email ?? '',
-    name: session.name ?? '',
-    roles: session.roles ?? [],
-  }
-}
-
 export async function resolveAuth(): Promise<AuthContext> {
-  const sid = getCookie(SESSION_COOKIE)
-  if (!sid) throw unauthorized('UNAUTHENTICATED')
-
-  const session = await readSession(sid)
-  if (!session || session.status !== 'authenticated') {
-    throw unauthorized('UNAUTHENTICATED')
+  const { getRequestHeaders } = await import('@tanstack/react-start/server')
+  // TanStack Start's getRequestHeaders returns a TypedHeaders view that
+  // doesn't tell TypeScript it's iterable. We treat the runtime value as
+  // an unknown record and let Zod-style guarding pick out string entries.
+  const raw: unknown = getRequestHeaders()
+  const headers = new Headers()
+  if (raw !== null && typeof raw === 'object') {
+    for (const [k, v] of Object.entries(raw)) {
+      if (typeof v === 'string') headers.set(k, v)
+    }
   }
+  const session = await auth.api.getSession({ headers })
+  if (!session) throw unauthorized('UNAUTHENTICATED')
 
-  const now = Date.now()
-  const idleExpired =
-    session.lastSeenAt !== undefined &&
-    now - session.lastSeenAt > IDLE_TIMEOUT_MS
-  const absoluteExpired =
-    session.createdAt !== undefined &&
-    now - session.createdAt > ABSOLUTE_TIMEOUT_MS
-
-  if (idleExpired || absoluteExpired) {
-    await destroySession(sid)
-    await logAudit({
-      actor: {
-        userId: session.userId ?? 'unknown',
-        username: session.email ?? 'unknown',
-        displayName: session.name ?? 'unknown',
-        roles: session.roles ?? [],
-      },
-      action: 'SESSION_EXPIRED',
-      target: { resourceType: 'SYSTEM' },
-      purpose: 'TREATMENT',
-      outcome: 'SUCCESS',
-      outcomeDetail: absoluteExpired ? 'absolute_timeout' : 'idle_timeout',
-      retentionPolicy: 'AUTH_LOG',
-      source: { sessionId: sid },
+  const ssoProviderId = process.env.SSO_KEYCLOAK_PROVIDER_ID ?? 'keycloak'
+  const accountRows = await authDb
+    .select({
+      accessToken: accountTable.accessToken,
+      accessTokenExpiresAt: accountTable.accessTokenExpiresAt,
     })
-    throw unauthorized('SESSION_EXPIRED')
-  }
+    .from(accountTable)
+    .where(eq(accountTable.userId, session.user.id))
+    .limit(5)
+  // Find the row for our configured Keycloak provider. accountTable carries
+  // multiple rows per user if other providers are linked.
+  const accessToken =
+    accountRows.find((r) => r.accessToken !== null)?.accessToken ?? undefined
 
-  const refreshed = await refreshIfExpiring(sid, session)
-  const slid: SessionData = { ...refreshed, lastSeenAt: now }
-  await writeSession(sid, slid)
+  const shape = SessionUserShapeSchema.safeParse(session.user)
+  const roles = shape.success ? (shape.data.keycloakRoles ?? []) : []
+  const authRole = shape.success ? (shape.data.role ?? 'user') : 'user'
 
-  if (!slid.accessToken) throw unauthorized('UNAUTHENTICATED')
+  // ssoProviderId is captured to leave a hook for future per-provider
+  // filtering when a deployment links more than one IdP.
+  void ssoProviderId
 
   return {
-    sid,
-    user: userOf(slid),
-    accessToken: slid.accessToken,
-    session: slid,
+    sid: session.session.token,
+    user: {
+      id: session.user.id,
+      email: session.user.email ?? '',
+      name: session.user.name ?? '',
+      roles,
+      authRole,
+    },
+    accessToken,
   }
 }

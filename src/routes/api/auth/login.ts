@@ -1,44 +1,63 @@
-// GET /api/auth/login — start the Authorization-Code + PKCE flow (§5.4).
+// GET /api/auth/login — redirect bridge into the Better Auth SSO flow
+// (docs/architecture.md §5; ADR-0028).
 //
-// Generates state + a PKCE verifier, stashes them in a short-lived
-// pre-session keyed by an httpOnly cookie, and redirects the browser to the
-// EXTERNAL Keycloak authorization endpoint. No tokens exist yet.
+// Better Auth's native sign-in URL is POST /api/auth/sign-in/sso; protected
+// routes use this thin GET shim to initiate the flow from beforeLoad
+// redirects + plain anchors (`<a href="/api/auth/login?redirect=/me">`).
+// The shim calls into auth.api.signInSSO server-side and 302s the browser
+// to the authorization endpoint the call returns.
 
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { setCookie } from '@tanstack/react-start/server'
-import { generateCodeVerifier, generateState } from 'arctic'
+import { z } from 'zod'
 
-import { keycloakBrowser, OIDC_SCOPES } from '@/lib/auth/keycloak.server'
-import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie.server'
-import { createSessionId, writeSession } from '@/lib/session.server'
+import {
+  auth,
+  ensureKeycloakSsoProviderRegistered,
+} from '@/lib/auth/auth.server'
+
+const SsoRedirectShapeSchema = z
+  .object({
+    url: z.string().optional(),
+    redirect: z.string().optional(),
+  })
+  .partial()
+
+function safeCallback(raw: string | null): string {
+  // Same allow-list shape the M2 callback used — only same-origin paths.
+  return raw && /^\/(?!\/)/.test(raw) ? raw : '/me'
+}
 
 export const Route = createFileRoute('/api/auth/login')({
   server: {
     handlers: {
-      GET: async ({ request }) => {
-        const state = generateState()
-        const codeVerifier = generateCodeVerifier()
-        const url = keycloakBrowser.createAuthorizationURL(state, codeVerifier, OIDC_SCOPES)
+      GET: async ({ request }: { request: Request }) => {
+        await ensureKeycloakSsoProviderRegistered()
+        const url = new URL(request.url)
+        const callbackURL = safeCallback(url.searchParams.get('redirect'))
+        const providerId = process.env.SSO_KEYCLOAK_PROVIDER_ID ?? 'keycloak'
 
-        // Only accept a local path as the post-login target — never an
-        // absolute URL (open-redirect guard). Must start with a single '/'.
-        const requested = new URL(request.url).searchParams.get('redirect')
-        const postLoginRedirect =
-          requested && /^\/(?!\/)/.test(requested) ? requested : '/me'
-
-        const sid = createSessionId()
-        await writeSession(sid, {
-          status: 'authenticating',
-          state,
-          codeVerifier,
-          postLoginRedirect,
+        const result = await auth.api.signInSSO({
+          body: { providerId, callbackURL },
+          headers: new Headers(request.headers),
+          asResponse: true,
         })
-
-        // 10 minutes to complete login; replaced by the full-session cookie on
-        // callback.
-        setCookie(SESSION_COOKIE, sid, { ...sessionCookieOptions(), maxAge: 60 * 10 })
-
-        throw redirect({ href: url.toString() })
+        // Better Auth returns either a redirect Response (asResponse:true)
+        // or a body with `{ url }`. Follow whichever it gave us.
+        if (result instanceof Response) {
+          if (result.status >= 300 && result.status < 400) return result
+          const raw: unknown = await result
+            .clone()
+            .json()
+            .catch(() => null)
+          const parsed = SsoRedirectShapeSchema.safeParse(raw ?? {})
+          const dest = parsed.success
+            ? (parsed.data.url ?? parsed.data.redirect)
+            : undefined
+          if (dest) throw redirect({ href: dest })
+          return result
+        }
+        // Defensive fallback — shouldn't happen with asResponse:true.
+        throw redirect({ href: '/' })
       },
     },
   },

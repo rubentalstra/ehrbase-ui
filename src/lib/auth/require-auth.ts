@@ -9,6 +9,6 @@ import { createServerFn } from '@tanstack/react-start'
 
 export const requireAuth = createServerFn().handler(async () => {
   const { resolveAuth } = await import('@/lib/auth/require-auth.server')
-  const auth = await resolveAuth()
-  return { user: auth.user }
+  const ctx = await resolveAuth()
+  return { user: ctx.user }
 })

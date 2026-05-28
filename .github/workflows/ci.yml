@@ -190,6 +190,14 @@ jobs:
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@localhost:5432/audit
       AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@localhost:5432/audit
       AUDIT_PSEUDONYM_SECRET: dev-only-rotate-in-prod
+      AUTH_DB_URL: postgres://auth_writer:auth_writer@localhost:5432/auth
+      AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@localhost:5432/auth
+      BETTER_AUTH_SECRET: dev-only-rotate-in-prod
+      BETTER_AUTH_URL: http://localhost:3000
+      SSO_KEYCLOAK_PROVIDER_ID: keycloak
+      SSO_KEYCLOAK_ISSUER: http://localhost:8180/realms/ehrbase
+      SSO_KEYCLOAK_CLIENT_ID: ehrbase-ui
+      SSO_KEYCLOAK_CLIENT_SECRET: dev-only-rotate-in-prod
       KEYCLOAK_ISSUER_URL: http://localhost:8180/realms/ehrbase
       KEYCLOAK_INTERNAL_ISSUER_URL: http://localhost:8180/realms/ehrbase
       KEYCLOAK_CLIENT_ID: ehrbase-ui
@@ -227,6 +235,8 @@ jobs:
         run: docker compose run --rm keycloak-seed-demo-users
       - name: Apply audit DB migration
         run: pnpm db:migrate
+      - name: Apply auth DB migration (Better Auth — ADR-0028)
+        run: pnpm db:auth:migrate
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Run full-stack E2E
