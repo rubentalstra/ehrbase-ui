@@ -221,7 +221,14 @@ test.describe('Authenticated flow', () => {
 
   test('skip link moves focus to the main content', async () => {
     await gotoStable(page, '/me')
-    await page.locator('body').click({ position: { x: 1, y: 1 } })
+    // The previous serial test left focus on a button (Escape returns focus
+    // to the dialog trigger). Body.click doesn't reset focus because <body>
+    // isn't focusable, so the next Tab would advance from that button and
+    // skip past the (DOM-first) skip-link. Blur whatever is focused so Tab
+    // starts from no-focus → first tabbable = skip-link.
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    })
     await page.keyboard.press('Tab')
     const skip = page.getByRole('link', { name: /skip to main content/i })
     await expect(skip).toBeFocused()
