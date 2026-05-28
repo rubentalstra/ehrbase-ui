@@ -190,6 +190,14 @@ jobs:
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@localhost:5432/audit
       AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@localhost:5432/audit
       AUDIT_PSEUDONYM_SECRET: dev-only-rotate-in-prod
+      AUTH_DB_URL: postgres://auth_writer:auth_writer@localhost:5432/auth
+      AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@localhost:5432/auth
+      BETTER_AUTH_SECRET: dev-only-rotate-in-prod
+      BETTER_AUTH_URL: http://localhost:3000
+      SSO_KEYCLOAK_PROVIDER_ID: keycloak
+      SSO_KEYCLOAK_ISSUER: http://localhost:8180/realms/ehrbase
+      SSO_KEYCLOAK_CLIENT_ID: ehrbase-ui
+      SSO_KEYCLOAK_CLIENT_SECRET: dev-only-rotate-in-prod
       KEYCLOAK_ISSUER_URL: http://localhost:8180/realms/ehrbase
       KEYCLOAK_INTERNAL_ISSUER_URL: http://localhost:8180/realms/ehrbase
       KEYCLOAK_CLIENT_ID: ehrbase-ui
@@ -218,8 +226,17 @@ jobs:
         run: pnpm build
       - name: Start stack (Keycloak + Valkey + audit DB)
         run: docker compose up -d --wait platform-db valkey keycloak
+      - name: Seed Keycloak demo users (synchronous)
+        # `docker compose run` blocks until the one-shot seeder exits, unlike
+        # `up --wait` which has known timing issues for one-shot containers
+        # without a healthcheck. Without this the e2e/auth.spec.ts beforeAll
+        # races the seeder and can see a fresh Keycloak realm without the
+        # demo identities. docs/demo-accounts.md.
+        run: docker compose run --rm keycloak-seed-demo-users
       - name: Apply audit DB migration
         run: pnpm db:migrate
+      - name: Apply auth DB migration (Better Auth — ADR-0028)
+        run: pnpm db:auth:migrate
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: Run full-stack E2E

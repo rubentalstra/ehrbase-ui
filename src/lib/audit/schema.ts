@@ -18,24 +18,24 @@ import { z } from 'zod'
 import {
   auditActionEnum,
   auditEvents,
-  auditLawfulBasisEnum,
   auditOutcomeEnum,
   auditPurposeEnum,
   auditResourceTypeEnum,
+  auditRetentionPolicyEnum,
 } from '@/db/schema/audit'
 
 // ─── Controlled vocabularies (derived from the pg enums) ──────────────────
 export const AuditAction = z.enum(auditActionEnum.enumValues)
 export const AuditResourceType = z.enum(auditResourceTypeEnum.enumValues)
 export const AuditPurpose = z.enum(auditPurposeEnum.enumValues)
-export const AuditLawfulBasis = z.enum(auditLawfulBasisEnum.enumValues)
 export const AuditOutcome = z.enum(auditOutcomeEnum.enumValues)
+export const AuditRetentionPolicy = z.enum(auditRetentionPolicyEnum.enumValues)
 
 export type AuditAction = z.infer<typeof AuditAction>
 export type AuditResourceType = z.infer<typeof AuditResourceType>
 export type AuditPurpose = z.infer<typeof AuditPurpose>
-export type AuditLawfulBasis = z.infer<typeof AuditLawfulBasis>
 export type AuditOutcome = z.infer<typeof AuditOutcome>
+export type AuditRetentionPolicy = z.infer<typeof AuditRetentionPolicy>
 
 // ─── Persisted row validators (derived from the table) ────────────────────
 // jsonb columns derive to a loose Json type; refine actorRoles back to the
@@ -75,9 +75,13 @@ export const LogAuditInputSchema = z.object({
     })
     .optional(),
   purpose: AuditPurpose,
-  lawfulBasis: AuditLawfulBasis,
   outcome: AuditOutcome,
   outcomeDetail: z.string().optional(),
+  // Optional override; the writer falls back to the Drizzle column default
+  // ('AUDIT_LOG') when the caller omits it. Auth + break-glass emit AUTH_LOG;
+  // BFF + general audits get the default; future clinical writes override
+  // explicitly (CLINICAL_RECORD).
+  retentionPolicy: AuditRetentionPolicy.optional(),
   source: z
     .object({
       ipAddress: z.string().optional(),

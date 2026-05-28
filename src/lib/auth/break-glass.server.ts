@@ -13,11 +13,11 @@
 
 import { z } from 'zod'
 
+import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@/lib/audit/logger.server'
 import { checkRateLimit } from '@/lib/http/rate-limit.server'
 import { valkey } from '@/lib/valkey.server'
-import { destroySession, readSession, writeSession } from '@/lib/session.server'
-import type { AuthContext } from '@/lib/auth/require-auth.server'
+import type { RoleContext } from '@/lib/auth/require-role.server'
 
 export const GRANT_TTL_SECONDS = 60 * 60
 export const MIN_JUSTIFICATION = 30
@@ -38,7 +38,7 @@ export type BreakGlassOutcome =
   | { status: 'forced_logout' }
 
 export async function grantEmergencyAccess(
-  auth: AuthContext,
+  auth: RoleContext,
   req: BreakGlassRequest,
 ): Promise<BreakGlassOutcome> {
   // Lifetime ceiling — the 4th attempt is refused and forces re-authentication.
@@ -54,22 +54,27 @@ export async function grantEmergencyAccess(
       action: 'ACCESS_DENIED',
       target: { ehrId: req.ehrId, resourceType: 'EHR' },
       purpose: 'EMERGENCY',
-      lawfulBasis: '9(2)(c)',
       outcome: 'FAILURE',
       outcomeDetail: 'break_glass_ceiling_reached',
       source: { sessionId: auth.sid },
     })
-    await destroySession(auth.sid)
+    // Force re-auth: revoke every active session for this user via Better
+    // Auth's admin API. The user is signed out of every device and the
+    // M15 audit-reviewer dashboard sees the gap.
+    await betterAuth.api
+      .revokeUserSessions({
+        body: { userId: auth.user.id },
+        headers: new Headers(),
+      })
+      .catch(() => undefined)
     return { status: 'forced_logout' }
   }
 
-  const session = await readSession(auth.sid)
-  if (session) {
-    await writeSession(auth.sid, {
-      ...session,
-      emergencyAccessCount: (session.emergencyAccessCount ?? 0) + 1,
-    })
-  }
+  // Per-session emergency-access counter lives in Valkey alongside the
+  // grant itself; Better Auth's session table doesn't carry custom counts.
+  const counterKey = `breakglass:count:${auth.sid}`
+  await valkey.incr(counterKey)
+  await valkey.expire(counterKey, GRANT_TTL_SECONDS * 4)
 
   const now = Date.now()
   await valkey.set(
@@ -98,20 +103,12 @@ export async function grantEmergencyAccess(
     action: 'EMERGENCY_ACCESS_GRANTED',
     target: { ehrId: req.ehrId, resourceType: 'EHR' },
     purpose: 'EMERGENCY',
-    lawfulBasis: '9(2)(c)',
     outcome: 'SUCCESS',
     outcomeDetail: `overrode=[${(req.deniedRoles ?? []).join(',')}] justification=${req.justification}`,
     source: { sessionId: auth.sid },
   })
 
   return { status: 'granted', expiresInSeconds: GRANT_TTL_SECONDS }
-}
-
-export type EmergencyGrant = {
-  justification: string
-  ehrId?: string
-  grantedAt: number
-  expiresAt: number
 }
 
 const EmergencyGrantSchema = z.object({
@@ -121,7 +118,14 @@ const EmergencyGrantSchema = z.object({
   expiresAt: z.number(),
 })
 
-export async function getEmergencyGrant(sid: string): Promise<EmergencyGrant | null> {
+// Derived from the schema so the runtime validator and the static type can
+// never drift — same pattern as BreakGlassRequest above + the audit row
+// schemas in src/lib/audit/schema.ts.
+export type EmergencyGrant = z.infer<typeof EmergencyGrantSchema>
+
+export async function getEmergencyGrant(
+  sid: string,
+): Promise<EmergencyGrant | null> {
   const raw = await valkey.get(grantKey(sid))
   if (!raw) return null
   const json: unknown = JSON.parse(raw)

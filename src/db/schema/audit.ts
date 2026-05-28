@@ -39,6 +39,9 @@ export const auditActionEnum = pgEnum('audit_action', [
   'CONSENT_WITHDRAW',
   'ADMIN_CHANGE',
   'EMERGENCY_ACCESS_GRANTED',
+  // M4 — patient/staff access of their own audit log is itself audited
+  // (§14.4, §14.13). Reuses the existing canonical-form pattern.
+  'META_AUDIT_ACCESS',
 ])
 
 export const auditResourceTypeEnum = pgEnum('audit_resource_type', [
@@ -62,18 +65,24 @@ export const auditPurposeEnum = pgEnum('audit_purpose', [
   'SYSTEM_ADMIN',
 ])
 
-export const auditLawfulBasisEnum = pgEnum('audit_lawful_basis', [
-  '9(2)(a)',
-  '9(2)(c)',
-  '9(2)(h)',
-  '9(2)(i)',
-  '9(2)(j)',
-])
-
 export const auditOutcomeEnum = pgEnum('audit_outcome', [
   'SUCCESS',
   'FAILURE',
   'PARTIAL',
+])
+
+// Per-event retention class — selects which AUDIT_RETENTION_DAYS_* env var the
+// purge job (M4 — src/lib/audit/retention.server.ts) consults to decide when
+// the warm row is archived to cold storage and deleted. Tagged at write time:
+// auth/break-glass events get AUTH_LOG (1y), BFF + general audits get
+// AUDIT_LOG (5y), future clinical writes (M6+) get CLINICAL_RECORD (20y).
+// Docs/architecture.md §14.7; ADR-0027.
+export const auditRetentionPolicyEnum = pgEnum('audit_retention_policy', [
+  'CLINICAL_RECORD',
+  'AUDIT_LOG',
+  'AUTH_LOG',
+  'APP_LOG',
+  'SESSION',
 ])
 
 export const auditEvents = pgTable(
@@ -114,11 +123,24 @@ export const auditEvents = pgTable(
 
     // WHY
     purpose: auditPurposeEnum('purpose').notNull(),
-    lawfulBasis: auditLawfulBasisEnum('lawful_basis').notNull(),
 
     // OUTCOME
     outcome: auditOutcomeEnum('outcome').notNull(),
     outcomeDetail: text('outcome_detail'),
+
+    // RETENTION (§14.7 — ADR-0027). Default AUDIT_LOG is the safe write-time
+    // tag for the M2 BFF + auth audits; clinical writes (M6+) override per
+    // emission site.
+    retentionPolicy: auditRetentionPolicyEnum('retention_policy')
+      .notNull()
+      .default('AUDIT_LOG'),
+    // Archive bookkeeping (§14.6). Mutable post-insert by the audit_retention
+    // role only; excluded from the canonical hash so flipping it doesn't break
+    // the chain (see src/lib/audit/hash-chain.server.ts canonicalize()).
+    s3ArchivedAt: timestamp('s3_archived_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
 
     // INTEGRITY (§14.5)
     previousHash: text('previous_hash'),
@@ -128,5 +150,10 @@ export const auditEvents = pgTable(
     index('audit_events_timestamp_idx').on(t.timestamp),
     index('audit_events_actor_user_id_idx').on(t.actorUserId),
     index('audit_events_action_idx').on(t.action),
+    // Supports the retention purge job's age-by-policy scan (M4).
+    index('audit_events_retention_purge_idx').on(
+      t.retentionPolicy,
+      t.timestamp,
+    ),
   ],
 )

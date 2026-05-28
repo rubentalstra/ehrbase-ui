@@ -26,3 +26,20 @@ const sql = postgres(auditDbUrl, { max: 5 })
 // imported tables), not the relational `db.query.*` API, so the schema option
 // would be dead weight.
 export const auditDb = drizzle({ client: sql })
+
+// Retention-role connection (M4 — ADR-0027). Owns the ONLY controlled bypass
+// of the ADR-0013 append-only trigger: DELETE + UPDATE of `s3_archived_at`.
+// Lazy-imported by the retention purge job; the warm hot path never sees it.
+// Lazily constructed so this module doesn't open a second pool at import time
+// (the purge job runs on a cron, not per request).
+let _retentionDb: ReturnType<typeof drizzle> | undefined
+let _retentionSql: ReturnType<typeof postgres> | undefined
+export function getAuditRetentionDb(): ReturnType<typeof drizzle> {
+  if (_retentionDb) return _retentionDb
+  const url =
+    process.env.AUDIT_RETENTION_DB_URL ??
+    'postgres://audit_retention:audit_retention@localhost:5432/audit'
+  _retentionSql = postgres(url, { max: 2 })
+  _retentionDb = drizzle({ client: _retentionSql })
+  return _retentionDb
+}

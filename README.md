@@ -13,6 +13,7 @@
 
 - **[Architecture](docs/architecture.md)** — the authoritative spec covering stack, BFF, audit logging, accessibility, CI/CD, and compliance.
 - **[Clinical UI](docs/CLINICAL-UI.md)** — single source of truth for every EPD surface: openEHR archetype mapping, user journeys, role dashboards, screen catalogue (22 surfaces). **Read this before writing any PHI-touching UI code.**
+- **[Demo accounts](docs/demo-accounts.md)** — dev login credentials (one per role) + how the prod-safe seeding flag works.
 - **[Implementation checklist](docs/IMPLEMENTATION_CHECKLIST.md)** — 18-milestone tracker.
 - **[v1.x roadmap](docs/v1.x-roadmap.md)** — deferred features (scheduling, embedded DICOM, AI CDS, real-time, …).
 - **[AQL catalogue](docs/aql-catalogue.md)** — named, parameterised, version-pinned queries the UI runs.
@@ -51,9 +52,12 @@ EPD surfaces — status badges: ✅ done · 🚧 in-progress · 📋 planned · 
 ```bash
 # Prerequisites: Node 24, pnpm 11, Docker engine 29
 pnpm install
-docker compose up -d   # boots EHRbase + Keycloak + Valkey + Postgres
-pnpm dev               # boots the UI dev server
+cp .env.example .env.local                    # COMPOSE_PROFILES=demo seeds 4 dev accounts
+docker compose --profile demo up -d --wait    # EHRbase + Keycloak (+ realm + demo users) + Valkey + Postgres + SeaweedFS
+pnpm dev                                       # boots the UI dev server at http://localhost:3000
 ```
+
+Log in with any of the four [demo accounts](docs/demo-accounts.md) — e.g. `dev-clinician` / `DevClinician123!`. Production never activates the `demo` profile and never sees these credentials.
 
 ## License
 
