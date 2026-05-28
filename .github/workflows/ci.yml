@@ -216,8 +216,8 @@ jobs:
         run: pnpm paraglide:compile
       - name: Build app (the full-stack suite runs against the built server)
         run: pnpm build
-      - name: Start stack (Keycloak + Valkey + audit DB)
-        run: docker compose up -d --wait platform-db valkey keycloak
+      - name: Start stack (Keycloak + Valkey + audit DB + demo users)
+        run: docker compose --profile demo up -d --wait platform-db valkey keycloak keycloak-seed-demo-users
       - name: Apply audit DB migration
         run: pnpm db:migrate
       - name: Install Playwright Chromium
