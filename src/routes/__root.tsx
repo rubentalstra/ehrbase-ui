@@ -15,6 +15,7 @@ import { ThemeProvider } from '@/components/theme/theme-provider'
 import { RootError } from '@/components/errors/root-error'
 import { NotFound } from '@/components/errors/not-found'
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -57,8 +58,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ThemeProvider nonce={nonce}>
-          {children}
-          <Toaster />
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
         <TanStackDevtools
           config={{

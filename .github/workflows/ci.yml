@@ -131,6 +131,8 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages (generated module — gitignored)
+        run: pnpm paraglide:compile
       - run: pnpm run storybook:build
       - uses: actions/upload-artifact@v7
         with:
