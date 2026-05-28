@@ -61,8 +61,20 @@ export function AppSidebar({
   user,
   ...props
 }: { user: NavUserData } & React.ComponentProps<typeof Sidebar>) {
+  // role="navigation" + aria-label makes the sidebar a NAV landmark so its
+  // brand, sections, and user menu are "contained by landmarks" (axe `region`
+  // rule). Sidebar spreads {...props} onto the visible sidebar-container div.
+  // The jsx-a11y-x/prefer-tag-over-role rule prefers <nav>, but the vendored
+  // Sidebar primitive renders a <div>; modifying ui/** is out of scope, and
+  // role="navigation" is semantically equivalent for assistive tech.
   return (
-    <Sidebar collapsible="icon" {...props}>
+    // eslint-disable-next-line jsx-a11y-x/prefer-tag-over-role
+    <Sidebar
+      collapsible="icon"
+      role="navigation"
+      aria-label={m.app_brand_tagline()}
+      {...props}
+    >
       <SidebarHeader>
         <BrandHeader />
       </SidebarHeader>

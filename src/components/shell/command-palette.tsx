@@ -67,7 +67,7 @@ export function CommandPalette() {
       >
         <SearchIcon className="size-4" />
         <span className="flex-1 text-left">{m.command_open()}</span>
-        <kbd className="bg-muted pointer-events-none hidden h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium sm:inline-flex">
+        <kbd className="bg-secondary text-secondary-foreground pointer-events-none hidden h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium sm:inline-flex">
           ⌘K
         </kbd>
       </Button>
