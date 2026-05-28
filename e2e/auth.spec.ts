@@ -110,59 +110,6 @@ test.describe('Authenticated flow', () => {
 
   test('login shows the user name and clinician role', async () => {
     await expect(page.getByRole('heading', { name: /my account/i })).toBeVisible()
-
-    // Diagnostic — dump the auth DB state so a CI failure includes what
-    // the read path is operating on (provisionUser writes the JSONB
-    // column for cache + we decode access_token at read time).
-    if (process.env.CI) {
-      const sql = postgres(
-        process.env.AUTH_DB_URL ??
-          'postgres://auth_writer:auth_writer@localhost:5432/auth',
-      )
-      try {
-        const rows = await sql<
-          {
-            id: string
-            email: string
-            keycloak_roles: unknown
-            access_token: string | null
-          }[]
-        >`SELECT u.id, u.email, u.keycloak_roles, a.access_token
-            FROM "user" u
-            LEFT JOIN account a ON a.user_id = u.id
-            WHERE u.email = 'dev-clinician@example.test'`
-        console.log(
-          '[e2e diag] user row:',
-          JSON.stringify(
-            rows.map((r) => ({
-              id: r.id,
-              email: r.email,
-              keycloakRoles: r.keycloak_roles,
-              hasAccessToken: !!r.access_token,
-              accessTokenLen: r.access_token?.length ?? 0,
-            })),
-          ),
-        )
-      } finally {
-        await sql.end()
-      }
-    }
-
-    if (process.env.CI) {
-      const html = await page.content()
-      const i = html.toLowerCase().indexOf('clinician')
-      console.log(
-        '[e2e diag] /me html length:',
-        html.length,
-        'first "clinician" at:',
-        i,
-        'snippet:',
-        i >= 0 ? html.slice(Math.max(0, i - 80), i + 80) : '(not found)',
-      )
-      const noRolesIdx = html.indexOf('No roles assigned')
-      console.log('[e2e diag] "No roles assigned" idx:', noRolesIdx)
-    }
-
     // Exact match: /clinician/i would also hit "Signed in as Dev Clinician".
     await expect(page.getByText('clinician', { exact: true })).toBeVisible()
   })

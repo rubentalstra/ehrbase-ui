@@ -27,6 +27,14 @@ const RealmAccessSchema = z
   })
   .partial()
 
+// Mirrors auth.functions.ts: only the four app-realm roles count for RBAC.
+const APP_REALM_ROLES = new Set([
+  'clinician',
+  'admin',
+  'audit-reviewer',
+  'researcher',
+])
+
 function decodeJwtPayload(jwt: string | null | undefined): unknown {
   if (!jwt) return undefined
   const parts = jwt.split('.')
@@ -99,17 +107,16 @@ export async function requireRole(
   const realmAccess = RealmAccessSchema.safeParse(
     decodeJwtPayload(accountRow[0]?.accessToken) ?? {},
   )
-  let keycloakRoles = realmAccess.success
+  let raw = realmAccess.success
     ? (realmAccess.data.realm_access?.roles ?? [])
     : []
-  if (keycloakRoles.length === 0) {
+  if (raw.length === 0) {
     const idRealm = RealmAccessSchema.safeParse(
       decodeJwtPayload(accountRow[0]?.idToken) ?? {},
     )
-    keycloakRoles = idRealm.success
-      ? (idRealm.data.realm_access?.roles ?? [])
-      : []
+    raw = idRealm.success ? (idRealm.data.realm_access?.roles ?? []) : []
   }
+  const keycloakRoles = raw.filter((r) => APP_REALM_ROLES.has(r))
   const allowed = roles.some((r) => keycloakRoles.includes(r))
   const ctx: RoleContext = {
     sid: session.session.token,

@@ -29,6 +29,21 @@ const RealmAccessSchema = z
   })
   .partial()
 
+// Realm roles we care about for RBAC. The Keycloak access_token's
+// realm_access.roles also carries built-in roles (default-roles-ehrbase,
+// offline_access, uma_authorization, etc.) — those are noise for our
+// clinical RBAC. Mirrors the M2 Arctic-era `decodeClaims` filter.
+const APP_REALM_ROLES = new Set([
+  'clinician',
+  'admin',
+  'audit-reviewer',
+  'researcher',
+])
+
+function filterAppRoles(all: string[]): string[] {
+  return all.filter((r) => APP_REALM_ROLES.has(r))
+}
+
 function decodeJwtPayload(jwt: string | null | undefined): unknown {
   if (!jwt) return undefined
   const parts = jwt.split('.')
@@ -91,10 +106,10 @@ export const getSessionWithRoles = createServerFn({ method: 'GET' }).handler(
       .limit(1)
     const accessToken = accountRow[0]?.accessToken
     const idToken = accountRow[0]?.idToken
-    let keycloakRoles = extractRealmRoles(decodeJwtPayload(accessToken))
-    if (keycloakRoles.length === 0) {
-      keycloakRoles = extractRealmRoles(decodeJwtPayload(idToken))
+    let raw = extractRealmRoles(decodeJwtPayload(accessToken))
+    if (raw.length === 0) {
+      raw = extractRealmRoles(decodeJwtPayload(idToken))
     }
-    return { session, keycloakRoles }
+    return { session, keycloakRoles: filterAppRoles(raw) }
   },
 )
