@@ -173,6 +173,13 @@ test.describe('Authenticated flow', () => {
 
   test('Cmd/Ctrl+K opens the command palette', async () => {
     await gotoStable(page, '/me')
+    // Wait for the palette trigger to mount — proves React has hydrated and
+    // the keydown listener in <CommandPalette> is attached. Without this the
+    // press can fire before useEffect runs (gotoStable resolves at navigation
+    // commit, not load).
+    const trigger = page.getByRole('button', { name: /search and commands/i })
+    await expect(trigger).toBeVisible()
+
     await page.keyboard.press('ControlOrMeta+KeyK')
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
