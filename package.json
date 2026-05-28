@@ -27,7 +27,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy url cookie baseLocale",
+    "paraglide:compile": "node scripts/paraglide-compile.mjs",
     "paraglide:check": "pnpm paraglide:compile && node scripts/paraglide-check.mjs",
     "api:gen": "orval --config ./orval.config.ts",
     "db:generate": "drizzle-kit generate",
