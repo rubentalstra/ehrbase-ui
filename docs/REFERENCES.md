@@ -260,6 +260,35 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - Storybook — https://storybook.js.org
 - Storybook a11y addon — https://storybook.js.org/addons/@storybook/addon-a11y
 
+### openEHR open standard — verified component versions (web-fetched 2026-05-28)
+
+Component releases are pinned per the architecture-doc "Version-drift discipline" — re-verify at every revision of `architecture.md`, never by recollection.
+
+| Component                                                                              | Release              | URL                                                                                     |
+| -------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------- |
+| BASE Model (architecture overview + foundational classes)                              | 1.2.0                | https://specifications.openehr.org/releases/BASE/Release-1.2.0                          |
+| Reference Model (RM) — EHR IM + Demographic IM + Common + Data Types + Data Structures | 1.1.0                | https://specifications.openehr.org/releases/RM/Release-1.1.0                            |
+| Archetype Model (AM / ADL2 / AOM2 / OPT)                                               | 2.3.0                | https://specifications.openehr.org/releases/AM/Release-2.3.0                            |
+| Query (AQL)                                                                            | 1.1.0                | https://specifications.openehr.org/releases/QUERY/Release-1.1.0                         |
+| Process (PROC — Task Planning, WORK_PLAN / TASK_PLAN / PLAN_ITEM)                      | 1.7.0                | https://specifications.openehr.org/releases/PROC/Release-1.7.0                          |
+| Clinical Decision Support (CDS / GDL2)                                                 | 2.0.1                | https://specifications.openehr.org/releases/CDS/Release-2.0.1                           |
+| Terminology (TERM)                                                                     | 3.0.0                | https://specifications.openehr.org/releases/TERM/Release-3.0.0                          |
+| ITS-REST (REST API specification — the surface EHRbase exposes)                        | 1.0.3 (19 Dec 2022)  | https://specifications.openehr.org/releases/ITS-REST/Release-1.0.3                      |
+| ITS-XML (XML serialisation of the RM)                                                  | 2.0.0                | https://specifications.openehr.org/releases/ITS-XML/Release-2.0.0                       |
+| ITS-JSON (JSON serialisation)                                                          | development          | https://specifications.openehr.org/releases/ITS-JSON/development                        |
+| openEHR base architecture overview (the EHR/Demographic separation source)             | —                    | https://specifications.openehr.org/releases/BASE/development/architecture_overview.html |
+| Clinical Knowledge Manager (archetype + template catalogue)                            | live                 | https://ckm.openehr.org/ckm/                                                            |
+| openEHR Foundation                                                                     | —                    | https://openehr.org                                                                     |
+| EHRbase (open-source CDR; implements EHR IM only — see ADR-0023)                       | 2.31.0 (28 Apr 2026) | https://github.com/ehrbase/ehrbase                                                      |
+| EHRbase docs                                                                           | —                    | https://docs.ehrbase.org                                                                |
+
+### Terminology infrastructure
+
+- Snowstorm (SNOMED International open-source terminology server, our v1.0 default — ADR-0022) — https://github.com/IHTSDO/snowstorm
+- SNOMED International — https://www.snomed.org
+- LOINC — https://loinc.org
+- ATC (WHO Anatomical Therapeutic Chemical classification) — https://www.whocc.no/atc_ddd_index/
+
 ### Compliance — EU baseline
 
 - GDPR — https://eur-lex.europa.eu/eli/reg/2016/679/oj
@@ -267,6 +296,8 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - EHDS Regulation (EU) 2025/327 — https://eur-lex.europa.eu/eli/reg/2025/327/oj
 - ISO 27799 (Health informatics — Information security management) — https://www.iso.org/standard/62777.html
 - IHE ATNA (Audit Trail and Node Authentication) — https://profiles.ihe.net/ITI/TF/Volume1/ch-9.html
+- IHE BPPC (Basic Patient Privacy Consents — break-glass pattern reference) — https://profiles.ihe.net/ITI/TF/Volume1/ch-19.html
+- ISO/TS 22600 (Privilege management and access control — break-glass reference) — https://www.iso.org/standard/62653.html
 - EDPB (European Data Protection Board) — https://edpb.europa.eu
 
 ### Compliance — national overlay (examples; each deployment configures its own)
