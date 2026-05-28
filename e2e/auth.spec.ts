@@ -148,6 +148,21 @@ test.describe('Authenticated flow', () => {
       }
     }
 
+    if (process.env.CI) {
+      const html = await page.content()
+      const i = html.toLowerCase().indexOf('clinician')
+      console.log(
+        '[e2e diag] /me html length:',
+        html.length,
+        'first "clinician" at:',
+        i,
+        'snippet:',
+        i >= 0 ? html.slice(Math.max(0, i - 80), i + 80) : '(not found)',
+      )
+      const noRolesIdx = html.indexOf('No roles assigned')
+      console.log('[e2e diag] "No roles assigned" idx:', noRolesIdx)
+    }
+
     // Exact match: /clinician/i would also hit "Signed in as Dev Clinician".
     await expect(page.getByText('clinician', { exact: true })).toBeVisible()
   })
