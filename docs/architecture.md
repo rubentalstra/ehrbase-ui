@@ -104,12 +104,19 @@ If you're reading this table more than a few months after the date at its head a
 4. **Component ownership** — shadcn/ui components are copied into the repo. Custom code is reserved for openEHR-specific concerns (dynamic forms, composition viewer, AQL editor).
 5. **Audit logging is code-shape, not afterthought** — every PHI-touching server function calls `logAudit()`. The hash chain, pseudonymization, integrity job and persistent store all sit behind that one helper, so server-function code never has to care about how audit gets persisted. Retrofitting audit calls into hundreds of server functions later is how organizations end up in GDPR fine tables; designing the call shape up front avoids that.
 
-**Explicitly NOT in v1.0** (deferred deliberately, not forgotten):
+**Explicitly NOT in v1.0** (deferred deliberately, not forgotten — every item below has a tracking stub in [`docs/v1.x-roadmap.md`](v1.x-roadmap.md)):
 
+- **Scheduling / appointments** (full clinic calendar, room booking, slots, waitlist, recurring appointments). Scheduling is its own product surface — HIX/Epic spend a large share of their UX budget on it. openEHR has no native scheduling model; v1.x scoping will combine ADMIN_ENTRY for the appointment record + PROC for recurring/series logic.
 - **Real-time updates** (WebSocket / SSE for new lab results, new alerts). React Query polling is sufficient at v1.0 scale; real-time is a v2 capability that needs its own DPIA addendum for the persistent-channel risk.
-- **Offline / PWA mode**. Hospital deployments are connected by design. Offline composition entry for home-visit nursing is a separate product configuration.
-- **Server-side PDF generation**. Browser print-to-PDF covers the v1.0 print use cases; server-side PDF adds Chromium attack surface (§6.x).
-- **Federated identity broker config** (UZI-pas, DigiD). The app speaks standard OIDC to Keycloak; configuring the upstream IdP is a hospital deployment concern, not an app-layer one (§5.6).
+- **Embedded DICOM viewer**. v1.0 ships a document viewer (PDF + image) plus a DICOM listing that hands off to the hospital's PACS viewer via external link (ADR-0020). Embedded viewer (Cornerstone.js / OHIF) is v1.x.
+- **AI / LLM clinical decision support.** v1.0 ships deterministic rule-based CDS only (GDL2-aligned, ADR-0021). AI-based CDS triggers separate DPIA + Art. 22 considerations; v1.x.
+- **External Patient Master Index (HL7 v2 ADT) integration.** v1.0 ships the M7 openEHR-spec demographic service as the standalone source-of-truth (ADR-0023). The adapter contract is openEHR-PARTY-shaped, so a v1.x PMI integration plugs in without UI changes.
+- **Real GDL2 execution engine integration.** v1.0's native rule evaluator uses a GDL2-aligned internal format. Real GDL2 engine = v1.x when ecosystem tooling matures.
+- **EHDS cross-border features (MyHealth@EU).** EHDS timeline puts patient-summary / ePrescription / eDispensation exchange at 26 Mar 2029; medical images / lab results / discharge reports at 26 Mar 2031. v1.0 ships the data layer EHDS-compatible (CANONICAL composition export → FHIR Bundle).
+- **Patient portal beyond `/me/access-log`.** Article 15 access log is in v1.0; full patient-facing UI (own record view, messaging with care team, appointment requests, consent management) is v1.x.
+- **Offline / PWA mode.** Hospital deployments are connected by design. Offline composition entry for home-visit nursing is a separate product configuration.
+- **Server-side PDF generation.** Browser print-to-PDF covers the v1.0 print use cases (ADR-0020); server-side PDF adds Chromium attack surface and the PDF/A archive concern (§6.x). v1.x.
+- **Federated identity broker config** (UZI-pas, DigiD, e-PA, etc.). The app speaks standard OIDC to Keycloak; configuring the upstream IdP is a hospital deployment concern, not an app-layer one (§5.6).
 - **Multi-tenant isolation** (one app instance serving multiple hospitals). Each hospital runs its own instance; multi-tenancy is a v2 product question, not an architectural one.
 - **ML-based anomaly detection** for the audit-review dashboard. v1.0 ships explicit heuristic rules; learned-model anomaly detection (§14.13) is post-v1.0.
 - **Native mobile apps**. The web app must be fully usable on tablet at the bedside (§12 target-size compliance enforces this); a native iOS/Android app is out of scope.
@@ -137,6 +144,10 @@ If you're reading this table more than a few months after the date at its head a
 **Web Template** = JSON describing the form structure derived from an operational template. Tree of nodes; each leaf has an `rmType` (DV_TEXT, DV_QUANTITY, DV_CODED_TEXT, …) and optional `inputs[]` constraints. This is what the dynamic form renderer consumes (see §7).
 
 **No comprehensive open-source UI exists today.** Validated again in this revision. This project is the first such effort with this stack.
+
+**EHR and Demographic information are logically separate** per the openEHR BASE architecture overview: _"One of the basic principles of openEHR is the complete separation of EHR and demographic information, such that an EHR taken in isolation contains little or no clue as to the identity of the patient it belongs to."_ EHRbase implements only the **EHR side** of the openEHR spec — its REST surface (ITS-REST Release 1.0.3) exposes `/ehr/*`, `/query/aql`, `/definition/template/*`, `/admin/*`, with no `/demographic/*` endpoints. Compositions reference subjects via `PARTY_PROXY` / `PARTY_SELF` / `PARTY_IDENTIFIED` (with `external_ref.id.namespace + value`) — these are references into a demographic store, not the demographic data itself. **We build the openEHR-spec demographic side ourselves as a module in this app** (M7; ADR-0023) — own Postgres schema, own REST surface (`/api/demographic/*`), implementing `PERSON` / `PARTY_IDENTITY` / `CONTACT` / `ADDRESS` / `ROLE` / `PARTY_RELATIONSHIP`.
+
+For the clinical-UI surfaces that consume these data models — the patient banner, problem list, vitals, labs, orders, care plan, discharge, referrals, and the rest — the single source of truth is [`docs/CLINICAL-UI.md`](CLINICAL-UI.md). It maps each EPD surface to its openEHR entry class, CKM archetype IDs, operational template, composition format, AQL queries, audit events, CDS rules, and role gating. **Read it before writing any PHI-touching UI code.**
 
 ---
 
@@ -523,7 +534,11 @@ Two real-world events from the months immediately before this document was writt
 
 ---
 
-## 6. UI Layer — shadcn/ui + React 19
+## 6. UI Layer — shadcn/ui + React 19 (patient-centric clinical workspace)
+
+This is a **patient-centric clinical workspace** modelled on HIX-style hospital EPDs (HIX / Epic / Cerner / OpenMRS), built on the openEHR open standard. **Multi-role from day one** — physician, nurse, admin, audit-reviewer, researcher each get a role-specific home screen (ADR-0017) with the same underlying React tree.
+
+The shape of the workspace, the IA, and the per-surface mapping to openEHR are spelled out in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md). §§6.1–6.17 below describe the engineering side of each surface (which shadcn primitives, which custom code, where the data flows). Read CLINICAL-UI.md first; the sub-sections here assume it.
 
 ### Component ownership
 
@@ -581,7 +596,79 @@ Clinical workflows produce paper. A printable patient summary, a printable compo
 - A clear "Print" button in the page header triggers `window.print()`; users print-to-PDF using the OS dialog if they want a file.
 - Print stylesheets are tested in CI via Playwright `page.emulateMedia({ media: 'print' })` + axe pass — confirming the printed version has no contrast or landmark regressions.
 
-**Why not server-side PDF generation (Puppeteer / PDFKit / etc.)** — it adds a server-side Chromium dependency, a measurable attack surface (every CVE in headless Chrome becomes ours), and most of what server-side PDF generation gives you (consistent rendering, headers/footers, page numbers) `@page` CSS already provides in modern browsers. We can revisit post-v1.0 if a specific use case demands it (e.g., automated discharge summaries on a schedule).
+**Why not server-side PDF generation (Puppeteer / PDFKit / etc.)** — it adds a server-side Chromium dependency, a measurable attack surface (every CVE in headless Chrome becomes ours), and most of what server-side PDF generation gives you (consistent rendering, headers/footers, page numbers) `@page` CSS already provides in modern browsers. We can revisit post-v1.0 if a specific use case demands it (e.g., automated discharge summaries on a schedule). ADR-0020 records this.
+
+### Clinical-UI surface catalogue (§§6.1–6.17)
+
+These sub-sections describe the _engineering_ of each clinical surface — the shadcn primitives + custom code + data-flow. The clinical / functional contract (purpose, role, openEHR archetypes, audit fields, CDS hooks) lives in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md); these §-numbers cross-reference its screen-catalogue entries.
+
+#### 6.1 Workspace IA + patient routing — ADR-0015
+
+Patient-bound surfaces all live under `/{locale}/_authed/patients/$patientId/<surface>`. The `$patientId` segment is the openEHR `ehr_id`. The `patients/$patientId/` layout route fetches the patient header banner once via the M7 demographic service + a summary AQL query and renders the child surface inside it. Shareable URLs + deep-linking preserve through OIDC redirects. Symmetric locale prefix per ADR-0014. Cross-cutting surfaces (`/inbox`, `/aql`, `/me`, `/admin/*`) sit outside the patient layout.
+
+#### 6.2 Role-specific home — ADR-0017
+
+`/_authed/home` resolves to the active role's home screen — physician / nurse / admin / audit-reviewer / researcher. Multi-role users hit `/_authed/role-picker` on first login. The choice is stored as a per-user preference in our app DB and switchable via the user menu. RBAC at the BFF still enforces actual permissions; the home choice only affects defaults.
+
+#### 6.3 Patient header banner (M8) — `CLINICAL-UI.md` §7.1
+
+A layout component (not a per-route fetch) that wraps every `patients/$patientId/*` screen. Reads from the M7 demographic service + EHR `ehr_status` + a single AQL query (`patient_summary_header` in `docs/aql-catalogue.md`). Critical allergies render in red via `Badge variant="destructive"`. Care-relationship check via `requireRole`; on miss, surfaces a `BreakGlassButton` (links to §5.6).
+
+#### 6.4 Global patient search + recently-viewed (M8) — `CLINICAL-UI.md` §§7.2–7.3
+
+Search hits the M7 demographic service (`/api/demographic/party?identifier_namespace=...&identifier_value=...`), then cross-checks an EHR exists in EHRbase for the matched PARTY. shadcn `Command` palette (cmdk) + `DataTable` for results. Recently-viewed is a per-user table in our app Postgres (not openEHR — that's UI state, not clinical data).
+
+#### 6.5 Encounter / visit list (M8) — `CLINICAL-UI.md` §7.4
+
+Reads via AQL over `EHR.compositions[]` joined to `DIRECTORY/FOLDER`. Each encounter is a FOLDER containing the compositions written during it. Virtualised `DataTable` (>50 rows uses `@tanstack/react-virtual`).
+
+#### 6.6 Vitals flowsheet (M9) — `CLINICAL-UI.md` §7.5
+
+Grid of vital-sign × time. Custom `VitalsFlowsheet` component (the "small custom code" carve-out from §6 rule). Recharts `LineChart` (ADR-0018) for trends. AQL queries `vitals_latest_*` + `vitals_trend_*` per archetype. Quick-entry drawer for nurse-led data entry. CDS rule `cds_005_critical_bp` fires at write time (ADR-0021).
+
+#### 6.7 Lab results timeline (M9) — `CLINICAL-UI.md` §7.6
+
+`DataTable` of recent results, abnormal-flag `Badge`, Recharts `LineChart` for trends. LOINC autocomplete via Snowstorm (ADR-0022). CDS rule `cds_003_renal_dose_adjust` cross-references active medications.
+
+#### 6.8 Clinical notes (M10) — `CLINICAL-UI.md` §7.7
+
+Custom `NoteEditor` (TipTap-based rich text + structured-field slots). SOAP layout via openEHR `SECTION`. Saved as `openEHR-EHR-COMPOSITION.encounter.v1` + `EVALUATION.clinical_synopsis.v1`. Autosave drafts encrypted in Valkey (24 h TTL). Signing writes the canonical composition + the dual-layer audit (ADR-0024).
+
+#### 6.9 Problems + medications + allergies + immunisations (M11) — `CLINICAL-UI.md` §§7.8–7.11
+
+Combined view under `/_authed/patients/$patientId/problems`. Each sub-area has its own `DataTable` + `Sheet` for add/edit. Severity `Badge` on allergies. Drug-allergy interaction fires via CDS rule `cds_001_drug_allergy_match` (ADR-0021) on prescribe or allergy-write. SNOMED CT autocomplete via Snowstorm.
+
+#### 6.10 Orders / CPOE (M12) — `CLINICAL-UI.md` §7.12
+
+`OrderSetPicker`, `DataTable` for active orders, per-order `Sheet`. Order sets via openEHR PROC `TASK_PLAN.order_set_id` (ADR-0019 + ADR-0025). CDS alerts surface inline (`Alert` variant by severity); critical alerts block submit until dismissed with documented justification.
+
+#### 6.11 Care plan + tasks (M13) — `CLINICAL-UI.md` §7.13
+
+Tree view of `WORK_PLAN` → `TASK_PLAN` → `PLAN_ITEM`. Checkbox completion writes `ACTION.care_plan` with `workflow_id` linking back to the PLAN_ITEM. Nurse home dashboard reads "active tasks for my ward" via AQL `care_plan_active_tasks`.
+
+#### 6.12 AQL editor + result tables (M14) — `CLINICAL-UI.md` §7.14
+
+CodeMirror 6 + custom AQL language grammar. Stored-query catalogue (`docs/aql-catalogue.md`) for power users to save + share. `DataTable` virtualised for large result sets. Audit logs the named query (or hash of ad-hoc query body), never the body in clear.
+
+#### 6.13 Admin UI — users / roles / audit / CDS (M15) — `CLINICAL-UI.md` §§7.15–7.17
+
+Admin user management proxies to Keycloak admin API via the BFF. Audit-review dashboard implements the sample-of-60 NEN-7513 quarterly review (§14.13). CDS rule authoring is a form-based UI (not raw GDL2 editing) over the GDL2-aligned internal format (ADR-0021).
+
+#### 6.14 Discharge + referrals + document viewer (M16) — `CLINICAL-UI.md` §§7.18–7.20
+
+Discharge-summary editor assembles from existing data (problems / meds / recent results) into `openEHR-EHR-COMPOSITION.discharge_summary.v1`. Referrals via `openEHR-EHR-COMPOSITION.referral.v0`. Document viewer = PDF.js for PDF + standard `<img>` for image attachments. DICOM studies list with external-PACS-viewer launch link (per ADR-0020). Print via Tailwind `print:` variants.
+
+#### 6.15 Inbox / messaging (M17) — `CLINICAL-UI.md` §7.21
+
+Non-openEHR internal Postgres tables (messages are workflow, not clinical data). `DataTable` for thread list, `Sheet` per thread. CDS-driven alerts (e.g. new critical lab result) drop into this same inbox.
+
+#### 6.16 Article 15 access log (M3 / M4) — `CLINICAL-UI.md` §7.22
+
+Patient-facing view at `/_authed/me/access-log`. Reads from the audit DB (not EHRbase). PDF download via browser print. The scaffold landed in M3; M4 wires the audit feed. Forms the v1.0 patient-facing minimum; full patient portal is v1.x.
+
+#### 6.17 Print / PDF (M16 + cross-cutting) — ADR-0020
+
+Tailwind `print:` variants on every printable surface. `page-break-before` / `page-break-inside: avoid` placed deliberately. Print-only header with `{patient name | DOB | MRN | document title | print date}`. Server-side PDF deferred to v1.x.
 
 ---
 
@@ -1738,7 +1825,9 @@ The "Order" column indicates a relative implementation sequence (1 = must be in 
 
 ### 14.13 Audit-log review dashboard
 
-NEN 7513 requires that audit logs be **reviewed**, not just stored. The standard's reference implementation guidance calls for a **sample-of-60** quarterly review (60 randomly-selected access events, examined for legitimacy by a designated reviewer). That review needs a dedicated UI, surfaced to the `audit-reviewer` role from §5.6.
+NEN 7513 requires that audit logs be **reviewed**, not just stored. The standard's reference-implementation guidance calls for a **sample-of-60** quarterly review (60 randomly-selected access events, examined for legitimacy by a designated reviewer). We adopt this cadence as the EU-baseline review SLA (per the doc re-frame in `docs/REFERENCES.md` and the §14.1 framing).
+
+This section **describes the dashboard's data model + routes**. The **UI implementation lives in M15** (per `docs/IMPLEMENTATION_CHECKLIST.md` and `docs/CLINICAL-UI.md` §7.16) — the dashboard is one of the M15 deliverables, not a v1.0-end concern.
 
 Routes (all guarded by `requireRole('audit-reviewer')`):
 

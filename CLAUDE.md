@@ -15,6 +15,9 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 7. **`.server.ts` suffix** for files that must never reach the client bundle (§17 Conventions).
 8. **Server functions live in `src/server/functions/<feature>.functions.ts`** (§17 Conventions).
 9. **Never add a `Co-Authored-By:` trailer to git commits.** No "Co-Authored-By: Claude …", no other AI attribution, no automatic co-authors of any kind. Commits are authored by the human committer only. Applies to every commit Claude creates on this repo, on every branch, in every context.
+10. **Every PHI-touching UI component cites its CLINICAL-UI.md screen entry + openEHR archetype anchor in its file header.** Format: a leading comment block referencing `docs/CLINICAL-UI.md §7.<N>` and the CKM archetype ID(s) the component reads/writes. This is the readable cross-link between code and the openEHR standard. The `clinical-ui-reviewer` sub-agent enforces.
+11. **Every UI write to EHRbase emits BOTH layers of audit.** (a) the openEHR `CONTRIBUTION` (data lineage — set the `openEHR-COMMITTER-*` + `openEHR-AUDIT-CHANGE-TYPE` + `openEHR-AUDIT-DESCRIPTION` headers on the proxy call); (b) the NEN-7513 `logAudit(...)` call (access trail). Skipping either is non-compliant. ADR-0024 documents the relationship.
+12. **No demographic data inside compositions.** The subject of every composition is always a `PARTY_IDENTIFIED` reference with `external_ref.id.namespace + value` pointing into the M7 demographic service. Never embed name / DOB / national ID inline in an EHR composition — that violates the openEHR EHR/Demographic separation (BASE architecture overview). ADR-0023 commits us to the separate demographic service; the `openehr-archetype-reviewer` sub-agent enforces.
 
 ## Versions (verified 2026-05-26 — drift tracked in `docs/REFERENCES.md`)
 
@@ -45,6 +48,8 @@ When working on these slices, prefer the dedicated sub-agent over generic implem
 - **`openehr-form-engineer`** — anything touching the dynamic form pipeline (web-template fetch, Zod schema generator, FieldRenderer, useFieldArray, FLAT converter).
 - **`audit-compliance-reviewer`** — review **BEFORE** merging anything in `src/server/functions/` or under `_authed/`; checks every PHI-touching function for §14 audit calls, pseudonymization, hash-chain integration, PHI-leak hazards.
 - **`a11y-auditor`** — checks WCAG 2.2 AA on changed components (target-size, focus-not-obscured, contrast, label associations).
+- **`clinical-ui-reviewer`** — review BEFORE merging anything under `/_authed/patients/$patientId/*` or any new clinical surface; checks the file header cites `CLINICAL-UI.md §7.<N>` + the CKM archetype ID, that the dual-layer audit (Inviolable rule 11 / ADR-0024) is wired, that role-gating is correct, that empty / loading / error states exist, and that the surface is axe-clean. Pairs with `audit-compliance-reviewer`.
+- **`openehr-archetype-reviewer`** — review any code that writes to EHRbase compositions: verifies the archetype IDs used match the v1.0 catalogue in ADR-0016 (cross-checked against CKM), that PARTY references go through the M7 demographic service (Inviolable rule 12), and that the FLAT-to-CANONICAL conversion path is correct. Pairs with `openehr-form-engineer`.
 
 ## When proposing changes
 
