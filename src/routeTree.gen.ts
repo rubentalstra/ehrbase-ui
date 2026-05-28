@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,13 +17,16 @@ import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
 import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
 import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
-import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
-import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
 import { Route as ApiAdminAuditTasksSplatRouteImport } from './routes/api/admin/audit/tasks/$'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccessibilityRoute = AccessibilityRouteImport.update({
   id: '/accessibility',
   path: '/accessibility',
@@ -57,16 +61,6 @@ const ApiEhrbaseSplatRoute = ApiEhrbaseSplatRouteImport.update({
   path: '/api/ehrbase/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
-  id: '/api/auth/logout',
-  path: '/api/auth/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
-  id: '/api/auth/login',
-  path: '/api/auth/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthBreakGlassRoute = ApiAuthBreakGlassRouteImport.update({
   id: '/api/auth/break-glass',
   path: '/api/auth/break-glass',
@@ -91,13 +85,12 @@ const ApiAdminAuditTasksSplatRoute = ApiAdminAuditTasksSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
+  '/login': typeof LoginRoute
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
-  '/api/auth/login': typeof ApiAuthLoginRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -105,13 +98,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
+  '/login': typeof LoginRoute
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
-  '/api/auth/login': typeof ApiAuthLoginRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -121,13 +113,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/accessibility': typeof AccessibilityRoute
+  '/login': typeof LoginRoute
   '/_authed/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
-  '/api/auth/login': typeof ApiAuthLoginRoute
-  '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -137,13 +128,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accessibility'
+    | '/login'
     | '/me'
     | '/api/csp-report'
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
-    | '/api/auth/login'
-    | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -151,13 +141,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accessibility'
+    | '/login'
     | '/me'
     | '/api/csp-report'
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
-    | '/api/auth/login'
-    | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -166,13 +155,12 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/accessibility'
+    | '/login'
     | '/_authed/me'
     | '/api/csp-report'
     | '/_authed/me_/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
-    | '/api/auth/login'
-    | '/api/auth/logout'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -182,11 +170,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
   AccessibilityRoute: typeof AccessibilityRoute
+  LoginRoute: typeof LoginRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthBreakGlassRoute: typeof ApiAuthBreakGlassRoute
-  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
-  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
   ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
   ApiAdminAuditTasksSplatRoute: typeof ApiAdminAuditTasksSplatRoute
@@ -194,6 +181,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/accessibility': {
       id: '/accessibility'
       path: '/accessibility'
@@ -241,20 +235,6 @@ declare module '@tanstack/react-router' {
       path: '/api/ehrbase/$'
       fullPath: '/api/ehrbase/$'
       preLoaderRoute: typeof ApiEhrbaseSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/logout': {
-      id: '/api/auth/logout'
-      path: '/api/auth/logout'
-      fullPath: '/api/auth/logout'
-      preLoaderRoute: typeof ApiAuthLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/login': {
-      id: '/api/auth/login'
-      path: '/api/auth/login'
-      fullPath: '/api/auth/login'
-      preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/break-glass': {
@@ -306,11 +286,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRouteRoute: AuthedRouteRouteWithChildren,
   AccessibilityRoute: AccessibilityRoute,
+  LoginRoute: LoginRoute,
   ApiCspReportRoute: ApiCspReportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthBreakGlassRoute: ApiAuthBreakGlassRoute,
-  ApiAuthLoginRoute: ApiAuthLoginRoute,
-  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
   ApiLogClientErrorRoute: ApiLogClientErrorRoute,
   ApiAdminAuditTasksSplatRoute: ApiAdminAuditTasksSplatRoute,

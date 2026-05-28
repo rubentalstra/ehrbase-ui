@@ -14,7 +14,12 @@
 
 import { randomBytes } from 'node:crypto'
 
-const isProduction = process.env.NODE_ENV === 'production'
+// Bracket access prevents Vite from statically inlining the value at build
+// time. The build always runs with NODE_ENV=production (it's what Vite needs
+// to drop dev assertions), but the resulting container can run with
+// NODE_ENV=development — we want HSTS + the enforcing CSP to follow the
+// RUNTIME value, not the build-time one.
+const isProduction = process.env['NODE_ENV'] === 'production'
 
 export function generateNonce(): string {
   return randomBytes(16).toString('base64')
@@ -65,10 +70,18 @@ export function applySecurityHeaders(
     headers.set('Content-Security-Policy-Report-Only', `${csp}; report-uri /api/csp-report`)
   }
 
-  headers.set(
-    'Strict-Transport-Security',
-    'max-age=63072000; includeSubDomains; preload',
-  )
+  // HSTS only in production. Dev compose runs with NODE_ENV=development
+  // and serves over plain HTTP on localhost — emitting HSTS there would
+  // permanently pin the developer's browser to HTTPS for `localhost`,
+  // which then breaks every subsequent dev session (browser auto-upgrades,
+  // our HTTP listener doesn't speak TLS, asset loads fail with a "TLS
+  // error"). Production deployments terminate TLS at the edge.
+  if (isProduction) {
+    headers.set(
+      'Strict-Transport-Security',
+      'max-age=63072000; includeSubDomains; preload',
+    )
+  }
   headers.set('X-Content-Type-Options', 'nosniff')
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   headers.set(

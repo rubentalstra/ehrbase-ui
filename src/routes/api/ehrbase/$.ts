@@ -14,11 +14,19 @@
 import { randomUUID } from 'node:crypto'
 
 import { createFileRoute } from '@tanstack/react-router'
+import { eq } from 'drizzle-orm'
+import { z } from 'zod'
 
+import { authDb } from '@/db/auth-client.server'
+import { account as accountTable } from '@/db/schema/auth'
+import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@/lib/audit/logger.server'
 import { classifyRequest, extractEhrId } from '@/lib/http/ehrbase-proxy.server'
 import { checkRateLimit, tooManyRequests } from '@/lib/http/rate-limit.server'
-import { resolveAuth, type AuthContext } from '@/lib/auth/require-auth.server'
+
+const UserShapeSchema = z
+  .object({ keycloakRoles: z.array(z.string()).default([]) })
+  .partial()
 
 const EHRBASE_URL =
   process.env.EHRBASE_URL ?? 'http://localhost:8080/ehrbase/rest/openehr/v1'
@@ -46,13 +54,33 @@ async function proxy({
 }): Promise<Response> {
   const correlationId = randomUUID()
 
-  let auth: AuthContext
-  try {
-    auth = await resolveAuth()
-  } catch (err) {
-    if (err instanceof Response) return err
-    return json(401, { code: 'UNAUTHENTICATED' }, correlationId)
+  const session = await betterAuth.api.getSession({ headers: request.headers })
+  if (!session) return json(401, { code: 'UNAUTHENTICATED' }, correlationId)
+
+  const shape = UserShapeSchema.safeParse(session.user)
+  const keycloakRoles = shape.success ? (shape.data.keycloakRoles ?? []) : []
+  const auth = {
+    sid: session.session.token,
+    user: {
+      id: session.user.id,
+      email: session.user.email ?? '',
+      name: session.user.name ?? '',
+      roles: keycloakRoles,
+    },
   }
+  // ADR-0028: the Keycloak access token is read from the Better Auth
+  // `account` row keyed by the SSO providerId. A session without a
+  // linked Keycloak account can't forward to EHRbase — fail closed.
+  const providerId = process.env.SSO_KEYCLOAK_PROVIDER_ID ?? 'keycloak'
+  const accountRow = await authDb
+    .select({ accessToken: accountTable.accessToken })
+    .from(accountTable)
+    .where(eq(accountTable.userId, session.user.id))
+    .limit(5)
+  const accessToken = accountRow.find(
+    (r) => r.accessToken !== null,
+  )?.accessToken
+  void providerId
 
   const splat = params._splat ?? ''
   const search = new URL(request.url).search
@@ -62,10 +90,7 @@ async function proxy({
   const limit = await checkRateLimit(cls.rateLimit, auth.sid)
   if (!limit.allowed) return tooManyRequests(limit)
 
-  // ADR-0028: the Keycloak access token is read from the Better Auth
-  // `account` row. A session without an IdP-linked account can't act on
-  // EHRbase — fail closed.
-  if (!auth.accessToken) {
+  if (!accessToken) {
     await audit('FAILURE', 'no_provider_access_token')
     return json(401, { code: 'UNAUTHENTICATED' }, correlationId)
   }
@@ -77,7 +102,7 @@ async function proxy({
   if (accept) headers.set('accept', accept)
   const prefer = request.headers.get('prefer')
   if (prefer) headers.set('prefer', prefer)
-  headers.set('authorization', `Bearer ${auth.accessToken}`)
+  headers.set('authorization', `Bearer ${accessToken}`)
   headers.set('x-correlation-id', correlationId)
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD'

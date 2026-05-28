@@ -18,13 +18,15 @@ function Home() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold">{m.app_title()}</h1>
-          <p className="mt-4 text-lg text-muted-foreground">{m.app_subtitle()}</p>
+          <p className="mt-4 text-lg text-muted-foreground">
+            {m.app_subtitle()}
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             {m.app_checklist_hint()}
           </p>
         </div>
         <Button asChild>
-          <a href="/api/auth/login?redirect=/me">{m.nav_sign_in()}</a>
+          <a href="/login?redirect=%2Fme">{m.nav_sign_in()}</a>
         </Button>
       </div>
 

@@ -12,8 +12,9 @@ import {
   ScrollTextIcon,
   UserIcon,
 } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 
+import { authClient } from '@/lib/auth/auth-client'
 import { m } from '@/paraglide/messages.js'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -44,7 +45,9 @@ function initialsOf(user: NavUserData): string {
   const first = parts.at(0) ?? source
   const last = parts.at(-1) ?? ''
   const letters =
-    parts.length > 1 ? `${first.charAt(0)}${last.charAt(0)}` : source.slice(0, 2)
+    parts.length > 1
+      ? `${first.charAt(0)}${last.charAt(0)}`
+      : source.slice(0, 2)
   return letters.toUpperCase()
 }
 
@@ -52,6 +55,12 @@ export function NavUser({ user }: { user: NavUserData }) {
   const { isMobile } = useSidebar()
   const initials = initialsOf(user)
   const displayName = user.name || user.email
+  const navigate = useNavigate()
+
+  async function signOut() {
+    await authClient.signOut()
+    await navigate({ to: '/' })
+  }
 
   return (
     <SidebarMenu>
@@ -84,13 +93,15 @@ export function NavUser({ user }: { user: NavUserData }) {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="size-8 rounded-lg">
                   <AvatarFallback className="rounded-lg bg-secondary text-secondary-foreground">
-                  {initials}
-                </AvatarFallback>
+                    {initials}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{displayName}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.roles.length > 0 ? user.roles.join(', ') : m.me_no_roles()}
+                    {user.roles.length > 0
+                      ? user.roles.join(', ')
+                      : m.me_no_roles()}
                   </span>
                 </div>
               </div>
@@ -116,11 +127,9 @@ export function NavUser({ user }: { user: NavUserData }) {
               {`${m.language_label()}: ${m.language_english()}`}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a href="/api/auth/logout">
-                <LogOutIcon />
-                {m.nav_sign_out()}
-              </a>
+            <DropdownMenuItem onClick={signOut}>
+              <LogOutIcon />
+              {m.nav_sign_out()}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

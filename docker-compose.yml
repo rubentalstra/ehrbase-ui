@@ -272,8 +272,19 @@ services:
       valkey: { condition: service_healthy }
       platform-db: { condition: service_healthy }
       seaweedfs: { condition: service_healthy }
+    # The Better Auth SSO plugin uses ONE issuer URL per provider — both the
+    # server-side OIDC discovery fetch AND the browser redirect target use
+    # the same URL. The browser needs `http://localhost:8180`; we therefore
+    # make `localhost` inside the ui container resolve to the host gateway
+    # so the SSR side can hit the same address (Docker Desktop ships this
+    # as `host-gateway`).
+    extra_hosts:
+      - 'localhost:host-gateway'
     environment:
-      NODE_ENV: production
+      # Dev compose runs in development mode. HSTS, secure-only cookies,
+      # and the enforcing CSP all gate on isProduction; production
+      # deployments override this in their orchestrator env.
+      NODE_ENV: development
       PORT: '3000'
       EHRBASE_URL: http://ehrbase:8080/ehrbase/rest/openehr/v1
       # Browser-facing Keycloak URL (redirects) vs internal URL (token/JWKS).
@@ -294,7 +305,10 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-rotate-in-prod}
       BETTER_AUTH_URL: http://localhost:3000
       SSO_KEYCLOAK_PROVIDER_ID: keycloak
-      SSO_KEYCLOAK_ISSUER: http://keycloak:8080/realms/ehrbase
+      # Single URL — see the `extra_hosts: localhost:host-gateway` block
+      # above for why this is the externally-reachable URL even from
+      # inside the ui container.
+      SSO_KEYCLOAK_ISSUER: http://localhost:8180/realms/ehrbase
       SSO_KEYCLOAK_CLIENT_ID: ehrbase-ui
       SSO_KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       VALKEY_URL: redis://valkey:6379

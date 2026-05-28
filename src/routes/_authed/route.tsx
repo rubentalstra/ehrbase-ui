@@ -1,12 +1,13 @@
 // Protected layout + clinical workspace shell (docs/architecture.md §5.5, §6,
-// §12). beforeLoad runs requireAuth server-side; an unauthenticated (or
-// timed-out) visitor is redirected into the Keycloak login flow. The resolved
-// user is placed on the route context for children and the shell.
+// §12). Follows the official Better Auth + TanStack Start pattern
+// (https://better-auth.com/docs/integrations/tanstack — _protected.tsx
+// recipe): beforeLoad calls getSession; if no session, redirect to /login
+// with the current path so the SSO flow can bounce back. The session.user
+// is placed on the route context for children + the shell.
 //
 // It also reads the sidebar_state cookie server-side (§3G) so the sidebar
-// renders open/closed without a hydration flash. The cookie read is guarded to
-// the server and dynamically imported, keeping @tanstack/react-start/server out
-// of the client bundle (same pattern as require-auth.ts).
+// renders open/closed without a hydration flash. The cookie read is guarded
+// to the server via createServerFn.
 //
 // Layout: a SidebarProvider row of [AppSidebar | content column]. The content
 // column is a plain flex container — NOT SidebarInset, which renders its own
@@ -20,9 +21,18 @@ import {
   redirect,
   useRouterState,
 } from '@tanstack/react-router'
+import { z } from 'zod'
 
-import { requireAuth } from '@/lib/auth/require-auth'
+import { getSession } from '@/lib/auth/auth.functions'
 import { getSidebarState } from '@/lib/shell/sidebar-state'
+
+// Better Auth's session.user doesn't carry our custom `keycloakRoles`
+// JSONB column in its base typings — we know the row carries it (the SSO
+// provisionUser hook fills it on every login). Parse it through Zod so
+// the AppSidebar's `roles: string[]` contract is fed safely.
+const UserShapeSchema = z
+  .object({ keycloakRoles: z.array(z.string()).default([]) })
+  .partial()
 import { m } from '@/paraglide/messages.js'
 import { AppSidebar } from '@/components/app-sidebar'
 import { CommandPalette } from '@/components/shell/command-palette'
@@ -36,24 +46,32 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb'
 import { Separator } from '@/components/ui/separator'
-import {
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar'
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
 export const Route = createFileRoute('/_authed')({
-  beforeLoad: async () => {
-    try {
-      const { user } = await requireAuth()
-      // Only needed for the initial SSR render (the layout persists across
-      // client navigations, so the live SidebarProvider state is authoritative
-      // there). On the server getSidebarState runs inline — no extra RPC.
-      const sidebarOpen =
-        typeof document === 'undefined' ? (await getSidebarState()).sidebarOpen : true
-      return { user, sidebarOpen }
-    } catch {
-      throw redirect({ href: '/api/auth/login?redirect=/me' })
+  beforeLoad: async ({ location }) => {
+    const session = await getSession()
+    if (!session) {
+      throw redirect({
+        href: `/login?redirect=${encodeURIComponent(location.href)}`,
+      })
     }
+    // Only needed for the initial SSR render (the layout persists across
+    // client navigations, so the live SidebarProvider state is authoritative
+    // there). On the server getSidebarState runs inline — no extra RPC.
+    const sidebarOpen =
+      typeof document === 'undefined'
+        ? (await getSidebarState()).sidebarOpen
+        : true
+    const shape = UserShapeSchema.safeParse(session.user)
+    const keycloakRoles = shape.success ? (shape.data.keycloakRoles ?? []) : []
+    const user = {
+      id: session.user.id,
+      name: session.user.name ?? '',
+      email: session.user.email ?? '',
+      roles: keycloakRoles,
+    }
+    return { user, sidebarOpen }
   },
   component: AuthedLayout,
 })
@@ -90,7 +108,11 @@ function AuthedLayout() {
             <ModeToggle />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="flex-1 p-4 outline-none md:p-6">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 p-4 outline-none md:p-6"
+        >
           <Outlet />
         </main>
         <SiteFooter />

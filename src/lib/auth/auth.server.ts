@@ -76,9 +76,30 @@ async function provisionFromKeycloak(args: {
   }
 }
 
+// Keycloak's origin must appear in the trustedOrigins list so the SSO
+// plugin is willing to fetch its OIDC discovery document. Better Auth
+// matches the URL's ORIGIN (scheme + host + port) against the patterns —
+// not the full path — so we derive `new URL(envValue).origin` from each
+// configured Keycloak URL.
+function toOrigin(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  try {
+    return new URL(value).origin
+  } catch {
+    return undefined
+  }
+}
+const trustedOrigins = [
+  toOrigin(process.env.SSO_KEYCLOAK_ISSUER),
+  toOrigin(process.env.KEYCLOAK_ISSUER_URL),
+  toOrigin(process.env.KEYCLOAK_INTERNAL_ISSUER_URL),
+  toOrigin(BETTER_AUTH_URL),
+].filter((s): s is string => typeof s === 'string' && s.length > 0)
+
 export const auth = betterAuth({
   secret: BETTER_AUTH_SECRET,
   baseURL: BETTER_AUTH_URL,
+  trustedOrigins,
   database: drizzleAdapter(authDb, { provider: 'pg', schema: authSchema }),
   // The clinical app must session-cookie idle out the same way M2 did
   // (§5.10 — 15-min idle, 12-h absolute). Better Auth's session model
@@ -208,7 +229,14 @@ async function registerKeycloakSsoProvider(): Promise<void> {
     oidcConfig: JSON.stringify({
       clientId,
       clientSecret,
-      // Better Auth fetches the discovery doc and fills in the rest.
+      // PKCE is mandatory for the Keycloak realm's client (S256). The
+      // SSO plugin's `mergeOIDCConfig` defaults pkce to true on UPDATE
+      // but the read path at sign-in does NOT — without an explicit
+      // value here the auth URL ships without code_challenge_method and
+      // Keycloak rejects with "Missing parameter: code_challenge_method".
+      pkce: true,
+      // Better Auth fetches the OIDC discovery doc on first use and
+      // fills in authorization / token / userinfo / jwks endpoints.
       scopes: ['openid', 'profile', 'email'],
     }),
   })

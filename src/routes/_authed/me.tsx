@@ -46,11 +46,14 @@ function Me() {
       const res = await fetch('/api/auth/break-glass', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ csrfToken: token.data.csrfToken, justification }),
+        body: JSON.stringify({
+          csrfToken: token.data.csrfToken,
+          justification,
+        }),
       })
 
       if (res.status === 401) {
-        window.location.href = '/api/auth/login?redirect=/me'
+        window.location.href = '/login?redirect=%2Fme'
         return
       }
       setState(res.ok ? 'granted' : 'error')
@@ -67,7 +70,9 @@ function Me() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{m.me_signed_in_as({ name: user.name || user.email })}</CardTitle>
+          <CardTitle>
+            {m.me_signed_in_as({ name: user.name || user.email })}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -107,7 +112,10 @@ function Me() {
           <Button
             type="button"
             variant="destructive"
-            disabled={justification.trim().length < MIN_JUSTIFICATION || state === 'submitting'}
+            disabled={
+              justification.trim().length < MIN_JUSTIFICATION ||
+              state === 'submitting'
+            }
             onClick={requestEmergencyAccess}
           >
             {m.me_emergency_submit()}

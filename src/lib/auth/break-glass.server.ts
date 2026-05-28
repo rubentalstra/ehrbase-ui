@@ -17,7 +17,7 @@ import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@/lib/audit/logger.server'
 import { checkRateLimit } from '@/lib/http/rate-limit.server'
 import { valkey } from '@/lib/valkey.server'
-import type { AuthContext } from '@/lib/auth/require-auth.server'
+import type { RoleContext } from '@/lib/auth/require-role.server'
 
 export const GRANT_TTL_SECONDS = 60 * 60
 export const MIN_JUSTIFICATION = 30
@@ -38,7 +38,7 @@ export type BreakGlassOutcome =
   | { status: 'forced_logout' }
 
 export async function grantEmergencyAccess(
-  auth: AuthContext,
+  auth: RoleContext,
   req: BreakGlassRequest,
 ): Promise<BreakGlassOutcome> {
   // Lifetime ceiling — the 4th attempt is refused and forces re-authentication.

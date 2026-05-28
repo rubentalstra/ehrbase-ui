@@ -20,17 +20,40 @@ import { desc, eq, count } from 'drizzle-orm'
 import { auditDb } from '@/db/client.server'
 import { auditEvents } from '@/db/schema/audit'
 import { logAudit } from '@/lib/audit/logger.server'
-import { resolveAuth } from '@/lib/auth/require-auth.server'
+import { auth as betterAuth } from '@/lib/auth/auth.server'
 import type {
   AccessLogPageInput,
   MyAuditEventsResponse,
 } from './access-log.functions'
 import { MAX_ACCESS_LOG_LIMIT } from './access-log.functions'
 
+function unauthorized(): Response {
+  return new Response(JSON.stringify({ code: 'UNAUTHENTICATED' }), {
+    status: 401,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 export async function fetchMyAuditEvents(
   input: AccessLogPageInput,
 ): Promise<MyAuditEventsResponse> {
-  const auth = await resolveAuth()
+  const { getRequest } = await import('@tanstack/react-start/server')
+  const session = await betterAuth.api.getSession({
+    headers: getRequest().headers,
+  })
+  if (!session) throw unauthorized()
+  const auth: {
+    sid: string
+    user: { id: string; email: string; name: string; roles: string[] }
+  } = {
+    sid: session.session.token,
+    user: {
+      id: session.user.id,
+      email: session.user.email ?? '',
+      name: session.user.name ?? '',
+      roles: [],
+    },
+  }
   const page = Math.max(0, Math.floor(input.page))
   const limit = Math.min(
     MAX_ACCESS_LOG_LIMIT,
