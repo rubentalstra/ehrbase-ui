@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/valkey.server', () => {
+vi.mock('@ehrbase-ui/valkey', () => {
   const store = new Map<string, string>()
   return {
     valkey: {

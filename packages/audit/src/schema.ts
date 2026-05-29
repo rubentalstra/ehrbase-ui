@@ -22,7 +22,7 @@ import {
   auditPurposeEnum,
   auditResourceTypeEnum,
   auditRetentionPolicyEnum,
-} from '@/db/schema/audit'
+} from '@ehrbase-ui/db-platform/audit'
 
 // ─── Controlled vocabularies (derived from the pg enums) ──────────────────
 export const AuditAction = z.enum(auditActionEnum.enumValues)

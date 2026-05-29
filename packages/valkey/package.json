@@ -1,0 +1,20 @@
+{
+  "name": "@ehrbase-ui/valkey",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Valkey (Redis-compatible) client wrapper. Single source of the shared ioredis instance used by audit hash-chain head, session store, rate limiter, draft autosave, and Better Auth.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.server.ts",
+  "types": "./src/index.server.ts",
+  "exports": {
+    ".": "./src/index.server.ts"
+  },
+  "dependencies": {
+    "ioredis": "5.11.0"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "@types/node": "25.9.1"
+  }
+}

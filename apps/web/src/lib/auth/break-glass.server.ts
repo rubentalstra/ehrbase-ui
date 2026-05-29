@@ -14,9 +14,9 @@
 import { z } from 'zod'
 
 import { auth as betterAuth } from '@/lib/auth/auth.server'
-import { logAudit } from '@/lib/audit/logger.server'
+import { logAudit } from '@ehrbase-ui/audit'
 import { checkRateLimit } from '@/lib/http/rate-limit.server'
-import { valkey } from '@/lib/valkey.server'
+import { valkey } from '@ehrbase-ui/valkey'
 import type { RoleContext } from '@/lib/auth/require-role.server'
 
 export const GRANT_TTL_SECONDS = 60 * 60

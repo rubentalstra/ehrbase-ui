@@ -9,7 +9,7 @@
 
 import { randomBytes } from 'node:crypto'
 
-import { valkey } from '@/lib/valkey.server'
+import { valkey } from '@ehrbase-ui/valkey'
 
 const allowedOrigin = (() => {
   if (process.env.APP_PUBLIC_URL) return new URL(process.env.APP_PUBLIC_URL).origin

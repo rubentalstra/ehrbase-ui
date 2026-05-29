@@ -15,8 +15,8 @@ import { join } from 'node:path'
 
 import pino, { type Logger } from 'pino'
 
-import { auditDb } from '@/db/client.server'
-import { auditEvents } from '@/db/schema/audit'
+import { auditDb } from '@ehrbase-ui/db-platform/client'
+import { auditEvents } from '@ehrbase-ui/db-platform/audit'
 import { setChainHead } from './hash-chain.server'
 import type { AuditEventInsert } from './schema'
 

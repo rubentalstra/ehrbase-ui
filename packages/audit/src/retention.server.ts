@@ -15,8 +15,8 @@
 import { and, lt, eq, asc } from 'drizzle-orm'
 import pino from 'pino'
 
-import { getAuditRetentionDb } from '@/db/client.server'
-import { auditEvents } from '@/db/schema/audit'
+import { getAuditRetentionDb } from '@ehrbase-ui/db-platform/client'
+import { auditEvents } from '@ehrbase-ui/db-platform/audit'
 import { getColdStorageProvider } from './cold-store.factory.server'
 import type { AuditEventRow, AuditRetentionPolicy } from './schema'
 

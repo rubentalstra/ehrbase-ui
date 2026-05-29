@@ -13,9 +13,9 @@
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { authDb } from '@/db/auth-client.server'
-import { account as accountTable } from '@/db/schema/auth'
-import { logAudit } from '@/lib/audit/logger.server'
+import { authDb } from '@ehrbase-ui/db-platform/auth-client'
+import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
+import { logAudit } from '@ehrbase-ui/audit'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 
 const RealmAccessSchema = z

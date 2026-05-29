@@ -7,8 +7,8 @@
 
 import { defineTask } from 'nitro/task'
 
-import { purgeExpiredAuditEvents } from '@/lib/audit/retention.server'
-import { withTaskLock } from '@/lib/audit/task-lock.server'
+import { purgeExpiredAuditEvents } from '@ehrbase-ui/audit'
+import { withTaskLock } from '@ehrbase-ui/audit'
 
 // Lock TTL = job-duration × 1.5. The job batches at 100 rows by default
 // (AUDIT_PURGE_BATCH_SIZE override); 30 min covers a large backlog and still

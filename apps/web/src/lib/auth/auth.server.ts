@@ -28,9 +28,9 @@ import { sso } from '@better-auth/sso'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { z } from 'zod'
 
-import { authDb } from '@/db/auth-client.server'
-import * as authSchema from '@/db/schema/auth'
-import { logAudit } from '@/lib/audit/logger.server'
+import { authDb } from '@ehrbase-ui/db-platform/auth-client'
+import * as authSchema from '@ehrbase-ui/db-platform/auth'
+import { logAudit } from '@ehrbase-ui/audit'
 
 const KeycloakRealmAccessSchema = z
   .object({

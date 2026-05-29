@@ -19,8 +19,8 @@ if (!ownerUrl) {
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/db/schema/auth.ts',
-  out: './src/db/migrations-auth',
+  schema: '../../packages/db-platform/src/auth/schema.ts',
+  out: '../../packages/db-platform/src/auth/migrations',
   dbCredentials: { url: ownerUrl },
   strict: true,
   verbose: true,

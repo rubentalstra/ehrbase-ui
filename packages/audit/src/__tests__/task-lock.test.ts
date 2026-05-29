@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   releaseAuditLock: vi.fn<(...args: unknown[]) => Promise<number>>(),
 }))
 
-vi.mock('@/lib/valkey.server', () => ({
+vi.mock('@ehrbase-ui/valkey', () => ({
   valkey: {
     set: mocks.set,
     defineCommand: mocks.defineCommand,
@@ -23,7 +23,7 @@ vi.mock('@/lib/valkey.server', () => ({
   },
 }))
 
-import { withTaskLock } from '@/lib/audit/task-lock.server'
+import { withTaskLock } from '../task-lock.server.ts'
 
 const originalEnv = { ...process.env }
 

@@ -17,7 +17,7 @@ import { randomUUID } from 'node:crypto'
 
 import pino from 'pino'
 
-import { valkey } from '@/lib/valkey.server'
+import { valkey } from '@ehrbase-ui/valkey'
 
 const log = pino({
   level: process.env.LOG_LEVEL ?? 'info',

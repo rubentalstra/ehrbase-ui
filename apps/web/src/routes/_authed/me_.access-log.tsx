@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { m } from '@/paraglide/messages.js'
-import type { AuditOutcome } from '@/lib/audit/schema'
+import type { AuditOutcome } from '@ehrbase-ui/audit'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { getMyAuditEvents } from '@/server/functions/access-log.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'

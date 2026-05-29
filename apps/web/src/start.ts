@@ -17,9 +17,26 @@
 // server fns).
 
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
 
+import { setAuditRequestContextProvider } from '@ehrbase-ui/audit'
 import { applySecurityHeaders, generateNonce } from '@/lib/http/security-headers.server'
 import { runWithNonce } from '@/lib/http/nonce-context.server'
+
+// Wire the framework-agnostic @ehrbase-ui/audit package to TanStack Start's
+// request-context API (ADR-0030 — packages are framework-agnostic; the host
+// app binds the runtime). Called once at module load.
+setAuditRequestContextProvider({
+  getHeader: (name) => {
+    try {
+      return getRequestHeader(name) ?? undefined
+    } catch {
+      // Called outside a request scope (Nitro scheduled task, test harness).
+      // The audit logger falls back to 'unknown'/random-correlation-ID.
+      return undefined
+    }
+  },
+})
 
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === 'serverFn',

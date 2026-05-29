@@ -17,10 +17,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { authDb } from '@/db/auth-client.server'
-import { account as accountTable } from '@/db/schema/auth'
+import { authDb } from '@ehrbase-ui/db-platform/auth-client'
+import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
-import { logAudit } from '@/lib/audit/logger.server'
+import { logAudit } from '@ehrbase-ui/audit'
 import { classifyRequest, extractEhrId } from '@/lib/http/ehrbase-proxy.server'
 import { checkRateLimit, tooManyRequests } from '@/lib/http/rate-limit.server'
 

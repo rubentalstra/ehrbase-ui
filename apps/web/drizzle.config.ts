@@ -13,8 +13,8 @@ if (!ownerUrl) {
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/db/schema/audit.ts',
-  out: './src/db/migrations',
+  schema: '../../packages/db-platform/src/audit/schema.ts',
+  out: '../../packages/db-platform/src/audit/migrations',
   dbCredentials: { url: ownerUrl },
   strict: true,
   verbose: true,

@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   cutoffDateFor,
   retentionCutoffDays,
-} from '@/lib/audit/retention.server'
+} from '../retention.server.ts'
 
 const originalEnv = { ...process.env }
 

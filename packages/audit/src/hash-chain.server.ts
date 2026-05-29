@@ -8,7 +8,7 @@
 
 import { createHash } from 'node:crypto'
 
-import { valkey } from '@/lib/valkey.server'
+import { valkey } from '@ehrbase-ui/valkey'
 
 export const CHAIN_HEAD_KEY = 'audit:lastHash'
 

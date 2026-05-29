@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { pseudonymizeSubject } from '@/lib/audit/pseudonymize.server'
+import { pseudonymizeSubject } from '../pseudonymize.server.ts'
 
 describe('pseudonymizeSubject', () => {
   it('is deterministic for the same subject', () => {

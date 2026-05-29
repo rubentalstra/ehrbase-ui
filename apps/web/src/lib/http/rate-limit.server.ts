@@ -9,7 +9,7 @@
 
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 
-import { valkey } from '@/lib/valkey.server'
+import { valkey } from '@ehrbase-ui/valkey'
 
 export type RateLimitClass =
   | 'aql'

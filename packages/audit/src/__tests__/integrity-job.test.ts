@@ -13,11 +13,16 @@ const mocks = vi.hoisted(() => ({
     vi.fn<() => Promise<{ valid: boolean; count: number; errors: string[] }>>(),
 }))
 
-vi.mock('@/lib/audit/integrity.server', () => ({
+// integrity-job.server.ts imports `verifyAuditChain` via the sibling
+// relative path `./integrity.server`, so the mock has to target the same
+// specifier the module under test actually resolves (vitest matches on
+// module identity, not on the public barrel). From this test file at
+// __tests__/integrity-job.test.ts that sibling is `../integrity.server.ts`.
+vi.mock('../integrity.server.ts', () => ({
   verifyAuditChain: mocks.verifyAuditChain,
 }))
 
-import { runIntegrityJob } from '@/lib/audit/integrity-job.server'
+import { runIntegrityJob } from '../integrity-job.server.ts'
 
 const originalEnv = { ...process.env }
 const originalFetch = globalThis.fetch

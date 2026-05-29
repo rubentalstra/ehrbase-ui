@@ -11,9 +11,8 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { getRequestHeader } from '@tanstack/react-start/server'
-
 import { computeHash, getChainHead } from './hash-chain.server'
+import { safeRequestHeader as safeHeader } from './request-context'
 import {
   AuditEventInsertSchema,
   LogAuditInputSchema,
@@ -21,16 +20,6 @@ import {
   type LogAuditInput,
 } from './schema'
 import { persistAuditEvent } from './store.server'
-
-// Reading request headers outside a request scope throws; tolerate that so the
-// logger is usable from non-request contexts (scheduled jobs, tests).
-function safeHeader(name: string): string | undefined {
-  try {
-    return getRequestHeader(name) ?? undefined
-  } catch {
-    return undefined
-  }
-}
 
 // Serialize the read-head → insert → set-head critical section so concurrent
 // events within this process produce a strictly linear chain (no forks).

@@ -11,12 +11,12 @@ import {
   NoopColdStore,
   objectKeyFor,
   retainUntilDateFor,
-} from '@/lib/audit/cold-store.server'
+} from '../cold-store.server.ts'
 import {
   _resetColdStorageProviderForTests,
   getColdStorageProvider,
-} from '@/lib/audit/cold-store.factory.server'
-import type { AuditEventRow } from '@/lib/audit/schema'
+} from '../cold-store.factory.server.ts'
+import type { AuditEventRow } from '../schema.ts'
 
 function rowAt(
   timestamp: string,

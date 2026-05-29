@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { canonicalize, computeHash } from '@/lib/audit/hash-chain.server'
-import type { AuditEventInsert } from '@/lib/audit/schema'
+import { canonicalize, computeHash } from '../hash-chain.server.ts'
+import type { AuditEventInsert } from '../schema.ts'
 
 function baseEvent(
   overrides: Partial<Omit<AuditEventInsert, 'hash'>> = {},

@@ -3,7 +3,7 @@
 // unit-testable without a request.
 
 import type { RateLimitClass } from '@/lib/http/rate-limit.server'
-import type { AuditAction, AuditResourceType } from '@/lib/audit/schema'
+import type { AuditAction, AuditResourceType } from '@ehrbase-ui/audit'
 
 export type RequestClass = {
   rateLimit: RateLimitClass

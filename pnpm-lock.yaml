@@ -66,9 +66,18 @@ importers:
       '@better-auth/sso':
         specifier: 1.6.11
         version: 1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-kit@1.0.0-rc.4-273829f)(drizzle-orm@1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))
+      '@ehrbase-ui/audit':
+        specifier: workspace:*
+        version: link:../../packages/audit
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../../packages/config-tsconfig
+      '@ehrbase-ui/db-platform':
+        specifier: workspace:*
+        version: link:../../packages/db-platform
+      '@ehrbase-ui/valkey':
+        specifier: workspace:*
+        version: link:../../packages/valkey
       '@fontsource-variable/geist':
         specifier: 5.2.9
         version: 5.2.9
@@ -266,7 +275,198 @@ importers:
         specifier: 0.1.0
         version: 0.1.0(vitest@4.1.7)
 
+  packages/audit:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: 3.1054.0
+        version: 3.1054.0
+      '@aws-sdk/lib-storage':
+        specifier: 3.1054.0
+        version: 3.1054.0(@aws-sdk/client-s3@3.1054.0)
+      '@ehrbase-ui/db-platform':
+        specifier: workspace:*
+        version: link:../db-platform
+      '@ehrbase-ui/valkey':
+        specifier: workspace:*
+        version: link:../valkey
+      drizzle-orm:
+        specifier: 1.0.0-rc.4-273829f
+        version: 1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)
+      ioredis:
+        specifier: 5.11.0
+        version: 5.11.0
+      pino:
+        specifier: 10.3.1
+        version: 10.3.1
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+
   packages/config-tsconfig: {}
+
+  packages/db-platform:
+    dependencies:
+      drizzle-orm:
+        specifier: 1.0.0-rc.4-273829f
+        version: 1.0.0-rc.4-273829f(postgres@3.4.9)(zod@4.4.3)
+      postgres:
+        specifier: 3.4.9
+        version: 3.4.9
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      drizzle-kit:
+        specifier: 1.0.0-rc.4-273829f
+        version: 1.0.0-rc.4-273829f
+
+  packages/demographic-adapter-fhir:
+    dependencies:
+      '@ehrbase-ui/demographic-core':
+        specifier: workspace:*
+        version: link:../demographic-core
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/demographic-core:
+    dependencies:
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-am:
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-aql:
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-base:
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-cds:
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-flat:
+    dependencies:
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-proc:
+    dependencies:
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-rm:
+    dependencies:
+      '@ehrbase-ui/openehr-base':
+        specifier: workspace:*
+        version: link:../openehr-base
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-term:
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/openehr-web-template:
+    dependencies:
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/term-adapter-snowstorm:
+    dependencies:
+      '@ehrbase-ui/term-core':
+        specifier: workspace:*
+        version: link:../term-core
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/term-core:
+    dependencies:
+      '@ehrbase-ui/openehr-term':
+        specifier: workspace:*
+        version: link:../openehr-term
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+
+  packages/valkey:
+    dependencies:
+      ioredis:
+        specifier: 5.11.0
+        version: 5.11.0
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
 
 packages:
 
