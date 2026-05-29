@@ -13,7 +13,7 @@
 
 import { auditDb } from '@ehrbase-ui/db-platform/client'
 import { auditEvents } from '@ehrbase-ui/db-platform/audit'
-import { computeHash } from './hash-chain.server'
+import { computeHash } from './hash-chain'
 import type { AuditEventInsert } from './schema'
 
 export type IntegrityResult = {

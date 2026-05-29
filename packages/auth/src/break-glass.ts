@@ -13,11 +13,11 @@
 
 import { z } from 'zod'
 
-import { getAuthInstance } from './instance.server.ts'
-import { logAudit } from '@ehrbase-ui/audit'
+import { getAuthInstance } from './instance.ts'
+import { logAudit } from '@ehrbase-ui/audit/server'
 import { checkRateLimit } from '@ehrbase-ui/http-bff'
 import { valkey } from '@ehrbase-ui/valkey'
-import type { RoleContext } from './require-role.server.ts'
+import type { RoleContext } from './require-role.ts'
 
 export const GRANT_TTL_SECONDS = 60 * 60
 export const MIN_JUSTIFICATION = 30

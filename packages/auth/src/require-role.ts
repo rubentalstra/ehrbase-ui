@@ -15,9 +15,9 @@ import { z } from 'zod'
 
 import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
-import { logAudit } from '@ehrbase-ui/audit'
-import { getAuthInstance } from './instance.server.ts'
-import { getAuthRequestHeaders } from './request-context.server.ts'
+import { logAudit } from '@ehrbase-ui/audit/server'
+import { getAuthInstance } from './instance.ts'
+import { getAuthRequestHeaders } from './request-context.ts'
 
 const RealmAccessSchema = z
   .object({

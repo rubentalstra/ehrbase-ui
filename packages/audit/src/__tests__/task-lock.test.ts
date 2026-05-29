@@ -23,7 +23,7 @@ vi.mock('@ehrbase-ui/valkey', () => ({
   },
 }))
 
-import { withTaskLock } from '../task-lock.server.ts'
+import { withTaskLock } from '../task-lock.ts'
 
 const originalEnv = { ...process.env }
 

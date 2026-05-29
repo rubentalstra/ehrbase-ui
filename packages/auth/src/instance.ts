@@ -21,7 +21,7 @@
 //   })
 //   setAuthInstance(auth)
 
-import type { buildAuth } from './factory.server.ts'
+import type { buildAuth } from './factory.ts'
 
 /**
  * The shape of the instance produced by buildAuth(). Captured as the return

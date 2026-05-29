@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { canonicalize, computeHash } from '../hash-chain.server.ts'
+import { canonicalize, computeHash } from '../hash-chain.ts'
 import type { AuditEventInsert } from '../schema.ts'
 
 function baseEvent(

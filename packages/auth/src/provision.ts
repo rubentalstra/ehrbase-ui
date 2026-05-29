@@ -15,7 +15,7 @@ import { eq } from 'drizzle-orm'
 import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import * as authSchema from '@ehrbase-ui/db-platform/auth'
 
-import { decodeJwtPayload, extractRealmRoles } from './jwt.server.ts'
+import { decodeJwtPayload, extractRealmRoles } from './jwt.ts'
 
 export type ProvisionInput = {
   user: { id?: string; email?: string | null }

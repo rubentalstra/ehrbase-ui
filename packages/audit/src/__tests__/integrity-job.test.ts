@@ -18,11 +18,11 @@ const mocks = vi.hoisted(() => ({
 // specifier the module under test actually resolves (vitest matches on
 // module identity, not on the public barrel). From this test file at
 // __tests__/integrity-job.test.ts that sibling is `../integrity.server.ts`.
-vi.mock('../integrity.server.ts', () => ({
+vi.mock('../integrity.ts', () => ({
   verifyAuditChain: mocks.verifyAuditChain,
 }))
 
-import { runIntegrityJob } from '../integrity-job.server.ts'
+import { runIntegrityJob } from '../integrity-job.ts'
 
 const originalEnv = { ...process.env }
 const originalFetch = globalThis.fetch

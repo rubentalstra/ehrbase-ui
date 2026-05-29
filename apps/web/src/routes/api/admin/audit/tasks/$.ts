@@ -16,7 +16,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { runTask } from 'nitro/task'
 import { z } from 'zod'
 
-import { logAudit } from '@ehrbase-ui/audit'
+import { logAudit } from '@ehrbase-ui/audit/server'
 import { requireRole } from '@ehrbase-ui/auth'
 import {
   consumeCsrfToken,

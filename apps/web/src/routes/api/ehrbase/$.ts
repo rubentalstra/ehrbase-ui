@@ -20,7 +20,7 @@ import { z } from 'zod'
 import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
-import { logAudit } from '@ehrbase-ui/audit'
+import { logAudit } from '@ehrbase-ui/audit/server'
 import { classifyRequest, extractEhrId } from '@ehrbase-ui/http-bff'
 import { checkRateLimit, tooManyRequests } from '@ehrbase-ui/http-bff'
 

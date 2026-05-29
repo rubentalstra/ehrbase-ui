@@ -22,7 +22,7 @@ import {
   type S3ClientConfig,
 } from '@aws-sdk/client-s3'
 
-import { canonicalize } from './hash-chain.server'
+import { canonicalize } from './hash-chain'
 import type { AuditEventRow, AuditRetentionPolicy } from './schema'
 
 export type ColdStorageMode = 'best-effort' | 'worm-compliance'

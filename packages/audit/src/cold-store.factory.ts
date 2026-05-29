@@ -16,7 +16,7 @@ import {
   S3ColdStore,
   SeaweedFsColdStore,
   type ColdStorageProvider,
-} from './cold-store.server'
+} from './cold-store'
 
 let _provider: ColdStorageProvider | undefined
 

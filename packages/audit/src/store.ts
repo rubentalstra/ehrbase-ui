@@ -17,7 +17,7 @@ import pino, { type Logger } from 'pino'
 
 import { auditDb } from '@ehrbase-ui/db-platform/client'
 import { auditEvents } from '@ehrbase-ui/db-platform/audit'
-import { setChainHead } from './hash-chain.server'
+import { setChainHead } from './hash-chain'
 import type { AuditEventInsert } from './schema'
 
 // Container deployments set AUDIT_LOG_PATH to the mounted audit_logs volume;

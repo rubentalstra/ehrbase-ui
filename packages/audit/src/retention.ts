@@ -17,7 +17,7 @@ import pino from 'pino'
 
 import { getAuditRetentionDb } from '@ehrbase-ui/db-platform/client'
 import { auditEvents } from '@ehrbase-ui/db-platform/audit'
-import { getColdStorageProvider } from './cold-store.factory.server'
+import { getColdStorageProvider } from './cold-store.factory'
 import type { AuditEventRow, AuditRetentionPolicy } from './schema'
 
 const log = pino({

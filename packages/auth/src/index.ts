@@ -18,34 +18,34 @@ export {
   type BuildAuthOptions,
   decodeJwtPayload,
   extractKeycloakRoles,
-} from './factory.server.ts'
+} from './factory.ts'
 export {
   setAuthInstance,
   getAuthInstance,
   _resetAuthInstanceForTests,
   type AuthInstance,
-} from './instance.server.ts'
+} from './instance.ts'
 export {
   setAuthRequestContextProvider,
   getAuthRequestHeaders,
   _resetAuthRequestContextProviderForTests,
   type AuthRequestContextProvider,
-} from './request-context.server.ts'
+} from './request-context.ts'
 export {
   extractRealmRoles,
   KeycloakRealmAccessSchema,
   SessionUserShapeSchema,
-} from './jwt.server.ts'
+} from './jwt.ts'
 export {
   provisionFromKeycloak,
   type ProvisionInput,
-} from './provision.server.ts'
-export { ensureKeycloakSsoProviderRegistered } from './sso-bootstrap.server.ts'
+} from './provision.ts'
+export { ensureKeycloakSsoProviderRegistered } from './sso-bootstrap.ts'
 export {
   requireRole,
   type RoleContext,
   type RequireRoleOptions,
-} from './require-role.server.ts'
+} from './require-role.ts'
 export {
   GRANT_TTL_SECONDS,
   MIN_JUSTIFICATION,
@@ -55,4 +55,4 @@ export {
   grantEmergencyAccess,
   getEmergencyGrant,
   type EmergencyGrant,
-} from './break-glass.server.ts'
+} from './break-glass.ts'

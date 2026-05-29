@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto'
 
 import pino from 'pino'
 
-import { verifyAuditChain, type IntegrityResult } from './integrity.server'
+import { verifyAuditChain, type IntegrityResult } from './integrity'
 
 const log = pino({
   level: process.env.LOG_LEVEL ?? 'info',

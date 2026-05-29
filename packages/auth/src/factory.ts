@@ -19,10 +19,10 @@ import { sso } from '@better-auth/sso'
 
 import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import * as authSchema from '@ehrbase-ui/db-platform/auth'
-import { logAudit } from '@ehrbase-ui/audit'
+import { logAudit } from '@ehrbase-ui/audit/server'
 
-import { decodeJwtPayload, extractKeycloakRoles } from './jwt.server.ts'
-import { provisionFromKeycloak } from './provision.server.ts'
+import { decodeJwtPayload, extractKeycloakRoles } from './jwt.ts'
+import { provisionFromKeycloak } from './provision.ts'
 
 export type BuildAuthOptions = {
   /** BETTER_AUTH_SECRET — must be ≥32 random chars in production. */

@@ -11,8 +11,8 @@
     ".": "./src/index.ts",
     "./audit": "./src/audit/index.ts",
     "./auth": "./src/auth/index.ts",
-    "./client": "./src/client.server.ts",
-    "./auth-client": "./src/auth-client.server.ts"
+    "./client": "./src/client.ts",
+    "./auth-client": "./src/auth-client.ts"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-rc.4-273829f",

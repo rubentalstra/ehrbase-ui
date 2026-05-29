@@ -11,7 +11,7 @@
 
 import { randomUUID } from 'node:crypto'
 
-import { computeHash, getChainHead } from './hash-chain.server'
+import { computeHash, getChainHead } from './hash-chain'
 import { safeRequestHeader as safeHeader } from './request-context'
 import {
   AuditEventInsertSchema,
@@ -19,7 +19,7 @@ import {
   type AuditEventInsert,
   type LogAuditInput,
 } from './schema'
-import { persistAuditEvent } from './store.server'
+import { persistAuditEvent } from './store'
 
 // Serialize the read-head → insert → set-head critical section so concurrent
 // events within this process produce a strictly linear chain (no forks).

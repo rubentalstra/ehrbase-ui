@@ -19,7 +19,7 @@
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start'
 import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
 
-import { setAuditRequestContextProvider } from '@ehrbase-ui/audit'
+import { setAuditRequestContextProvider } from '@ehrbase-ui/audit/server'
 import { setAuthRequestContextProvider } from '@ehrbase-ui/auth'
 import { applySecurityHeaders, generateNonce, runWithNonce } from '@ehrbase-ui/http-bff'
 
