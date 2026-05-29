@@ -8,11 +8,11 @@ import { z } from 'zod'
 
 import { m } from '@/paraglide/messages.js'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Alert, AlertDescription, AlertTitle } from '@ehrbase-ui/ui/components/alert'
+import { Button } from '@ehrbase-ui/ui/components/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@ehrbase-ui/ui/components/card'
+import { Label } from '@ehrbase-ui/ui/components/label'
+import { Textarea } from '@ehrbase-ui/ui/components/textarea'
 
 export const Route = createFileRoute('/_authed/me')({
   component: Me,

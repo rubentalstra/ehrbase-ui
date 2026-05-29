@@ -10,8 +10,8 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
 
 import { reportClientError } from '@/lib/errors/report-client-error'
 import { m } from '@/paraglide/messages.js'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@ehrbase-ui/ui/components/alert'
+import { Button } from '@ehrbase-ui/ui/components/button'
 
 export function FeatureErrorBoundary({ error, reset }: ErrorComponentProps) {
   // Stable id chosen at mount so it can render immediately; the side-effecting

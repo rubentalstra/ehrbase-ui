@@ -26,7 +26,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from '@/components/ui/sidebar'
+} from '@ehrbase-ui/ui/components/sidebar'
 
 function navSections(roles: string[]): NavSection[] {
   const sections: NavSection[] = [

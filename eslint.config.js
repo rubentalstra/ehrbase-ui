@@ -42,9 +42,11 @@ export default defineConfig([
     // (docs/architecture.md §6) and not our code to maintain. Excluded from
     // ESLint entirely (and from Prettier, see .prettierignore) so a routine
     // `shadcn add` doesn't fail the strict src/** rules. tsc still typechecks
-    // them via the app's tsconfig — they remain type-valid.
-    'apps/web/src/components/ui/**',
-    'apps/web/src/hooks/use-mobile.ts',
+    // them via each package's tsconfig — they remain type-valid. Per ADR-0030
+    // they live under packages/ui/src now (apps/web/components.json points
+    // shadcn-CLI installs at that location).
+    'packages/ui/src/components/**',
+    'packages/ui/src/hooks/use-mobile.ts',
     // Workspace package generated outputs / vendored content can extend the
     // ignore list here when packages start owning code (Phase 0 + later).
     'packages/*/dist/**',

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 
 import { AppSidebar } from '@/components/app-sidebar'
-import { SidebarProvider } from '@/components/ui/sidebar'
+import { SidebarProvider } from '@ehrbase-ui/ui/components/sidebar'
 import { withRouter } from '@/test/storybook-decorators'
 
 const meta = {

@@ -42,6 +42,7 @@
     "@ehrbase-ui/http-bff": "workspace:*",
     "@ehrbase-ui/observability": "workspace:*",
     "@ehrbase-ui/openehr-its-rest": "workspace:*",
+    "@ehrbase-ui/ui": "workspace:*",
     "@ehrbase-ui/valkey": "workspace:*",
     "@fontsource-variable/geist": "5.2.9",
     "@hookform/resolvers": "5.4.0",

@@ -17,15 +17,15 @@ import { m } from '@/paraglide/messages.js'
 import type { AuditOutcome } from '@ehrbase-ui/audit'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { getMyAuditEvents } from '@/server/functions/access-log.functions'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@ehrbase-ui/ui/components/alert'
+import { Button } from '@ehrbase-ui/ui/components/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
+} from '@ehrbase-ui/ui/components/card'
 import {
   Table,
   TableBody,
@@ -33,7 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from '@ehrbase-ui/ui/components/table'
 
 export const Route = createFileRoute('/_authed/me_/access-log')({
   component: AccessLog,

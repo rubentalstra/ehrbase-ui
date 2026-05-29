@@ -6,7 +6,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@/components/ui/button'
+import { Button } from '@ehrbase-ui/ui/components/button'
 
 const LAST_REVIEWED = '2026-05-27'
 

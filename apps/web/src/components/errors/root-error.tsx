@@ -9,7 +9,7 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
 
 import { reportClientError } from '@/lib/errors/report-client-error'
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@/components/ui/button'
+import { Button } from '@ehrbase-ui/ui/components/button'
 
 export function RootError({ error, reset }: ErrorComponentProps) {
   const [correlationId] = useState(() => crypto.randomUUID())

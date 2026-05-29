@@ -14,10 +14,10 @@
   "rtl": false,
   "aliases": {
     "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
+    "utils": "@ehrbase-ui/ui/lib/utils",
+    "ui": "@ehrbase-ui/ui/components",
+    "lib": "@ehrbase-ui/ui/lib",
+    "hooks": "@ehrbase-ui/ui/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

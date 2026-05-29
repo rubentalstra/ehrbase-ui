@@ -14,8 +14,8 @@ import { getLocale } from '@/paraglide/runtime.js'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { RootError } from '@/components/errors/root-error'
 import { NotFound } from '@/components/errors/not-found'
-import { Toaster } from '@/components/ui/sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@ehrbase-ui/ui/components/sonner'
+import { TooltipProvider } from '@ehrbase-ui/ui/components/tooltip'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({

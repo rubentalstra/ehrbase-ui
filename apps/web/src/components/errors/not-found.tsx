@@ -5,7 +5,7 @@
 import { Link } from '@tanstack/react-router'
 
 import { m } from '@/paraglide/messages.js'
-import { Button } from '@/components/ui/button'
+import { Button } from '@ehrbase-ui/ui/components/button'
 
 export function NotFound() {
   return (
