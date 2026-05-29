@@ -10,40 +10,25 @@
 //      Providing a start instance replaces the default CSRF middleware, so we
 //      re-register it here (§5.8 layer 2).
 //
-// The Paraglide locale middleware lives in src/server.ts (the outermost fetch
-// handler) per the official Paraglide + TanStack Start integration example —
-// it establishes the locale AsyncLocalStorage context before the framework
-// pipeline runs, so getLocale() works in everything below (SSR, loaders,
-// server fns).
+// This file is bundled into the CLIENT environment too (TanStack Start needs
+// the startInstance reference for the route tree's client side), so its
+// top-level imports MUST NOT reach any server-only package or `.server.ts`
+// file — `tanstack-start-core:import-protection` denies that. The middleware
+// function body itself runs only server-side (`.server(fn)` wrapper), so its
+// dynamic `await import('@ehrbase-ui/http-bff')` is resolved at request time
+// on the server and never lands in the client bundle.
+//
+// The audit + auth request-context providers are registered in
+// apps/web/src/server.ts (the outermost fetch entry, which is server-only by
+// construction). start.ts cannot register them itself for the import-
+// protection reason above.
+//
+// The Paraglide locale middleware also lives in src/server.ts per the
+// official Paraglide + TanStack Start integration example — it establishes
+// the locale AsyncLocalStorage context before the framework pipeline runs,
+// so getLocale() works in everything below (SSR, loaders, server fns).
 
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start'
-import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
-
-import { setAuditRequestContextProvider } from '@ehrbase-ui/audit/server'
-import { setAuthRequestContextProvider } from '@ehrbase-ui/auth'
-import { applySecurityHeaders, generateNonce, runWithNonce } from '@ehrbase-ui/http-bff'
-
-// Wire the framework-agnostic @ehrbase-ui/audit + @ehrbase-ui/auth packages
-// to TanStack Start's request-context API (ADR-0030 — packages are
-// framework-agnostic; the host app binds the runtime). Called once at
-// module load.
-setAuditRequestContextProvider({
-  getHeader: (name) => {
-    try {
-      return getRequestHeader(name) ?? undefined
-    } catch {
-      // Called outside a request scope (Nitro scheduled task, test harness).
-      // The audit logger falls back to 'unknown'/random-correlation-ID.
-      return undefined
-    }
-  },
-})
-setAuthRequestContextProvider({
-  // requireRole + the M5+ server functions feed these Headers into
-  // Better Auth's getSession({ headers }) call. Throws when called outside
-  // a request scope — auth flows truly require a request.
-  getHeaders: () => getRequest().headers,
-})
 
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === 'serverFn',
@@ -51,6 +36,9 @@ const csrfMiddleware = createCsrfMiddleware({
 
 const securityHeadersMiddleware = createMiddleware({ type: 'request' }).server(
   async ({ next, pathname }) => {
+    const { applySecurityHeaders, generateNonce, runWithNonce } = await import(
+      '@ehrbase-ui/http-bff'
+    )
     const nonce = generateNonce()
     const result = await runWithNonce(nonce, () => next())
     applySecurityHeaders(result.response.headers, { nonce, pathname })

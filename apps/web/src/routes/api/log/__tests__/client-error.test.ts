@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 
 // Importing the route module pulls in server-only deps; stub them so the test
 // doesn't open a Valkey connection or need the request context.
-vi.mock('@/lib/http/rate-limit.server', () => ({ checkRateLimit: vi.fn() }))
+vi.mock('@ehrbase-ui/http-bff', () => ({ checkRateLimit: vi.fn() }))
 vi.mock('@tanstack/react-start/server', () => ({ getRequestHeader: vi.fn() }))
-vi.mock('@/lib/log/app.server', () => ({ withCorrelationId: vi.fn() }))
+vi.mock('@ehrbase-ui/observability/log', () => ({ withCorrelationId: vi.fn() }))
 
 import { BodySchema } from '@/routes/api/log/client-error'
 
