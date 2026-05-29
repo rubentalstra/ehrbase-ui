@@ -38,7 +38,7 @@ onlyBuiltDependencies:
 allowBuilds:
   esbuild: true
   msw: true
-  protobufjs: set this to true or false
+  protobufjs: true
 
 minimumReleaseAgeExclude:
   - ioredis@5.11.0
