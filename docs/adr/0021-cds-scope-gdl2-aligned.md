@@ -80,3 +80,9 @@ The exact set is reviewed when M15 implements rule authoring.
 **Negative.** Not full GDL2 semantics — complex rules (cross-archetype evaluations, temporal reasoning beyond simple "recent") might not fit the simplified format. Mitigation: M15 review of the baseline rules calibrates whether the format needs extension before v1.0 tag. The escape hatch is "if it's too complex for the JSON format, raise an issue to upgrade to a real GDL2 engine in v1.x."
 
 The built-in drug-drug table (`cds_002`) is tiny by design — it covers the most-severe pairs as a safety floor, not a comprehensive interaction database. Deployments needing comprehensive coverage configure an external knowledge source (documented in the deployment guide; the API contract is provided in M15).
+
+---
+
+## Addendum 2026-05-29 — CDS infrastructure consolidated into new M9 milestone
+
+Originally the CDS work was split across three milestones: the rule **wired** at vitals write (old M9), the rule **authoring UI** (old M15), and the runtime **evaluator + dismiss-with-justification** flow (old M16). Per CLAUDE.md Inviolable rule 13 (no minimal-now/full-later splits), the entire CDS feature — rule schema, authoring UI, runtime evaluator at the BFF, generic dismiss-with-justification flow, and the initial 10-rule pack listed above — consolidates into a **new milestone M9** that lands BEFORE any clinical write surface (M10+). The total v1.0 milestone count grows from 18 to 19 (see `docs/IMPLEMENTATION_CHECKLIST.md`). Subsequent clinical milestones (M10 vitals/labs, M11 notes, M12 problems/meds/allergies, M13 orders/CPOE) wire their archetype-specific rules to the M9 runtime — no per-milestone re-implementation of dismiss flow.

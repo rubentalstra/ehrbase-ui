@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+
+/* Shared design tokens + a11y base layer (ADR-0030). Owns @theme tokens,
+   the :root + .dark color scales, the focus-visible + scroll-margin-top
+   base rules, and the skip-link styling. Anything app-specific stays
+   below this import. */
+@import '@ehrbase-ui/config-tailwind';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+}
+
+:root {
+  /* Sticky header height. Drives both the shell header sizing and the
+     scroll-margin-top in the shared preset so an in-page focus target isn't
+     hidden behind the sticky header (WCAG 2.2 SC 2.4.11 Focus Not Obscured). */
+  --header-height: 3.5rem;
+}
+
+@layer base {
+  html {
+    @apply font-sans;
+  }
+}

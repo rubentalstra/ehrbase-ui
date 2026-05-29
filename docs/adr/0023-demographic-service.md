@@ -1,10 +1,10 @@
 # ADR-0023 — Demographic service: separate openEHR-spec service alongside EHRbase
 
-- **Status:** Accepted
+- **Status:** Superseded (shape) — see addendum
 - **Date:** 2026-05-28
 - **Deciders:** Initial maintainer (@rubentalstra)
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** [ADR-0031](0031-pluggable-demographic-provider.md) (2026-05-29)
 
 ## Context
 
@@ -72,3 +72,22 @@ User chose **C** — most spec-pure.
 **Negative.** Building the demographic service is a whole milestone (M7). Cost: full implementation of PARTY hierarchy + versioning + REST surface + admin UI for clinician demographic entry. Mitigation: we implement the _minimum_ class hierarchy v1.0 needs (PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, basic PARTY_RELATIONSHIP for clinician-patient) and defer ORGANISATION / GROUP / AGENT to v1.x.
 
 There is no widely-deployed open-source reference implementation of the openEHR Demographic Information Model — we're building a small one. Mitigation: the scope is narrow (~5 classes, 4 endpoints). The openEHR Foundation's archetypes for demographic entities (`openEHR-DEMOGRAPHIC-*` namespace on CKM) give us validated schemas to constrain against.
+
+---
+
+## Addendum 2026-05-29 — Superseded by ADR-0031 (in shape, not intent)
+
+Research conducted 2026-05-29 surfaced that:
+
+1. The openEHR Demographic IM spec **explicitly** supports BOTH standalone AND wrapper-around-existing-PMI ("either standalone, or a 'wrapper' service for an existing system such as a patient master index").
+2. EHRbase's own commercial vendor — vitagroup HIP CDR — stores demographics in **HL7 FHIR R4**, not the openEHR demographic IM.
+3. ~80% of production hospitals already broadcast HL7 v2 ADT from an existing HIS / PMI. Hardcoding our built-in store loses every such deployment.
+
+**[ADR-0031](0031-pluggable-demographic-provider.md) supersedes ADR-0023 in shape.** The intent of ADR-0023 (an openEHR-spec demographic surface, full PARTY hierarchy, pseudonymisation, dual-layer audit, VERSIONED_PARTY semantics) is **preserved verbatim**. The shape changes:
+
+- The same openEHR `Party` / `PartyIdentity` / `Contact` / `Address` / `Role` / `PartyRelationship` types remain the canonical wire shape (`@ehrbase-ui/openehr-rm`).
+- The built-in openEHR-Postgres adapter described above is now ONE concrete `DemographicProvider` — `packages/demographic-core` — selected via `DEMOGRAPHIC_PROVIDER=builtin` (the default).
+- A second adapter `packages/demographic-adapter-fhir` (FHIR R4 Patient) ships in M7 alongside the built-in.
+- HL7 v2 ADT + IHE PIX/PDQ adapter slots are reserved (`packages/demographic-adapter-hl7v2-adt`, `packages/demographic-adapter-pix-pdq`) for v1.x.
+
+M7 milestone scope was simultaneously expanded (per CLAUDE.md Inviolable rule 13, no minimal-now/full-later splits) to include the full demographic admin UI that was originally scheduled for M15.

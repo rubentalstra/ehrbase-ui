@@ -1,0 +1,20 @@
+{
+  "name": "@ehrbase-ui/openehr-its-rest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "openEHR ITS-REST 1.0.3 client — orval-generated against EHRbase 2.31's OpenAPI spec, with Zod response validation per docs/architecture.md §15. v1.0 ships a placeholder; M6 replaces it with the real generated client.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "orval": "8.13.0"
+  }
+}

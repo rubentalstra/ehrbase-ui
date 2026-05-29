@@ -1,0 +1,70 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "globalDependencies": [
+    "tsconfig.json",
+    "pnpm-workspace.yaml",
+    ".env",
+    ".env.local"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "vite.config.ts",
+        "app.config.ts",
+        "public/**"
+      ],
+      "outputs": ["dist/**", ".output/**", ".nitro/**", "src/paraglide/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "tsconfig.*.json"],
+      "outputs": [".tsbuildinfo"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "package.json",
+        "eslint.config.*",
+        "../../packages/config-eslint/**"
+      ],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vitest.config.ts"],
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
+      "cache": false,
+      "persistent": true
+    },
+    "e2e": {
+      "dependsOn": ["^build", "build"],
+      "inputs": ["src/**", "e2e/**", "package.json", "playwright.config.ts"],
+      "outputs": ["playwright-report/**", "test-results/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "storybook:build": {
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
+    },
+    "paraglide:compile": {
+      "inputs": ["messages/**", "project.inlang/**"],
+      "outputs": ["src/paraglide/**"]
+    }
+  }
+}

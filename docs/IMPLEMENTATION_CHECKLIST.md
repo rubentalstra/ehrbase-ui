@@ -46,6 +46,25 @@ append-only) added.
 - [x] **2M** Source maps hidden in production (verified + documented) — §5.11
 - [x] **2N** Tests (unit + gated full-stack E2E with audit-chain assertion), ADR ratification, checklist rewrite, secrets/env/compose/gitleaks wiring
 
+## Milestone 0 — Monorepo migration (Phase 0, lands before M5)
+
+> **NEW.** Restructures the repo as a Turborepo + pnpm-workspaces monorepo per ADR-0030. Every file moves verbatim (no rewrites). Critical pre-requisite for M5+ — every clinical milestone (M10+) lands code into the existing package layout instead of re-shuffling per-milestone. ADRs 0030–0034 ratify the structural decisions.
+
+- [ ] pnpm-workspace.yaml + turbo.json + root package.json + root tsconfig.json with project references — ADR-0030
+- [ ] Config packages: `@ehrbase-ui/config-tsconfig`, `config-eslint`, `config-tailwind`
+- [ ] App move: `src/` → `apps/web/src/`; `public/`, `e2e/`, `messages/`, vitest + playwright configs follow
+- [ ] Platform packages extracted: `audit`, `auth`, `http-bff`, `observability` (with `log/`), `valkey`, `db-platform`, `i18n`
+- [ ] openEHR per-spec packages scaffolded (empty + index.ts only): `openehr-base`, `-rm`, `-am`, `-aql`, `-proc`, `-cds`, `-term`, `-its-rest` (current generated stub moves here), `-flat`, `-web-template` — ADR-0032
+- [ ] Demographic provider scaffold: `demographic-core`, `demographic-adapter-fhir` (empty packages with provider interface stub) — ADR-0031
+- [ ] Terminology provider scaffold: `term-core`, `term-adapter-snowstorm` (empty packages with provider interface stub) — ADR-0034
+- [ ] UI package: `packages/ui` — current `src/components/ui/*` shadcn primitives move here
+- [ ] All imports updated to `@ehrbase-ui/*`; `apps/web/package.json` depends on workspace packages via `workspace:*`
+- [ ] ADR-0030 (monorepo) + ADR-0031 (pluggable demographic) + ADR-0032 (openEHR per-spec) + ADR-0033 (FHIR R4 adapter scope) + ADR-0034 (pluggable terminology) ratified
+- [ ] ADR-0021 (CDS) + ADR-0022 (terminology) + ADR-0023 (demographic) amended
+- [ ] Inviolable rule 13 added to CLAUDE.md
+- [ ] CLINICAL-UI.md + architecture.md cross-refs updated for new milestone numbering + monorepo paths
+- [ ] `pnpm install && pnpm turbo run build typecheck lint test e2e` green; dev workflow regression-free; pre-commit hooks fire from root
+
 ## Milestone 3 — UI shell + i18n + state (§6, §9, §10, §11, §12)
 
 - [x] App shell — sidebar (cookie state) + nav + theme toggle + `Command` palette
@@ -57,7 +76,7 @@ append-only) added.
 - [x] Skip-to-content link, visible focus rings, `scroll-margin-top` for sticky headers — §12.6
 - [~] Manual NVDA + VoiceOver test report under `docs/accessibility/` — §12.7 (report written 2026-05-27; NVDA/VoiceOver passes PENDING human run before v1.0, M8)
 
-> **Milestones renumbered (2026-05-28).** v1.0 expanded from 8 to 18 milestones to reflect the full HIX-grade EPD scope on the openEHR open standard. See `docs/CLINICAL-UI.md` for the screen catalogue each new clinical milestone delivers, and the plan at `~/.claude/plans/i-want-you-to-fuzzy-curry.md` for the full rationale.
+> **Milestones renumbered (2026-05-28; further consolidated 2026-05-29).** v1.0 grew from 8 to 18 to **19** milestones to reflect the full HIX-grade EPD scope on the openEHR open standard. The 2026-05-29 re-org consolidates two previously-split capabilities into single milestones (M7 demographic absorbs the full admin demographic UI that was originally scheduled for M15; CDS is consolidated from M9/M15/M16 into a new M9) per CLAUDE.md Inviolable rule 13. The plan at `~/.claude/plans/okay-now-i-want-delightful-reddy.md` records the full rationale + the monorepo migration that lands in Milestone 0.
 
 ## Milestone 4 — Audit governance + retention (§14.6–14.12)
 
@@ -75,81 +94,101 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 ## Milestone 5 — Observability (§13)
 
-> **Moved earlier (was M7).** The user-confirmed rationale: building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one.
+> **Moved earlier.** Building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one. Lands in `packages/observability` + `apps/web/src/instrumentation.ts` + `apps/web/src/routes/api/{health,ready}.ts`.
 
 - [ ] OTel SDK bootstrap + sampling + PHI redaction layers — §13.2
 - [ ] `pino-opentelemetry-transport` wiring — §13.1
 - [ ] `/api/health` + `/api/ready` — §13.4
-- [ ] OTel collector config in `docker-compose.yml`
-- [ ] Tempo + Loki + Prometheus dev stack
-- [ ] PHI-redaction layer verification + axe-equivalent automated test for span content
+- [ ] OTel collector config in `docker-compose.yml` — `otel/opentelemetry-collector-contrib:0.118.0`
+- [ ] Tempo (`2.7.x`) + Loki (`3.7.2`) + Prometheus (`v3.12.0`) + Grafana (`11.x`) dev stack
+- [ ] PHI-redaction layer verification + automated test for span content (no PHI)
 
-## Milestone 6 — openEHR engine (§7)
+## Milestone 6 — openEHR form engine (§7)
 
-> **Was M5.** The form-rendering substrate every clinical write surface (M9–M16) depends on. No clinical UI ships before this; this ships before any clinical UI.
+> The form-rendering substrate every clinical write surface (M10–M15) depends on. Lands across `packages/openehr-{base,rm,its-rest,flat,web-template}` + `packages/ui/src/components/openehr/*` + app-internal `apps/web/src/lib/openehr/*`.
 
 - [ ] Web-template fetch + cache (per archetype-catalogue ADR-0016) — §2, §7
 - [ ] Zod schema generator from web template — §7 Validation
 - [ ] `FieldRenderer` (rmType → shadcn map) — §7
 - [ ] `ArrayFieldRenderer` (`useFieldArray` cardinality) — §7
-- [ ] FLAT converter (write); STRUCTURED converter (read); CANONICAL converter (export)
-- [ ] `DV_MULTIMEDIA` upload + ClamAV sidecar — §7.x file uploads
+- [ ] FLAT converter (write); STRUCTURED converter (read); CANONICAL converter (export) — `packages/openehr-flat`
+- [ ] `DV_MULTIMEDIA` upload + ClamAV sidecar (`clamav/clamav:1.5-debian`) — §7.x file uploads
 - [ ] Optimistic concurrency (If-Match ETag) + side-by-side diff modal — §7.x concurrent edits
 - [ ] Autosave drafts → encrypted Valkey, 24-hour TTL — §7.x autosave
 - [ ] `CompositionViewer` (STRUCTURED read-back) — §6
 - [ ] CONTRIBUTION header population on every write (`openEHR-COMMITTER-NAME`, `-ID`, `-CHANGE-TYPE`, `-DESCRIPTION`) — ADR-0024
-- [ ] Snowstorm terminology autocomplete wiring (ADR-0022)
+- [ ] Terminology autocomplete wiring via `@ehrbase-ui/term-core` (ADR-0034) — pluggable Snowstorm default
 
-## Milestone 7 — Demographic service (§2, ADR-0023)
+## Milestone 7 — Demographic service (pluggable provider; ADR-0031)
 
-> **NEW.** EHRbase implements only the EHR side — the demographic store is ours. v1.0 ships a separate openEHR-spec demographic service as a module in this app (own Postgres schema, own REST surface, own audit lines).
+> **NEW.** EHRbase only implements the EHR side. Demographic provider is pluggable — built-in Postgres adapter (default) + FHIR R4 adapter both ship in M7. ADR-0031 supersedes ADR-0023 in shape. Per Inviolable rule 13, the full demographic admin UI ships in M7 (previously split with M15).
 
-- [ ] Postgres schema `demographic` + roles (`demographic_owner`, `demographic_writer`) — ADR-0013 pattern
-- [ ] PARTY hierarchy implementation: PERSON (concrete), PARTY_IDENTITY, CONTACT, ADDRESS, basic PARTY_RELATIONSHIP — `docs/CLINICAL-UI.md` §6
-- [ ] `VERSIONED_OBJECT` semantics — every update creates a new version; prior versions readable by ID + version
-- [ ] REST surface `/api/demographic/*` — GET / POST / PUT per the openEHR Demographic spec shape — ADR-0023
-- [ ] Identifier-namespace registry for national patient IDs (NL: BSN, BE: NISS, FR: NIR, DE: KVNR, IT: Codice Fiscale, ES: TIS, PT: NUTS, AT: bPK, PL: PESEL, MRN)
-- [ ] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024 cross-link)
-- [ ] EHRbase `EHR_STATUS.subject` populated as `PARTY_IDENTIFIED` with `external_ref` pointing at the demographic service
-- [ ] Audit: `READ` / `CREATE` / `UPDATE` on `PARTY` resource type
-- [ ] Admin UI: minimal patient-create flow (full UI in M15)
+- [ ] `DemographicProvider` interface in `packages/demographic-core` — ADR-0031
+- [ ] Built-in adapter: Postgres `demographic` schema + roles (`demographic_owner`, `demographic_writer`) on `platform-db` — ADR-0013 pattern, in `packages/db-platform`
+- [ ] PARTY hierarchy implementation: PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, ROLE, basic PARTY_RELATIONSHIP — types from `@ehrbase-ui/openehr-rm` (ADR-0032)
+- [ ] VERSIONED_PARTY semantics — every update writes a new row; prior versions readable
+- [ ] REST surface `/api/demographic/*` in `apps/web/src/routes/api/demographic/`
+- [ ] FHIR R4 adapter: `packages/demographic-adapter-fhir` — version-aware (R4 only for v1.0; R5/R6 pure-additive per ADR-0033)
+- [ ] Capability flags (`capabilities.readonly` etc.) drive admin UI gating
+- [ ] Identifier-namespace registry: NL (BSN, 11-proef), BE (NISS, mod-97), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL, 11-digit), MRN
+- [ ] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024)
+- [ ] EHRbase `EHR_STATUS.subject` populated as `PARTY_IDENTIFIED` with `external_ref` pointing through the provider
+- [ ] Audit: `READ` / `CREATE` / `UPDATE` / `MERGE_PARTY` on `PARTY` resource type; `source.adapterName` recorded
+- [ ] **Full demographic admin UI** at `/_authed/admin/patients/*` — create + edit + identifiers + relationships + deactivate + merge + version-history (capability-gated against the active provider)
+- [ ] Storybook + E2E: built-in adapter golden-path; FHIR adapter read-only path
 
-## Milestone 8 — Patient core (CLINICAL-UI.md §§7.1–7.4)
+## Milestone 8 — Patient core + workspace shell (CLINICAL-UI.md §§7.1–7.4)
 
-> **NEW.** The patient-bound layout + the three cross-cutting surfaces that lead to every other clinical screen.
+> The patient-bound layout + cross-cutting surfaces that lead to every other clinical screen. Reads M7 `DemographicProvider` directly (works against built-in OR FHIR adapter).
 
-- [ ] Patient header banner — layout component wrapping `/_authed/patients/$patientId/*`; reads M7 demographic + EHR `ehr_status` + summary AQL `patient_summary_header`
-- [ ] Critical-allergy / critical-problem highlighting in the banner — CDS-state aware
+- [ ] Patient header banner — layout component wrapping `/_authed/patients/$patientId/*`; reads M7 provider + EHR `ehr_status` + summary AQL `patient_summary_header`
+- [ ] Critical-allergy / critical-problem highlighting in the banner — CDS-state aware (data from M9)
 - [ ] Break-glass hint when clinician not in care relationship — §5.6 wired into the banner
-- [ ] Global patient search at `/_authed/patients/search` — hits M7 demographic + EHRbase existence check
-- [ ] Recently-viewed list at `/_authed/patients/recent` — per-user app-DB table
-- [ ] Encounter / visit list at `/_authed/patients/$patientId/encounters` — AQL over `DIRECTORY/FOLDER` per encounter
+- [ ] Global patient search at `/_authed/patients/search` — hits M7 provider + EHRbase existence check
+- [ ] Recently-viewed list at `/_authed/patients/recent` — per-user `auth` DB table (new tiny schema in `packages/db-platform`)
+- [ ] Encounter / visit list at `/_authed/patients/$patientId/encounters` — AQL over `DIRECTORY/FOLDER`
 - [ ] Role-specific home (`/_authed/home` resolves per ADR-0017) — physician / nurse / admin / audit-reviewer / researcher
 - [ ] First-login role picker at `/_authed/role-picker` for multi-role users
 - [ ] Storybook stories for banner + each home variant
 - [ ] E2E: physician home renders today's ward; switching role works; deep link to a patient survives login
 
-## Milestone 9 — Vitals + labs (CLINICAL-UI.md §§7.5–7.6)
+## Milestone 9 — CDS infrastructure + rule authoring + runtime (CLINICAL-UI.md §7.17, ADR-0021)
 
-> **NEW.** The highest-frequency clinical read surface in inpatient workflow.
+> **NEW.** CDS consolidated from old M9/M15/M16 fragmentation per Inviolable rule 13. Ships rule schema + form-based authoring UI + runtime evaluator at the BFF + generic dismiss-with-justification flow + the v1.0 10-rule pack. All subsequent clinical write surfaces (M10–M14) wire their rules to this runtime.
+
+- [ ] `@ehrbase-ui/openehr-cds` — `CdsRule` schema (GDL2-aligned, ADR-0021)
+- [ ] CDS rule storage in `auth`-pattern Postgres schema + Drizzle migrations in `packages/db-platform`
+- [ ] CDS rule authoring at `/_authed/admin/cds-rules` — form-based UI over the JSON rule format (NOT raw GDL2 syntax); uses M6 form engine for archetype-path binding pickers
+- [ ] CDS rule activation toggle + dry-run preview (evaluate against current data without writing)
+- [ ] Runtime evaluator in the BFF — loads active rules on startup, evaluates on every composition write
+- [ ] Severity handling: `info` (banner), `warning` (modal, dismissible), `critical` (block until dismissed-with-justification)
+- [ ] Generic dismiss-with-justification flow → `EVALUATION.cds_override.v0` composition + NEN-7513 `CDS_OVERRIDE` audit (dual-layer)
+- [ ] Initial 10-rule pack seeded: `cds_001`–`cds_010` (drug-allergy, drug-drug top-20, renal-dose, paediatric-weight, critical-BP, critical-lab, duplicate-order, anticoagulant-INR, pregnancy-contra, allergy-severity-unknown)
+- [ ] Rule-change audit (`ADMIN_CHANGE` on create/update/disable)
+- [ ] Storybook stories for the rule editor + alert components
+- [ ] E2E: author a rule, dry-run, activate, write a composition that triggers it, dismiss with justification, verify dual-layer audit lands
+
+## Milestone 10 — Vitals + labs (CLINICAL-UI.md §§7.5–7.6)
+
+> The highest-frequency clinical read surface in inpatient workflow. CDS rules (`cds_005`, `cds_006`, `cds_003`) now resolvable end-to-end via M9 runtime.
 
 - [ ] Vitals flowsheet at `/_authed/patients/$patientId/vitals` — custom `VitalsFlowsheet` grid + Recharts `LineChart` per archetype (ADR-0018)
-- [ ] Vitals quick-entry drawer (nurse-led) — writes `OBSERVATION` compositions per archetype (blood_pressure.v2, pulse.v2, body_temperature.v2, respiration.v2, pulse_oximetry.v1, body_weight.v2, height.v2, body_mass_index.v2) — ADR-0016
+- [ ] Vitals quick-entry drawer (nurse-led) — writes `OBSERVATION` per archetype (blood_pressure.v2, pulse.v2, body_temperature.v2, respiration.v2, pulse_oximetry.v1, body_weight.v2, height.v2, body_mass_index.v2) — ADR-0016
 - [ ] AQL queries: `vitals_latest_*` + `vitals_trend_*` per archetype — added to `docs/aql-catalogue.md`
-- [ ] CDS rule `cds_005_critical_bp` (ADR-0021) wired into vitals write path
+- [ ] CDS rule `cds_005_critical_bp` wired via M9 runtime
 - [ ] Lab results timeline at `/_authed/patients/$patientId/labs` — `DataTable` + Recharts trend chart
-- [ ] Abnormal-flag highlighting via reference-range comparison (per LOINC code from Snowstorm)
-- [ ] LOINC autocomplete (Snowstorm) for ad-hoc lab data entry
-- [ ] CDS rule `cds_006_critical_lab` + `cds_003_renal_dose_adjust` wired
+- [ ] Abnormal-flag highlighting via reference-range comparison (per LOINC code from terminology provider)
+- [ ] LOINC autocomplete via `@ehrbase-ui/term-core` (ADR-0034)
+- [ ] CDS rules `cds_006_critical_lab` + `cds_003_renal_dose_adjust` wired via M9
 - [ ] Dual-layer audit (CONTRIBUTION + `logAudit`) on every write — ADR-0024
 - [ ] Storybook stories for flowsheet, trend chart, abnormal-flag badge
-- [ ] E2E: record vitals → flowsheet updates; lab abnormal flag renders; CDS critical-BP alert fires
+- [ ] E2E: record vitals → flowsheet updates; lab abnormal flag renders; CDS critical-BP alert fires (via M9 runtime)
 
-## Milestone 10 — Clinical notes (CLINICAL-UI.md §7.7)
+## Milestone 11 — Clinical notes (CLINICAL-UI.md §7.7)
 
-> **NEW.** The highest-volume clinical write surface.
+> The highest-volume clinical write surface. CDS evaluation on submit goes through the M9 generic flow.
 
-- [ ] `NoteEditor` component — TipTap-based rich text + structured-field slots
+- [ ] `NoteEditor` component — TipTap-based rich text + structured-field slots (in `packages/ui`)
 - [ ] SOAP layout via openEHR `SECTION` — Subjective / Objective / Assessment / Plan blocks
 - [ ] Note-type variants — admission note, progress note, discharge prep, nurse note (role-gated)
 - [ ] Save as `openEHR-EHR-COMPOSITION.encounter.v1` + `EVALUATION.clinical_synopsis.v1`
@@ -157,57 +196,70 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [ ] Autosave every 30 s + on blur; restore on page-reload
 - [ ] Optimistic concurrency on signed-note edits (If-Match ETag, M6 substrate)
 - [ ] AQL query `notes_recent_compositions`
+- [ ] M9 runtime evaluates note submission for CDS rules
 - [ ] Storybook + E2E: type a note, sign it, reload, the note appears in encounter list
 
-## Milestone 11 — Problems + medications + allergies + immunisations (CLINICAL-UI.md §§7.8–7.11)
+## Milestone 12 — Problems + medications + allergies + immunisations (CLINICAL-UI.md §§7.8–7.11)
 
-> **NEW.** The persistent patient-summary surface — top of every patient view.
+> Persistent patient-summary surface. CDS rules `cds_001` + `cds_010` fire via M9 runtime.
 
 - [ ] Combined route `/_authed/patients/$patientId/problems` with tabs (problems / meds / allergies / immunisations)
-- [ ] Problem list — `EVALUATION.problem_diagnosis.v1`, SNOMED CT-coded via Snowstorm — `DataTable`, `Sheet` for add/edit
+- [ ] Problem list — `EVALUATION.problem_diagnosis.v1`, SNOMED CT-coded via terminology provider — `DataTable`, `Sheet` for add/edit
 - [ ] Medication active list — `INSTRUCTION.medication_order.v3` + `ACTION.medication.v1` — custom `MedicationCard`
 - [ ] Allergies — `EVALUATION.adverse_reaction_risk.v1`, severity Badge, SNOMED CT-coded
 - [ ] Immunisations — `ACTION.immunisation.v1`, timeline view, SNOMED CT vaccine codes
-- [ ] CDS rule `cds_001_drug_allergy_match` fires on prescribe + on allergy-write
-- [ ] CDS rule `cds_010_allergy_severity_unknown` suggests follow-up
+- [ ] CDS rule `cds_001_drug_allergy_match` fires on prescribe + on allergy-write (via M9)
+- [ ] CDS rule `cds_010_allergy_severity_unknown` suggests follow-up (via M9)
 - [ ] AQL queries: `problems_active`, `problems_history`, `medications_active`, `medication_administrations_recent`, `allergies_active`, `immunisations_history`
 - [ ] Banner-summary feed updated (active allergies count, active problems count)
 - [ ] Storybook + E2E covering each tab
 
-## Milestone 12 — Orders / CPOE (CLINICAL-UI.md §7.12)
+## Milestone 13 — Orders / CPOE (CLINICAL-UI.md §7.12)
 
-> **NEW.** Computerised order entry — meds / labs / imaging. Built on M6 form engine + M11 med/allergy data for safety checks.
+> Computerised order entry. Dismiss-with-justification reuses the M9 generic flow (no per-milestone re-implementation).
 
 - [ ] Orders route `/_authed/patients/$patientId/orders`
 - [ ] Order types: medication (`INSTRUCTION.medication_order.v3`), lab (`INSTRUCTION.laboratory_test_order.v1`), imaging (`INSTRUCTION.imaging_examination_request.v1`) — ADR-0019
 - [ ] Fulfilment records: `ACTION.medication.v1`, `ACTION.procedure.v1`
-- [ ] Order sets via openEHR PROC `TASK_PLAN.order_set_id` — ADR-0025
+- [ ] Order sets via `@ehrbase-ui/openehr-proc` `TASK_PLAN.order_set_id` — ADR-0025
 - [ ] `OrderSetPicker` component + `DataTable` for pending/active/completed
 - [ ] Workflow-id linking on writes (INSTRUCTION ↔ ACTION cross-ref)
-- [ ] CDS rules `cds_001` (drug-allergy), `cds_002` (drug-drug, with built-in top-20 high-severity table), `cds_007` (duplicate order), `cds_008` (anticoagulant-INR), `cds_009` (pregnancy contraindication) — ADR-0021
-- [ ] Dismiss-with-justification flow on critical CDS alerts → `EVALUATION.cds_override.v0` + NEN-7513 `CDS_OVERRIDE` audit
+- [ ] CDS rules `cds_001`, `cds_002`, `cds_007`, `cds_008`, `cds_009` wired via M9 runtime
+- [ ] Critical alerts blocked until dismiss-with-justification (M9 generic flow)
 - [ ] AQL queries: `orders_pending`, `orders_recent_completed`
-- [ ] FHIR `MedicationRequest` / `ServiceRequest` export transformer (one-way, M12 ships a minimal set) — ADR-0019
+- [ ] FHIR `MedicationRequest` / `ServiceRequest` export transformer (one-way) — ADR-0019
 - [ ] Storybook + E2E: prescribe a med that triggers an allergy alert; dismiss with justification; audit trail correct
 
-## Milestone 13 — Care plan + tasks (CLINICAL-UI.md §7.13)
+## Milestone 14 — Care plan + tasks (CLINICAL-UI.md §7.13)
 
-> **NEW.** The interdisciplinary care-team surface. Nurse home pulls from here.
+> The interdisciplinary care-team surface. Nurse home pulls from here.
 
 - [ ] Care plan route `/_authed/patients/$patientId/care-plan`
-- [ ] Tree view of `WORK_PLAN` → `TASK_PLAN` → `PLAN_ITEM` — openEHR PROC component, ADR-0025
+- [ ] Tree view of `WORK_PLAN` → `TASK_PLAN` → `PLAN_ITEM` — `@ehrbase-ui/openehr-proc`, ADR-0025
 - [ ] Task completion writes `ACTION.care_plan.vN` with `workflow_id` linking back to `PLAN_ITEM`
 - [ ] References to external `care_pathway` / `guideline` / `best_practice_ref` (display + link only)
 - [ ] AQL queries: `care_plan_active_tasks`, `care_plan_tasks_overdue` (overdue surfaces on nurse home dashboard)
 - [ ] Goal tracking + outcome-measure recording (small subset — full goal model is v1.x)
 - [ ] Storybook + E2E: nurse closes a task, the plan tree updates, the care-plan ACTION composition lands in EHRbase
 
-## Milestone 14 — AQL editor + data tables (§8)
+## Milestone 15 — Discharge + referrals + document viewer + print/PDF (CLINICAL-UI.md §§7.18–7.20, ADR-0020)
 
-> **Was M6.** Power-user surface — researcher + audit-reviewer. Moved later because daily clinicians don't author AQL.
+> Outbound clinical documents + inbound document display. CDS runtime moved to M9; this milestone owns document outputs only.
 
-- [ ] `@uiw/react-codemirror` wrapper with AQL grammar highlighting — AQL Release 1.1.0 spec
-- [ ] AQL autocomplete schema for the main RM classes (`EHR`, `COMPOSITION`, `OBSERVATION`, …) + the v1.0 archetype catalogue (ADR-0016)
+- [ ] Discharge summary editor at `/_authed/patients/$patientId/documents/discharge` — assembles from existing data (problems / meds / recent results) into `openEHR-EHR-COMPOSITION.discharge_summary.v1`
+- [ ] Referral letter editor at `/_authed/patients/$patientId/documents/referrals` — `openEHR-EHR-COMPOSITION.referral.v0`
+- [ ] Document viewer at `/_authed/patients/$patientId/documents` — PDF.js + image viewer
+- [ ] DICOM study listing + external-PACS-viewer launch link (no embedded DICOM in v1.0) — ADR-0020
+- [ ] Print/PDF via Tailwind `print:` + page-break utilities; print-only header with `{patient | DOB | MRN | doc title | date}` — ADR-0020
+- [ ] M9 runtime evaluates each document submission for CDS rules (no new code here)
+- [ ] Storybook + E2E: print preview renders correctly; DICOM list shows external-launch button
+
+## Milestone 16 — AQL editor + data tables (§8)
+
+> Power-user surface — researcher + audit-reviewer. Later because daily clinicians don't author AQL.
+
+- [ ] `@uiw/react-codemirror` wrapper with AQL grammar highlighting — AQL Release 1.1.0 spec, types from `@ehrbase-ui/openehr-aql`
+- [ ] AQL autocomplete schema for the main RM classes + the v1.0 archetype catalogue (ADR-0016)
 - [ ] Stored-query persistence — `docs/aql-catalogue.md` model
 - [ ] Result table via shadcn `data-table` + `@tanstack/react-table`
 - [ ] Virtualized rows > 500 via `@tanstack/react-virtual`
@@ -215,47 +267,33 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [ ] Stricter `aql-complex` rate limit applied per §5.9
 - [ ] Storybook + E2E: write an AQL query, save it, run it, see virtualised results
 
-## Milestone 15 — Admin UI + audit-review UI + CDS rule authoring (CLINICAL-UI.md §§7.15–7.17)
+## Milestone 17 — Admin: user/role mgmt + audit-review UI (CLINICAL-UI.md §§7.15–7.16)
 
-> **NEW.** Admin surface ships here — user / role management, audit-review dashboard (§14.13 implementation), CDS rule authoring.
+> Keycloak admin proxy + audit-review dashboard only. Patient demographic admin moved to M7; CDS rule authoring moved to M9.
 
 - [ ] User / role management at `/_authed/admin/users` — proxies Keycloak admin API via BFF
 - [ ] Audit-review dashboard at `/_authed/admin/audit` — sample-of-60 review queue, drill-down drawer, mark-reviewed action — §14.13
 - [ ] Audit-review meta-audit: reviewer access produces `META_AUDIT_ACCESS` events
-- [ ] CDS rule authoring at `/_authed/admin/cds-rules` — form-based UI (not raw GDL2 syntax) over the GDL2-aligned internal format — ADR-0021
-- [ ] CDS rule activation toggle + dry-run preview (evaluate rule against current data without writing)
-- [ ] Rule-change audit (`ADMIN_CHANGE` action on create/update/disable)
-- [ ] Storybook stories for the admin surfaces + the CDS rule editor
+- [ ] Anomaly heuristics surface (`/admin/audit/anomalies`) — off-hours, bulk reads, repeat 403s — §14.13
+- [ ] Quarterly review export (PDF for binder, signed by reviewer)
+- [ ] Storybook stories for the admin surfaces
 
-## Milestone 16 — Discharge + referrals + document viewer + print/PDF + CDS runtime (CLINICAL-UI.md §§7.18–7.20, ADR-0020)
+## Milestone 18 — Messaging + decision-support surfaces (CLINICAL-UI.md §7.21)
 
-> **NEW.** Outbound clinical documents + inbound document display + the runtime CDS evaluator that wires the M15 rule authoring into composition writes.
-
-- [ ] Discharge summary editor at `/_authed/patients/$patientId/documents/discharge` — assembles from existing data (problems / meds / recent results) into `openEHR-EHR-COMPOSITION.discharge_summary.v1`
-- [ ] Referral letter editor at `/_authed/patients/$patientId/documents/referrals` — `openEHR-EHR-COMPOSITION.referral.v0`
-- [ ] Document viewer at `/_authed/patients/$patientId/documents` — PDF.js + image viewer
-- [ ] DICOM study listing + external-PACS-viewer launch link (no embedded DICOM in v1.0) — ADR-0020
-- [ ] Print/PDF via Tailwind `print:` + page-break utilities; print-only header with `{patient | DOB | MRN | doc title | date}` — ADR-0020
-- [ ] CDS runtime evaluator in the BFF — loads rules from the M15 DB, evaluates on composition write, fires alerts per ADR-0021
-- [ ] Dismiss-with-justification flow generic to any CDS rule (M12 implements for orders; M16 generalises)
-- [ ] Storybook + E2E: print preview renders correctly; DICOM list shows external-launch button; CDS rule fires on note submission
-
-## Milestone 17 — Messaging + decision support surfaces (CLINICAL-UI.md §7.21)
-
-> **NEW.** Inbox + lab-alert + reminder surfaces. Last clinical milestone because it depends on every prior surface's data.
+> Inbox + lab-alert + reminder surfaces. Last clinical milestone because it depends on every prior surface's data.
 
 - [ ] Inbox at `/_authed/inbox` — `DataTable` of threads + `Sheet` per thread
-- [ ] Lab-result alert generation (when a result lands abnormal and CDS rule `cds_006_critical_lab` triggers, drop into inbox)
-- [ ] Referral-response inbox messages (when a referral comes back from M16's referral surface)
+- [ ] Lab-result alert generation (when a result lands abnormal and CDS rule `cds_006_critical_lab` triggers via M9, drop into inbox)
+- [ ] Referral-response inbox messages (when a referral comes back from M15's referral surface)
 - [ ] Internal messages — non-openEHR, app-DB tables (workflow, not clinical data)
-- [ ] CDS-alert acknowledgement audit trail
+- [ ] CDS-alert acknowledgement audit trail (handled by M9 generic flow)
 - [ ] Reminder surface on patient banner — when CDS rules with severity=info fired at last write, display as a non-blocking banner badge
 - [ ] Audit: `READ` on `MESSAGE` (custom resource type), purpose `TREATMENT` when patient-linked
 - [ ] Storybook + E2E covering inbox + lab-alert + reminder flows
 
-## Milestone 18 — Hardening + release (§19, §21, §22, §25, §26)
+## Milestone 19 — Hardening + release (§19, §21, §22, §25, §26)
 
-> **Was M8.** v1.0 tag.
+> v1.0 tag.
 
 - [ ] Secrets via env / Doppler — never committed — §19
 - [ ] Backup + DR drill runbook — §21
@@ -267,6 +305,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [ ] DPIA legal sign-off — §14.10
 - [ ] Penetration test
 - [ ] Clinical reviewer sign-off on `docs/CLINICAL-UI.md` — domain SME confirms user journeys + archetype choices match real ward / clinic workflow
+- [ ] M7 patient-merge: confirm whether 2-person approval gate needed (clinical-safety question deferred from M7)
 - [ ] Tag `v1.0.0`
 
 ---

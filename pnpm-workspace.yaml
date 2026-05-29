@@ -1,21 +1,24 @@
-# pnpm workspace + settings.
+# Monorepo workspace + pnpm settings.
 #
-# Settings here override the defaults that ship with pnpm 11. We pin them
-# explicitly to make the supply-chain posture auditable for hospital
-# procurement teams (matches docs/architecture.md §5.12 and §17).
+# Layout per ADR-0030: apps/ holds deployable surfaces, packages/ holds the
+# per-openEHR-spec libraries + cross-cutting platform packages + shared
+# config packages. Workspace deps inside the repo reference each other via
+# the `workspace:*` protocol; nothing here is published to npm.
 
 packages:
-  - .
+  - apps/*
+  - packages/*
+
+# Settings below match the pre-monorepo posture verbatim — pinned for audit
+# visibility, not because they differ from pnpm 11 defaults.
 
 # 24-hour minimum age before a newly-published version is installable.
 # Defends against zero-day publish-and-spread supply-chain attacks
 # (e.g. CVE-2026-45321 TanStack compromise, May 2026).
-# Default in pnpm 11; pinning makes it audit-visible.
 minimumReleaseAge: 1440
 
 # Refuse installs that reference dependencies via exotic protocols
 # (git URLs, etc.) inside sub-dependencies.
-# Default in pnpm 11.
 blockExoticSubdeps: true
 
 # Auto-install peer dependencies declared in installed packages.

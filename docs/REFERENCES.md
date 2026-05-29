@@ -6,7 +6,7 @@ Re-verify the version block on every revision of `architecture.md` (§ "Version-
 
 ---
 
-## Verified version table (re-fetched 2026-05-26)
+## Verified version table (re-fetched 2026-05-29)
 
 Each entry was fetched against the npm registry, Docker Hub, or the vendor's release page on the date above. Versions in **bold** are the value pinned in `package.json` / `Dockerfile` / `docker-compose.yml`.
 
@@ -95,13 +95,63 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Backend (proxied) & infrastructure
 
-| Service    | Verified                                                | Pinned                                  | Source                                      |
-| ---------- | ------------------------------------------------------- | --------------------------------------- | ------------------------------------------- |
-| EHRbase    | 2.31.0 (Apr 2026, Java 25)                              | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases |
-| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)             | **≥ 26.6.2**                            | https://www.keycloak.org/downloads          |
-| Valkey     | 9.1.0 (three use-after-free CVE fixes)                  | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags |
-| PostgreSQL | 18.4 (May 14, 2026)                                     | **18.4**                                | https://www.postgresql.org/docs/release/    |
-| SeaweedFS  | 4.29 (May 26, 2026) — dev cold-store default (ADR-0027) | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs      |
+| Service    | Verified                                               | Pinned                                  | Source                                      |
+| ---------- | ------------------------------------------------------ | --------------------------------------- | ------------------------------------------- |
+| EHRbase    | 2.31.0 (28 Apr 2026, Java 25)                          | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases |
+| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)            | **≥ 26.6.2**                            | https://www.keycloak.org/downloads          |
+| Valkey     | 9.1.0 (three use-after-free CVE fixes)                 | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags |
+| PostgreSQL | 18.4 (14 May 2026)                                     | **18.4**                                | https://www.postgresql.org/docs/release/    |
+| SeaweedFS  | 4.29 (26 May 2026) — dev cold-store default (ADR-0027) | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs      |
+
+### Observability stack (M5 — ADR-0009, web-verified 2026-05-29)
+
+| Service                  | Verified            | Pinned                | Source                                                             |
+| ------------------------ | ------------------- | --------------------- | ------------------------------------------------------------------ |
+| OTel Collector (contrib) | 0.118.0             | **0.118.0** (sha-pin) | https://hub.docker.com/r/otel/opentelemetry-collector-contrib/tags |
+| Grafana Tempo            | 3.0.0 (28 May 2025) | **2.7.x**             | https://github.com/grafana/tempo/releases                          |
+| Grafana Loki             | 3.7.2 (13 May 2026) | **3.7.2**             | https://github.com/grafana/loki/releases                           |
+| Prometheus               | v3.12.0             | **v3.12.0**           | https://hub.docker.com/r/prom/prometheus/tags                      |
+| Grafana                  | 11.6.x              | **11.x**              | https://hub.docker.com/r/grafana/grafana/tags                      |
+
+> Note: Tempo 3.0 (May 2025) introduced breaking ingest/write architecture changes; v1.0 pins to the last 2.x line until the arch doc has migrated forward.
+
+### Terminology stack (M9/M10/M12 — ADR-0022, ADR-0034, web-verified 2026-05-29)
+
+| Service   | Verified              | Pinned      | Source                                       |
+| --------- | --------------------- | ----------- | -------------------------------------------- |
+| Snowstorm | 10.11.2 (22 Apr 2026) | **10.11.2** | https://github.com/IHTSDO/snowstorm/releases |
+
+### Antivirus (M6 — ClamAV sidecar, web-verified 2026-05-29)
+
+| Service       | Verified              | Pinned         | Source                                      |
+| ------------- | --------------------- | -------------- | ------------------------------------------- |
+| clamav/clamav | 1.5-debian (May 2026) | **1.5-debian** | https://hub.docker.com/r/clamav/clamav/tags |
+
+### FHIR (M7 — `demographic-adapter-fhir`, ADR-0033)
+
+| Spec     | Version                     | Status                     | Source                    |
+| -------- | --------------------------- | -------------------------- | ------------------------- |
+| FHIR R4  | 4.0.1                       | Normative; pinned for v1.0 | https://hl7.org/fhir/R4/  |
+| FHIR R4B | 4.3.0                       | Functionally R4-compat     | https://hl7.org/fhir/R4B/ |
+| FHIR R5  | 5.0.0                       | Not adopted in v1.0        | https://hl7.org/fhir/R5/  |
+| FHIR R6  | 6.0.0-ballot4 (26 May 2026) | Final publication 2027+    | https://build.fhir.org/   |
+
+### Monorepo tooling (Phase 0 — ADR-0030)
+
+| Tool                            | Source                                                                                 |
+| ------------------------------- | -------------------------------------------------------------------------------------- |
+| Turborepo                       | https://turborepo.com/docs                                                             |
+| pnpm workspaces                 | https://pnpm.io/workspaces                                                             |
+| TanStack Start monorepo example | https://tanstack.com/start/latest/docs/framework/react/examples/router-monorepo-simple |
+
+### openEHR TypeScript landscape (rejected libraries — see ADR-0032)
+
+| Library                    | Status                                 | Why not used                                                                      |
+| -------------------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| `ehrtslib` (Erik Sundvall) | Active, Apache 2.0, May 2026           | "experimental", 6 stars, no npm releases, no contract tests — re-evaluate at v1.x |
+| `medblocks-ui`             | Last release May 2023 (~3 years stale) | Web Components + Lit + Shoelace — incompatible with React + shadcn                |
+| `@bpac/openehr-models`     | Last published ~5 years ago            | Abandoned                                                                         |
+| `@mmt_d/mmt-openehr-types` | Last updated ~1 year ago               | Generated-types only, stale                                                       |
 
 ### Audit cold-store dependencies (M4 — ADR-0027)
 
@@ -114,7 +164,7 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ## Drift watch list
 
-Items that have moved since the architecture doc was last touched (2026-05-26) or that we have deliberately pinned away from the doc's value.
+Items that have moved since the architecture doc was last touched (2026-05-26 base; 2026-05-29 monorepo addendum) or that we have deliberately pinned away from the doc's value.
 
 | Item      | Arch doc says  | Pinned to | Reason                                                                                                                             |
 | --------- | -------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |

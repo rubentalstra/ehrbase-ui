@@ -7,6 +7,16 @@
 
 > **Status: greenfield, pre-v1.0.** This document describes the **v1.0 target architecture** — what gets built, why, and how the pieces fit together. It is not a description of a running system. Until v1.0 ships there are no users, no real patient data, no migrations, no backwards-compatibility obligations, no live audit log, no breach to respond to, no retention clock running. Every change is a breaking change and that is fine. The sequencing of when each piece is built is tracked separately (it is not part of this document). If a sentence sounds like "in production we…" read it as "at v1.0 we will…" — not "today we already do."
 
+> **2026-05-29 structural addenda.** Five ADRs ratified after v3.4 of this document reshape the project structure without changing its intent. Read them before the §-numbered chapters below:
+>
+> - **[ADR-0030](adr/0030-monorepo-structure.md)** — repo is a Turborepo + pnpm-workspaces monorepo with per-openEHR-spec packages. File-layout language in §16/§17 still describes the _logical_ architecture; physical layout lives under `apps/web/` and `packages/*` per ADR-0030.
+> - **[ADR-0031](adr/0031-pluggable-demographic-provider.md)** — supersedes ADR-0023 in shape (not intent). The M7 demographic surface is pluggable: built-in Postgres adapter (default) + FHIR R4 adapter, with HL7v2 + IHE PDQ slots reserved for v1.x.
+> - **[ADR-0032](adr/0032-openehr-per-spec-package-mapping.md)** — openEHR types are generated from the official JSON Schemas; no third-party openEHR SDK on the dependency graph.
+> - **[ADR-0033](adr/0033-fhir-adapter-scope.md)** — FHIR R4 only for v1.0; R5 / R6 are pure-additive packages.
+> - **[ADR-0034](adr/0034-pluggable-terminology-provider.md)** — terminology consumer is pluggable. Snowstorm (ADR-0022) is the v1.0 default; the interface is FHIR R4 Terminology Service.
+>
+> Milestone count grew from 18 → 19 (new M9 = CDS infrastructure consolidated from old M9/M15/M16). See `docs/IMPLEMENTATION_CHECKLIST.md` and CLAUDE.md Inviolable rule 13. Where this document says `src/...` read `apps/web/src/...` or `packages/<name>/src/...` per ADR-0030.
+
 ---
 
 ## Table of Contents

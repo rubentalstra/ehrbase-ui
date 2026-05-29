@@ -61,3 +61,9 @@ The UI layer hits the same endpoint via the BFF for autocomplete + display-label
 National-extension loading is a per-deployment step (the deployment fetches the extension RF2 release from their National Release Centre and runs the Snowstorm import job). v1.0 ships the international module; extensions are operational documentation.
 
 The Affiliate Licence requirement is non-trivial for some deployments (research / non-clinical) — they may need to start with the international-module-only configuration, which doesn't require a national-level licence in many countries. Deployment guide explains the per-country picture.
+
+---
+
+## Addendum 2026-05-29 — Terminology consumer is pluggable per ADR-0034
+
+The terminology consumer side is now structured as a pluggable provider per [ADR-0034](0034-pluggable-terminology-provider.md). The decision to default to Snowstorm stands; ADR-0034 records the `TerminologyProvider` interface, the `term-adapter-generic-fhir` adapter (works against any FHIR R4 Terminology Service — e.g. HAPI FHIR `tx`, Ontoserver in basic mode), and the reserved v1.x slot for `term-adapter-ontoserver`. Snowstorm-specific tweaks (the `_displayLanguage` parameter, snomed-extension routing) live in `packages/term-adapter-snowstorm`. Pin (Snowstorm `10.11.2`, web-verified 2026-05-29) is unchanged.

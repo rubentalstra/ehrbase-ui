@@ -1,0 +1,21 @@
+{
+  "name": "@ehrbase-ui/demographic-core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "DemographicProvider interface + built-in Postgres adapter (default). Per ADR-0031 — supersedes ADR-0023 in shape. Empty until M7 populates.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./builtin": "./src/builtin/index.ts",
+    "./identifier": "./src/identifier/index.ts"
+  },
+  "dependencies": {
+    "@ehrbase-ui/openehr-rm": "workspace:*"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*"
+  }
+}
