@@ -38,6 +38,11 @@ RUN pnpm run build
 # Nitro bundle).
 FROM builder AS migrator
 WORKDIR /app/apps/web
+# Drop privileges before exec — Semgrep's "USER root" rule (Dockerfile best
+# practice). The `node` user (uid 1000) is baked into the node:24-alpine
+# base. drizzle-kit only needs network access to platform-db + read of the
+# migration SQL files (already owned by uid 1000 from the COPY above).
+USER node
 # Both migrations run sequentially; either failing aborts the up.
 CMD ["sh", "-c", "pnpm run db:migrate && pnpm run db:auth:migrate"]
 
