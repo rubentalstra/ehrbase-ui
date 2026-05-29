@@ -13,7 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import type { AuditOutcome } from '@ehrbase-ui/audit'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { getMyAuditEvents } from '@/server/functions/access-log.functions'

@@ -18,6 +18,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: 21.0.1
         version: 21.0.1
+      '@ehrbase-ui/config-eslint':
+        specifier: workspace:*
+        version: link:packages/config-eslint
       '@eslint-react/eslint-plugin':
         specifier: 5.8.6
         version: 5.8.6(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
@@ -72,6 +75,9 @@ importers:
       '@ehrbase-ui/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@ehrbase-ui/config-tailwind':
+        specifier: workspace:*
+        version: link:../../packages/config-tailwind
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../../packages/config-tsconfig
@@ -81,6 +87,9 @@ importers:
       '@ehrbase-ui/http-bff':
         specifier: workspace:*
         version: link:../../packages/http-bff
+      '@ehrbase-ui/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@ehrbase-ui/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -364,6 +373,32 @@ importers:
         specifier: 25.9.1
         version: 25.9.1
 
+  packages/config-eslint:
+    dependencies:
+      '@eslint-react/eslint-plugin':
+        specifier: 5.8.6
+        version: 5.8.6(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+      '@eslint/js':
+        specifier: 10.0.1
+        version: 10.0.1(eslint@10.4.0(jiti@2.7.0))
+      eslint:
+        specifier: 10.4.0
+        version: 10.4.0(jiti@2.7.0)
+      eslint-plugin-jsx-a11y-x:
+        specifier: 0.2.0
+        version: 0.2.0(eslint@10.4.0(jiti@2.7.0))
+      eslint-plugin-react-hooks:
+        specifier: 7.1.1
+        version: 7.1.1(eslint@10.4.0(jiti@2.7.0))
+      globals:
+        specifier: 17.6.0
+        version: 17.6.0
+      typescript-eslint:
+        specifier: 8.60.0
+        version: 8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
+
+  packages/config-tailwind: {}
+
   packages/config-tsconfig: {}
 
   packages/db-platform:
@@ -432,6 +467,16 @@ importers:
       vitest:
         specifier: 4.1.7
         version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+
+  packages/i18n:
+    dependencies:
+      '@inlang/paraglide-js':
+        specifier: 2.18.1
+        version: 2.18.1(typescript@6.0.3)
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
 
   packages/observability:
     dependencies:

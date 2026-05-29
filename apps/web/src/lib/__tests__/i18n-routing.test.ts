@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { deLocalizeUrl, localizeUrl } from '@/paraglide/runtime.js'
+import { deLocalizeUrl, localizeUrl } from '@ehrbase-ui/i18n/runtime'
 
 const ROOT = 'http://localhost:3000'
 

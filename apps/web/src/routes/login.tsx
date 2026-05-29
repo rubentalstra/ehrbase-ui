@@ -11,7 +11,7 @@ import { createFileRoute, redirect, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { Button } from '@ehrbase-ui/ui/components/button'
 import {
   Card,

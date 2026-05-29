@@ -2,7 +2,7 @@
 // First focusable element in the shell; visually hidden until focused (see the
 // `.skip-link` rule in styles.css). Targets the <main id="main-content">.
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 
 export function SkipLink() {
   return (

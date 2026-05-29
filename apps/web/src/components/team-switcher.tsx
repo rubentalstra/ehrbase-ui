@@ -7,7 +7,7 @@
 import { Link } from '@tanstack/react-router'
 import { ActivityIcon } from 'lucide-react'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import {
   SidebarMenu,
   SidebarMenuButton,

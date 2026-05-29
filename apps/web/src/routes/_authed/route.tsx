@@ -23,7 +23,7 @@ import {
 } from '@tanstack/react-router'
 import { getSessionWithRoles } from '@/lib/auth/auth.functions'
 import { getSidebarState } from '@/lib/shell/sidebar-state'
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { AppSidebar } from '@/components/app-sidebar'
 import { CommandPalette } from '@/components/shell/command-palette'
 import { SiteFooter } from '@/components/shell/site-footer'

@@ -42,6 +42,7 @@
   "devDependencies": {
     "@commitlint/cli": "21.0.1",
     "@commitlint/config-conventional": "21.0.1",
+    "@ehrbase-ui/config-eslint": "workspace:*",
     "@eslint-react/eslint-plugin": "5.8.6",
     "@eslint/js": "10.0.1",
     "eslint": "10.4.0",

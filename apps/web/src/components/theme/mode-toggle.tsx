@@ -5,7 +5,7 @@
 import { MoonIcon, SunIcon } from 'lucide-react'
 
 import { useTheme } from '@/components/theme/theme-provider'
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { Button } from '@ehrbase-ui/ui/components/button'
 import {
   DropdownMenu,

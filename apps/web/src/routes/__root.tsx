@@ -10,7 +10,7 @@ import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 import appCss from '../styles.css?url'
-import { getLocale } from '@/paraglide/runtime.js'
+import { getLocale } from '@ehrbase-ui/i18n/runtime'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { RootError } from '@/components/errors/root-error'
 import { NotFound } from '@/components/errors/not-found'

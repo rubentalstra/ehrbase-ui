@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 import { reportClientError } from '@/lib/errors/report-client-error'
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { Alert, AlertDescription, AlertTitle } from '@ehrbase-ui/ui/components/alert'
 import { Button } from '@ehrbase-ui/ui/components/button'
 

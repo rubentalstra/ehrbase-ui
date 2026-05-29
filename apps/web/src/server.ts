@@ -16,7 +16,7 @@
 
 import handler from '@tanstack/react-start/server-entry'
 
-import { paraglideMiddleware } from '@/paraglide/server.js'
+import { paraglideMiddleware } from '@ehrbase-ui/i18n/server'
 
 export default {
   fetch(req: Request): Promise<Response> {

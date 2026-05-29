@@ -16,7 +16,7 @@ import {
   UsersIcon,
 } from 'lucide-react'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { BrandHeader } from '@/components/team-switcher'
 import { NavMain, type NavSection } from '@/components/nav-main'
 import { NavUser, type NavUserData } from '@/components/nav-user'

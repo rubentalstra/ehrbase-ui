@@ -9,7 +9,7 @@
 
 import { Link } from '@tanstack/react-router'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 
 const HELP_URL = 'https://github.com/rubentalstra/ehrbase-ui#readme'
 const CONTACT_URL = 'https://github.com/rubentalstra/ehrbase-ui/issues'

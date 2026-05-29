@@ -8,7 +8,7 @@ import { Link } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
 import { reportClientError } from '@/lib/errors/report-client-error'
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { Button } from '@ehrbase-ui/ui/components/button'
 
 export function RootError({ error, reset }: ErrorComponentProps) {

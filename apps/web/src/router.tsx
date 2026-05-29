@@ -3,7 +3,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 
 import { routeTree } from './routeTree.gen'
 import { makeQueryClient } from '@/lib/query/client'
-import { deLocalizeUrl, localizeUrl } from '@/paraglide/runtime.js'
+import { deLocalizeUrl, localizeUrl } from '@ehrbase-ui/i18n/runtime'
 
 export function getRouter() {
   // Per-request on the server (one client per request → no PHI cache bleed,

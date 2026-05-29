@@ -12,7 +12,7 @@
 
 import { toast } from 'sonner'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 
 const MAX_MESSAGE_LENGTH = 500
 

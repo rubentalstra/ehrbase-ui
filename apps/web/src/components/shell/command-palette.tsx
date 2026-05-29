@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import type { AppNavRoute } from '@/lib/router/routes'
 import { Button } from '@ehrbase-ui/ui/components/button'
 import {

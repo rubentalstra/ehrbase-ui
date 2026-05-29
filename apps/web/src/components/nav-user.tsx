@@ -15,7 +15,7 @@ import {
 import { Link, useNavigate } from '@tanstack/react-router'
 
 import { authClient } from '@ehrbase-ui/auth/client'
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { Avatar, AvatarFallback } from '@ehrbase-ui/ui/components/avatar'
 import {
   DropdownMenu,

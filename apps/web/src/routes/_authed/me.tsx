@@ -6,7 +6,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 
-import { m } from '@/paraglide/messages.js'
+import { m } from '@ehrbase-ui/i18n/messages'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { Alert, AlertDescription, AlertTitle } from '@ehrbase-ui/ui/components/alert'
 import { Button } from '@ehrbase-ui/ui/components/button'
