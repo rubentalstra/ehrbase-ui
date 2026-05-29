@@ -8,8 +8,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getRequestHeader } from '@tanstack/react-start/server'
 
-import { appLog } from '@/lib/log/app.server'
-import { checkRateLimit } from '@/lib/http/rate-limit.server'
+import { appLog } from '@ehrbase-ui/observability/log'
+import { checkRateLimit } from '@ehrbase-ui/http-bff'
 
 export const Route = createFileRoute('/api/csp-report')({
   server: {

@@ -22,7 +22,7 @@ import {
   consumeCsrfToken,
   isAllowedOrigin,
   issueCsrfToken,
-} from '@/lib/http/csrf.server'
+} from '@ehrbase-ui/http-bff'
 
 const ALLOWED_TASKS = ['audit:integrity', 'audit:purge'] as const
 type AllowedTask = (typeof ALLOWED_TASKS)[number]

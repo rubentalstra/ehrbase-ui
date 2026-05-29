@@ -21,8 +21,8 @@ import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@ehrbase-ui/audit'
-import { classifyRequest, extractEhrId } from '@/lib/http/ehrbase-proxy.server'
-import { checkRateLimit, tooManyRequests } from '@/lib/http/rate-limit.server'
+import { classifyRequest, extractEhrId } from '@ehrbase-ui/http-bff'
+import { checkRateLimit, tooManyRequests } from '@ehrbase-ui/http-bff'
 
 const UserShapeSchema = z
   .object({ keycloakRoles: z.array(z.string()).default([]) })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { classifyRequest, extractEhrId } from '@/lib/http/ehrbase-proxy.server'
+import { classifyRequest, extractEhrId } from '../ehrbase-proxy.server.ts'
 
 describe('classifyRequest', () => {
   it('classifies AQL queries with the strict limit', () => {

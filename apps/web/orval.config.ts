@@ -17,7 +17,7 @@ export default defineConfig({
     input: { target: './openapi/ehrbase-openapi.yaml' },
     output: {
       mode: 'split',
-      target: './src/lib/api/ehrbase-generated',
+      target: '../../packages/openehr-its-rest/src/generated',
       client: 'zod',
       fileExtension: '.ts',
       override: {

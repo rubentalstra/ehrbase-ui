@@ -20,8 +20,8 @@ import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/r
 import { getRequestHeader } from '@tanstack/react-start/server'
 
 import { setAuditRequestContextProvider } from '@ehrbase-ui/audit'
-import { applySecurityHeaders, generateNonce } from '@/lib/http/security-headers.server'
-import { runWithNonce } from '@/lib/http/nonce-context.server'
+import { applySecurityHeaders, generateNonce } from '@ehrbase-ui/http-bff'
+import { runWithNonce } from '@ehrbase-ui/http-bff'
 
 // Wire the framework-agnostic @ehrbase-ui/audit package to TanStack Start's
 // request-context API (ADR-0030 — packages are framework-agnostic; the host

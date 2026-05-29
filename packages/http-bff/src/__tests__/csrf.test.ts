@@ -17,7 +17,7 @@ vi.mock('@ehrbase-ui/valkey', () => {
   }
 })
 
-import { consumeCsrfToken, isAllowedOrigin, issueCsrfToken } from '@/lib/http/csrf.server'
+import { consumeCsrfToken, isAllowedOrigin, issueCsrfToken } from '../csrf.server.ts'
 
 // Tests run with KEYCLOAK_REDIRECT_URI = http://localhost:3000/... so the
 // allow-listed origin is http://localhost:3000.

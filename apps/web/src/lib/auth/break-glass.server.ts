@@ -15,7 +15,7 @@ import { z } from 'zod'
 
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 import { logAudit } from '@ehrbase-ui/audit'
-import { checkRateLimit } from '@/lib/http/rate-limit.server'
+import { checkRateLimit } from '@ehrbase-ui/http-bff'
 import { valkey } from '@ehrbase-ui/valkey'
 import type { RoleContext } from '@/lib/auth/require-role.server'
 

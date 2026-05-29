@@ -75,6 +75,15 @@ importers:
       '@ehrbase-ui/db-platform':
         specifier: workspace:*
         version: link:../../packages/db-platform
+      '@ehrbase-ui/http-bff':
+        specifier: workspace:*
+        version: link:../../packages/http-bff
+      '@ehrbase-ui/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@ehrbase-ui/openehr-its-rest':
+        specifier: workspace:*
+        version: link:../../packages/openehr-its-rest
       '@ehrbase-ui/valkey':
         specifier: workspace:*
         version: link:../../packages/valkey
@@ -362,6 +371,41 @@ importers:
         specifier: workspace:*
         version: link:../config-tsconfig
 
+  packages/http-bff:
+    dependencies:
+      '@ehrbase-ui/audit':
+        specifier: workspace:*
+        version: link:../audit
+      '@ehrbase-ui/valkey':
+        specifier: workspace:*
+        version: link:../valkey
+      rate-limiter-flexible:
+        specifier: 11.1.0
+        version: 11.1.0
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+
+  packages/observability:
+    dependencies:
+      pino:
+        specifier: 10.3.1
+        version: 10.3.1
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+
   packages/openehr-am:
     devDependencies:
       '@ehrbase-ui/config-tsconfig':
@@ -395,6 +439,19 @@ importers:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+
+  packages/openehr-its-rest:
+    dependencies:
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      orval:
+        specifier: 8.13.0
+        version: 8.13.0(prettier@3.8.3)(typescript@6.0.3)
 
   packages/openehr-proc:
     dependencies:

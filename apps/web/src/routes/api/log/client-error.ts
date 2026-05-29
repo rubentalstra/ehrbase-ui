@@ -14,8 +14,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { z } from 'zod'
 
-import { withCorrelationId } from '@/lib/log/app.server'
-import { checkRateLimit } from '@/lib/http/rate-limit.server'
+import { withCorrelationId } from '@ehrbase-ui/observability/log'
+import { checkRateLimit } from '@ehrbase-ui/http-bff'
 
 // Exported for unit testing — the bounds here are the no-PHI / anti-flood
 // guard: a caller cannot smuggle a large blob or unbounded code through this

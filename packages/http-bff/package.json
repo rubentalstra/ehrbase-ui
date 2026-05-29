@@ -1,0 +1,23 @@
+{
+  "name": "@ehrbase-ui/http-bff",
+  "version": "0.0.0",
+  "private": true,
+  "description": "BFF helpers: EHRbase request classification, CSRF token issue/consume, per-class rate-limiting, security-headers (CSP nonce + HSTS + COOP/COEP), nonce AsyncLocalStorage. Used by every authed route.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ehrbase-ui/audit": "workspace:*",
+    "@ehrbase-ui/valkey": "workspace:*",
+    "rate-limiter-flexible": "11.1.0"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "@types/node": "25.9.1",
+    "vitest": "4.1.7"
+  }
+}

@@ -22,7 +22,7 @@ import {
   consumeCsrfToken,
   isAllowedOrigin,
   issueCsrfToken,
-} from '@/lib/http/csrf.server'
+} from '@ehrbase-ui/http-bff'
 
 const PostBodySchema = BreakGlassRequestSchema.extend({ csrfToken: z.string() })
 

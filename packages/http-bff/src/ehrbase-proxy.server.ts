@@ -2,7 +2,7 @@
 // (docs/architecture.md §5.9, §14.3). Kept separate from the route so it is
 // unit-testable without a request.
 
-import type { RateLimitClass } from '@/lib/http/rate-limit.server'
+import type { RateLimitClass } from './rate-limit.server.ts'
 import type { AuditAction, AuditResourceType } from '@ehrbase-ui/audit'
 
 export type RequestClass = {

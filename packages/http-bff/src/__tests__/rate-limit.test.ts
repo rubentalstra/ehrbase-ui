@@ -29,7 +29,7 @@ vi.mock('rate-limiter-flexible', () => {
   return { RateLimiterRedis, RateLimiterRes }
 })
 
-import { checkRateLimit } from '@/lib/http/rate-limit.server'
+import { checkRateLimit } from '../rate-limit.server.ts'
 
 describe('checkRateLimit', () => {
   beforeEach(() => {
