@@ -5,6 +5,7 @@
 - **Deciders:** Initial maintainer (@rubentalstra)
 - **Supersedes:** —
 - **Superseded by:** —
+- **Amended by:** ADR-0035 (the cross-cutting platform packages `db-platform`, `audit`, `auth`, `observability`, `http-bff` were collapsed into `apps/web/src/server/*` — they had no consumer outside the app).
 
 ## Context
 

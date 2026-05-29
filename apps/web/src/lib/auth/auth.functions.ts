@@ -93,8 +93,8 @@ export const getSessionWithRoles = createServerFn({ method: 'GET' }).handler(
     const session = await auth.api.getSession({ headers })
     if (!session) return null
 
-    const { authDb } = await import('@ehrbase-ui/db-platform/auth-client')
-    const { account: accountTable } = await import('@ehrbase-ui/db-platform/auth')
+    const { authDb } = await import('@/server/db/auth-client')
+    const { account: accountTable } = await import('@/server/db/auth')
     const { eq } = await import('drizzle-orm')
     const accountRow = await authDb
       .select({

@@ -15,7 +15,7 @@
 // top-level imports MUST NOT reach any server-only package or `.server.ts`
 // file — `tanstack-start-core:import-protection` denies that. The middleware
 // function body itself runs only server-side (`.server(fn)` wrapper), so its
-// dynamic `await import('@ehrbase-ui/http-bff')` is resolved at request time
+// dynamic `await import('@/server/bff')` is resolved at request time
 // on the server and never lands in the client bundle.
 //
 // The audit + auth request-context providers are registered in
@@ -37,7 +37,7 @@ const csrfMiddleware = createCsrfMiddleware({
 const securityHeadersMiddleware = createMiddleware({ type: 'request' }).server(
   async ({ next, pathname }) => {
     const { applySecurityHeaders, generateNonce, runWithNonce } = await import(
-      '@ehrbase-ui/http-bff'
+      '@/server/bff'
     )
     const nonce = generateNonce()
     const result = await runWithNonce(nonce, () => next())

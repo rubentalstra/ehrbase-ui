@@ -5,7 +5,7 @@
 // Returns 200 with a JSON envelope when all pass; 503 with the same
 // envelope (failing probes flagged 'fail') otherwise.
 //
-// The actual probes live in @ehrbase-ui/observability/health and are
+// The actual probes live in @/server/observability/health and are
 // dynamic-imported here so the server-only graph (Drizzle + ioredis +
 // fetch wrappers) never reaches the client bundle through this route
 // file. Identical pattern to apps/web/src/lib/auth/auth.functions.ts.
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/api/ready')({
   server: {
     handlers: {
       GET: async () => {
-        const { checkReadiness } = await import('@ehrbase-ui/observability/health')
+        const { checkReadiness } = await import('@/server/observability/health')
         return checkReadiness()
       },
     },

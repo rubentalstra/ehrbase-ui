@@ -31,4 +31,12 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
-          deny-licenses: GPL-3.0, AGPL-3.0-only, AGPL-3.0-or-later
+          # `deny-licenses` is deprecated (actions/dependency-review-action#997)
+          # — the action recommends an allow-list. We allow the OSI-permissive
+          # set (verified to cover the entire current dependency graph via
+          # `pnpm licenses list`), which blocks copyleft (GPL/AGPL/LGPL/EPL/…)
+          # by omission. Unknown/undetected licenses warn but don't fail.
+          allow-licenses: >-
+            MIT, MIT-0, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD, ISC,
+            BlueOak-1.0.0, CC0-1.0, CC-BY-4.0, Unlicense, Python-2.0, OFL-1.1,
+            Zlib, MPL-2.0

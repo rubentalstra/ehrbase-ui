@@ -17,12 +17,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
-import { authDb } from '@ehrbase-ui/db-platform/auth-client'
-import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
+import { authDb } from '@/server/db/auth-client'
+import { account as accountTable } from '@/server/db/auth'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
-import { logAudit } from '@ehrbase-ui/audit/server'
-import { classifyRequest, extractEhrId } from '@ehrbase-ui/http-bff'
-import { checkRateLimit, tooManyRequests } from '@ehrbase-ui/http-bff'
+import { logAudit } from '@/server/audit/runtime'
+import { classifyRequest, extractEhrId } from '@/server/bff'
+import { checkRateLimit, tooManyRequests } from '@/server/bff'
 
 const UserShapeSchema = z
   .object({ keycloakRoles: z.array(z.string()).default([]) })

@@ -1,4 +1,4 @@
-// apps/web bootstraps the @ehrbase-ui/auth Better Auth instance with the
+// apps/web bootstraps the @/server/auth Better Auth instance with the
 // TanStack-Start-specific cookies plugin and registers the result via the
 // service locator. Every other consumer (break-glass, require-role, the
 // createServerFn wrappers in auth.functions.ts) reaches the instance
@@ -13,7 +13,7 @@
 
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 
-import { buildAuth, setAuthInstance } from '@ehrbase-ui/auth'
+import { buildAuth, setAuthInstance } from '@/server/auth'
 
 const BETTER_AUTH_SECRET =
   process.env.BETTER_AUTH_SECRET ?? 'dev-only-rotate-in-prod'
@@ -46,10 +46,10 @@ export const auth = buildAuth({
   extraPlugins: [tanstackStartCookies()],
 })
 
-// Register with the @ehrbase-ui/auth service locator so break-glass +
+// Register with the @/server/auth service locator so break-glass +
 // require-role + the M5+ server functions can reach the instance.
 setAuthInstance(auth)
 
 // Re-export the SSO-bootstrap helper so apps/web's auth route handler
 // keeps the same call site (`ensureKeycloakSsoProviderRegistered()`).
-export { ensureKeycloakSsoProviderRegistered } from '@ehrbase-ui/auth'
+export { ensureKeycloakSsoProviderRegistered } from '@/server/auth'

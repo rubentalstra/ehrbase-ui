@@ -1,8 +1,0 @@
-{
-  "extends": "@ehrbase-ui/config-tsconfig/node.json",
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist"],
-  "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
-  }
-}

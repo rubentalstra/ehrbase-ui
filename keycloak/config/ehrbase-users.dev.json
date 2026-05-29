@@ -1,0 +1,53 @@
+{
+  "realm": "ehrbase",
+  "users": [
+    {
+      "username": "dev-clinician",
+      "enabled": true,
+      "email": "dev-clinician@example.test",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Clinician",
+      "credentials": [
+        { "type": "password", "value": "DevClinician123!", "temporary": false }
+      ],
+      "realmRoles": ["clinician"]
+    },
+    {
+      "username": "dev-admin",
+      "enabled": true,
+      "email": "dev-admin@example.test",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Admin",
+      "credentials": [
+        { "type": "password", "value": "DevAdmin12345!", "temporary": false }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "dev-audit-reviewer",
+      "enabled": true,
+      "email": "dev-audit-reviewer@example.test",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "AuditReviewer",
+      "credentials": [
+        { "type": "password", "value": "DevReviewer123!", "temporary": false }
+      ],
+      "realmRoles": ["audit-reviewer"]
+    },
+    {
+      "username": "dev-researcher",
+      "enabled": true,
+      "email": "dev-researcher@example.test",
+      "emailVerified": true,
+      "firstName": "Dev",
+      "lastName": "Researcher",
+      "credentials": [
+        { "type": "password", "value": "DevResearcher123!", "temporary": false }
+      ],
+      "realmRoles": ["researcher"]
+    }
+  ]
+}

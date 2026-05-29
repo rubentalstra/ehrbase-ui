@@ -3,7 +3,7 @@
 // locale AsyncLocalStorage context is in place for every request (SSR, server
 // fns, loaders, route handlers).
 //
-// Also binds the framework-agnostic @ehrbase-ui/audit + @ehrbase-ui/auth
+// Also binds the framework-agnostic @/server/audit + @/server/auth
 // packages to TanStack Start's request-context API, and (M5) boots the OTel
 // SDK as a fallback for production where Node's `--import` preload isn't
 // wired through Nitro's bundle yet. `startOtelSdk()` is idempotent — dev
@@ -27,7 +27,7 @@
 // using the paraglide-rewritten request would double-rewrite and produce a
 // redirect loop. The middleware docs call this out explicitly.
 
-import { startOtelSdk } from '@ehrbase-ui/observability/otel'
+import { startOtelSdk } from '@/server/observability/otel'
 
 // First — before any other module gets a chance to acquire `http` / `pg` /
 // `ioredis` references — start the SDK. Dev preload via `--import` should
