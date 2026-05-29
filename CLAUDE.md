@@ -37,7 +37,7 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 ## Where decisions live
 
-- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting. Cross-cutting structural ADRs that constrain everything M5+: ADR-0030 (monorepo: Turborepo + pnpm workspaces), ADR-0031 (pluggable demographic provider, supersedes ADR-0023 in shape), ADR-0032 (openEHR per-spec package mapping + type-generation), ADR-0033 (FHIR R4 adapter scope), ADR-0034 (pluggable terminology provider).
+- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting. Cross-cutting structural ADRs that constrain everything M5+: ADR-0030 (monorepo: Turborepo + pnpm workspaces), ADR-0031 (pluggable demographic provider, supersedes ADR-0023 in shape), ADR-0032 (openEHR per-spec package mapping + type-generation), ADR-0033 (FHIR R4 adapter scope), ADR-0034 (pluggable terminology provider), ADR-0035 (app-server code lives in `apps/web/src/server`, amends ADR-0030), ADR-0036 (Keycloak config-as-code via keycloak-config-cli).
 - **Runbooks** in `docs/runbooks/` — operational procedures (breach response, audit-integrity check, key rotation, DR drill, signature verification).
 - **Compliance templates** in `docs/compliance/` — DPIA (§14.10), DPA (§14.1), RoPA (§14.1).
 - **Accessibility manual-test reports** in `docs/accessibility/manual-test-YYYY-MM-DD.md` — one per release (§12.7).
@@ -46,11 +46,11 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 Workspace root is the repo root. Code lives in:
 
-- **`apps/web/`** — the TanStack Start app. App-internal routes, components, server functions, and BFF live here. `apps/web/src/server/functions/` is the server-function location (Inviolable rule 8).
+- **`apps/web/`** — the TanStack Start app. App-internal routes, components, server functions, and BFF live here. `apps/web/src/server/functions/` is the server-function location (Inviolable rule 8). The app-server platform — DB schema/clients, audit, auth, observability, BFF helpers — lives under `apps/web/src/server/{db,audit,auth,observability,bff}/` (ADR-0035), NOT as packages; the browser Better Auth client is `apps/web/src/lib/auth-client.ts`. Server-only modules use the `.server.ts` suffix.
 - **`packages/openehr-*`** — per-openEHR-spec libraries (base, rm, am, aql, proc, cds, term, its-rest, flat, web-template). Types generated from openEHR JSON Schemas per ADR-0032. No third-party openEHR SDKs on the dependency graph.
 - **`packages/demographic-*`** — pluggable demographic provider (`demographic-core` built-in + `demographic-adapter-fhir`; HL7v2/PDQ slots reserved for v1.x). ADR-0031.
 - **`packages/term-*`** — pluggable terminology provider (`term-core` interface + `term-adapter-snowstorm` default + `term-adapter-generic-fhir`). ADR-0034.
-- **`packages/{ui,audit,auth,observability,db-platform,i18n,http-bff,valkey}`** — cross-cutting platform packages.
+- **`packages/{ui,i18n,valkey}`** — cross-cutting platform packages that are genuinely shared (multiple consumers / not the web app itself). The former `audit`, `auth`, `observability`, `db-platform`, `http-bff` packages were collapsed into `apps/web/src/server/*` (ADR-0035).
 - **`packages/config-{tsconfig,eslint,tailwind}`** — shared configs every package extends.
 
 Package names: `@ehrbase-ui/<slug>` (private; never published). Workspace deps: `workspace:*`. Task graph: `pnpm turbo run <build|typecheck|lint|test|e2e|dev>`.

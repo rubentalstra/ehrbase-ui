@@ -94,7 +94,9 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 ## Milestone 5 — Observability (§13)
 
-> **Moved earlier.** Building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one. Lands in `packages/observability` + `apps/web/src/instrumentation.ts` + `apps/web/src/routes/api/{health,ready}.ts`.
+> **Moved earlier.** Building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one. Lands in `apps/web/src/server/observability/` + `apps/web/src/instrumentation.ts` + `apps/web/src/routes/api/{health,ready}.ts`.
+>
+> **Stack simplification (2026-05-29, ADR-0035 + ADR-0036).** The `db-platform`/`audit`/`auth`/`observability`/`http-bff` packages were collapsed into `apps/web/src/server/*` (no external consumers); Drizzle migrations collapsed to one `db:migrate`; and the bespoke Keycloak `kcadm` shell scripts (realm import + grafana-client sync + demo-user seed) were replaced by one declarative `keycloak-config-cli` container. One-shot containers: 4 → 3.
 
 - [x] OTel SDK bootstrap + sampling + PHI redaction layers — §13.2 (ADR-0009)
 - [x] `pino-opentelemetry-transport` wiring — §13.1

@@ -2233,7 +2233,9 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.6
-    command: start-dev --import-realm
+    # No --import-realm: the realm is applied declaratively (and updated in
+    # place) by keycloak-config below — ADR-0036.
+    command: start-dev
     depends_on: [keycloak-db]
     environment:
       KC_DB: postgres
@@ -2244,9 +2246,27 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: 'false'
       KC_HEALTH_ENABLED: 'true'
-    volumes: [./keycloak/import:/opt/keycloak/data/import:ro]
     ports: ['8180:8080']
     networks: [ehrbase-net]
+
+  # Keycloak configuration-as-code (ADR-0036): one-shot keycloak-config-cli that
+  # applies keycloak/config/*.json (realm + clients + dev users) and UPDATES in
+  # place on every up. Replaces --import-realm + the old bespoke kcadm shell
+  # scripts (grafana-client sync + demo-user seed). Realm-dependent services
+  # (ehrbase, ui, grafana) gate on this completing, not on keycloak's health.
+  keycloak-config:
+    image: adorsys/keycloak-config-cli:6.5.1-26.5.5
+    depends_on:
+      keycloak: { condition: service_healthy }
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      IMPORT_VARSUBSTITUTION_ENABLED: 'true'
+      IMPORT_FILES_LOCATIONS: '/config/*.json'
+    volumes: [./keycloak/config:/config:ro]
+    networks: [ehrbase-net]
+    restart: 'no'
 
   # Valkey is the Linux-Foundation BSD-licensed fork of Redis 7.2.4.
   # Wire-compatible; existing Redis clients (ioredis, etc.) work unchanged.

@@ -1,5 +1,4 @@
 {
-  "id": "ehrbase",
   "realm": "ehrbase",
   "displayName": "EHRbase UI",
   "displayNameHtml": "<strong>EHRbase UI</strong>",
@@ -54,7 +53,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "dev-only-rotate-in-prod",
+      "secret": "$(env:KEYCLOAK_CLIENT_SECRET)",
       "redirectUris": ["http://localhost:3000/*", "http://ui:3000/*"],
       "webOrigins": ["http://localhost:3000", "+"],
       "publicClient": false,
@@ -90,7 +89,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "dev-only-rotate-in-prod",
+      "secret": "$(env:GRAFANA_OIDC_CLIENT_SECRET)",
       "redirectUris": ["http://localhost:3030/login/generic_oauth"],
       "webOrigins": ["http://localhost:3030"],
       "publicClient": false,
@@ -111,7 +110,6 @@
     }
   ],
   "groups": [],
-  "users": [],
   "smtpServer": {},
   "internationalizationEnabled": true,
   "supportedLocales": ["en", "nl"],

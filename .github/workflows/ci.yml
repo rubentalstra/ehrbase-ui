@@ -226,17 +226,15 @@ jobs:
         run: pnpm build
       - name: Start stack (Keycloak + Valkey + audit DB)
         run: docker compose up -d --wait platform-db valkey keycloak
-      - name: Seed Keycloak demo users (synchronous)
-        # `docker compose run` blocks until the one-shot seeder exits, unlike
-        # `up --wait` which has known timing issues for one-shot containers
-        # without a healthcheck. Without this the e2e/auth.spec.ts beforeAll
-        # races the seeder and can see a fresh Keycloak realm without the
-        # demo identities. docs/demo-accounts.md.
-        run: docker compose run --rm keycloak-seed-demo-users
-      - name: Apply audit DB migration
+      - name: Apply Keycloak config (realm + clients + demo users, synchronous)
+        # `docker compose run` blocks until the one-shot keycloak-config-cli
+        # container exits, unlike `up --wait` which has known timing issues for
+        # one-shot containers without a healthcheck. Without this the
+        # e2e/auth.spec.ts beforeAll races config application and can see a
+        # fresh Keycloak without the realm/clients/demo identities. ADR-0036.
+        run: docker compose run --rm keycloak-config
+      - name: Apply DB migrations (audit + auth)
         run: pnpm db:migrate
-      - name: Apply auth DB migration (Better Auth — ADR-0028)
-        run: pnpm db:auth:migrate
       - name: Install Playwright Chromium
         run: pnpm --filter @ehrbase-ui/web exec playwright install --with-deps chromium
       - name: Run full-stack E2E

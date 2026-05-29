@@ -19,7 +19,7 @@ description = "Dev-only placeholders + JDBC DB names that look like high-entropy
 paths = [
   '''\.env\.example$''',
   '''docker-compose\.yml$''',
-  '''keycloak/import/.*\.json$''',
+  '''keycloak/config/.*\.json$''',
   '''docs/architecture\.md$''',
   '''platform-db-init/.*\.sql$''',
 ]

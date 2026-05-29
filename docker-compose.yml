@@ -34,16 +34,16 @@ services:
     # Pin to an exact version. Never use :latest.
     image: ehrbase/ehrbase:2.31.0
     # EHRbase builds its OAuth2 JwtDecoder at startup by fetching Keycloak's
-    # OIDC discovery doc, so it must not start until Keycloak's realm import
-    # has finished. We gate on keycloak: service_healthy (see Keycloak's
-    # /health/ready healthcheck) rather than crash-restarting until the realm
-    # appears — deterministic ordering, no boot-time error noise.
+    # OIDC discovery doc, so it must not start until the realm EXISTS. The realm
+    # is now applied by keycloak-config (not --import-realm), which runs AFTER
+    # keycloak is healthy — so we gate on keycloak-config completing, not merely
+    # on keycloak's health. Deterministic ordering, no boot-time error noise.
     # restart: unless-stopped is an orthogonal runtime-resilience policy
     # (recover from a later crash), not the startup-ordering mechanism.
     restart: unless-stopped
     depends_on:
       ehrbase-db: { condition: service_healthy }
-      keycloak: { condition: service_healthy }
+      keycloak-config: { condition: service_completed_successfully }
     environment:
       DB_URL: jdbc:postgresql://ehrbase-db:5432/ehrbase
       # EHRbase 2.x two-user model: admin runs Flyway migrations, the
@@ -99,7 +99,11 @@ services:
   keycloak:
     # CVE-2026-37981 floor (§5.12).
     image: quay.io/keycloak/keycloak:26.6.2
-    command: start-dev --import-realm
+    # No `--import-realm`: realm + clients (+ dev users) are applied
+    # declaratively, idempotently, and update-in-place by the keycloak-config
+    # service below (adorsys/keycloak-config-cli). `--import-realm` could only
+    # create-or-recreate a realm, never update it — ADR-0036.
+    command: start-dev
     depends_on:
       platform-db: { condition: service_healthy }
     environment:
@@ -113,14 +117,13 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HOSTNAME_STRICT: 'false'
       KC_HEALTH_ENABLED: 'true'
-    volumes:
-      - ./keycloak/import:/opt/keycloak/data/import:ro
     ports: ['8180:8080']
     # Health gate on the management-port /health/ready endpoint (port 9000,
-    # enabled by KC_HEALTH_ENABLED). It only reports UP after `--import-realm`
-    # finishes, so any dependent gated on service_healthy is guaranteed the
-    # ehrbase realm is live. The Keycloak 26 image has no curl/wget, but it
-    # does ship bash — so we use bash's /dev/tcp to speak raw HTTP.
+    # enabled by KC_HEALTH_ENABLED). Keycloak now reports UP as soon as the
+    # server is ready — the realm is applied AFTER this by keycloak-config, so
+    # realm-dependent services (ehrbase, ui, grafana) gate on keycloak-config's
+    # completion, NOT on this healthcheck. The Keycloak 26 image has no
+    # curl/wget, but it ships bash — so we use bash's /dev/tcp to speak raw HTTP.
     healthcheck:
       test:
         [
@@ -135,49 +138,39 @@ services:
       start_period: 30s
     networks: [ehrbase-net]
 
-  # Grafana OIDC client sync — one-shot, always runs (NOT profile-gated).
-  # Self-heals the gap where Keycloak's `start-dev --import-realm` skips
-  # re-import when the realm already exists in the DB (Strategy:
-  # IGNORE_EXISTING). Any client added to the realm JSON after the FIRST
-  # boot would otherwise be silently missing — what bit operators upgrading
-  # from M4 to M5 when the `grafana` client landed. The script is
-  # idempotent: create-or-update on every up, < 1 s wall-clock.
-  keycloak-sync-grafana-client:
-    image: quay.io/keycloak/keycloak:26.6.2
-    depends_on:
-      keycloak: { condition: service_healthy }
-    environment:
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-dev-only-rotate-in-prod}
-    volumes:
-      - ./keycloak/scripts:/scripts:ro
-    entrypoint: ['/bin/bash', '/scripts/sync-grafana-client.sh']
-    networks: [ehrbase-net]
-    restart: 'no'
-
-  # Demo-user seeder — one-shot. Runs every dev `docker compose up` so the
-  # four demo identities (one per realm role) exist for both the app login
-  # and Grafana SSO. Idempotent — kcadm seed loop short-circuits if a user
-  # already exists. The realm import (keycloak/import/ehrbase.json) carries
-  # NO users — that file is the prod-safe baseline.
+  # Keycloak configuration-as-code — one-shot, declarative, idempotent
+  # (ADR-0036). Applies the realm + roles + all three OIDC clients from
+  # keycloak/config/ehrbase-realm.json and the four dev demo users from
+  # keycloak/config/ehrbase-users.dev.json, UPDATING in place on every up. This is the
+  # official replacement for the old bespoke kcadm shell scripts (realm import
+  # + grafana-client sync + demo-user seed) — one tool, one source of truth.
   #
-  # Production deployments either delete this service from their own
-  # compose override, or set SEED_DEMO_USERS=skip in the env to make the
-  # script no-op out. See docs/demo-accounts.md for the credentials.
-  keycloak-seed-demo-users:
-    image: quay.io/keycloak/keycloak:26.6.2
+  # Secrets are injected via keycloak-config-cli variable substitution
+  # ($(env:VAR) with IMPORT_VARSUBSTITUTION_ENABLED) so prod rotates via env,
+  # no file edit. PRODUCTION excludes the dev users by pointing
+  # IMPORT_FILES_LOCATIONS at ehrbase-realm.json only (this dev compose globs
+  # *.json). keycloak-config-cli manages only the collections each file
+  # defines, so ehrbase-users.dev.json (users only) never touches the baseline clients.
+  #
+  # Image: pinned to the 26.x-line build (no 26.6.x tag is published yet; the
+  # Keycloak 26 admin API is stable across minors, so this is compatible with
+  # our keycloak:26.6.2). Never :latest (Inviolable rule 5).
+  keycloak-config:
+    image: adorsys/keycloak-config-cli:6.5.1-26.5.5
     depends_on:
       keycloak: { condition: service_healthy }
     environment:
-      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-on}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      KEYCLOAK_AVAILABILITYCHECK_ENABLED: 'true'
+      KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: 120s
+      IMPORT_VARSUBSTITUTION_ENABLED: 'true'
+      IMPORT_FILES_LOCATIONS: '/config/*.json'
+      GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-dev-only-rotate-in-prod}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
     volumes:
-      - ./keycloak/scripts:/scripts:ro
-    entrypoint: ['/bin/bash', '/scripts/seed-demo-users.sh']
+      - ./keycloak/config:/config:ro
     networks: [ehrbase-net]
     restart: 'no'
 
@@ -305,7 +298,10 @@ services:
       tempo: { condition: service_started }
       loki: { condition: service_started }
       prometheus: { condition: service_started }
-      keycloak: { condition: service_healthy }
+      # Gate on keycloak-config (not keycloak health): the grafana OIDC client
+      # is created by keycloak-config, so it must exist before Grafana's first
+      # OIDC discovery.
+      keycloak-config: { condition: service_completed_successfully }
     environment:
       GF_SERVER_ROOT_URL: http://localhost:3030
       # Disable Grafana's built-in login form — Keycloak SSO is the only
@@ -386,7 +382,10 @@ services:
       # Keycloak + Valkey ARE gated on health since the BFF (Milestone 2)
       # talks to them on the auth path.
       ehrbase: { condition: service_started }
-      keycloak: { condition: service_healthy }
+      # Better Auth registers its SSO provider via Keycloak OIDC discovery, so
+      # the realm + ehrbase-ui client must exist first → gate on keycloak-config
+      # completing, not merely on keycloak's health.
+      keycloak-config: { condition: service_completed_successfully }
       valkey: { condition: service_healthy }
       platform-db: { condition: service_healthy }
       seaweedfs: { condition: service_healthy }
