@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Seed Keycloak with one demo user per realm role.
 #
-# Runs as a one-shot init container in docker-compose, gated by the `demo`
-# Compose profile (see docker-compose.yml + docs/demo-accounts.md). Production
-# never activates the profile, so production never sees these credentials.
+# Runs as a one-shot init container in docker-compose every dev up so the
+# four demo identities exist for app + Grafana SSO. Production deployments
+# set SEED_DEMO_USERS=skip in their orchestrator env (or delete the
+# service from their compose override) to make this a no-op.
 #
 # Idempotent: re-running checks for existing users via `kcadm.sh get users -q
 # username=...` and skips ones that are already present. Safe to run after a
@@ -13,6 +14,11 @@
 # digits + specialChars + notUsername + notEmail + passwordHistory(5).
 
 set -uo pipefail
+
+if [ "${SEED_DEMO_USERS:-on}" = "skip" ]; then
+  echo "[seed] SEED_DEMO_USERS=skip — production posture, no users seeded"
+  exit 0
+fi
 
 KCADM="/opt/keycloak/bin/kcadm.sh"
 SERVER="${KEYCLOAK_INTERNAL_URL:-http://keycloak:8080}"

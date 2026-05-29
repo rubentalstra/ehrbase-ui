@@ -86,7 +86,7 @@
     {
       "clientId": "grafana",
       "name": "Grafana",
-      "description": "Grafana Cloud-OSS dashboards — confidential OAuth client with PKCE. Used by admins to inspect traces (Tempo), logs (Loki), metrics (Prometheus). Per-realm role mapping (admin→Admin, audit-reviewer→Editor, else→Viewer) is enforced via JMESPath in the Grafana env (see docker-compose.yml).",
+      "description": "Grafana OSS — Keycloak-SSO confidential client (PKCE). Role mapping in docker-compose.yml.",
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",

@@ -30,6 +30,17 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm run build
 
+# ─── migrator ─────────────────────────────────────────────────────────────
+# Lightweight stage that reuses the builder's installed deps + source so a
+# compose-side one-shot service can run the drizzle-kit migrations against
+# the platform Postgres before the ui starts. Keeps the runner image lean
+# (the runner has neither pnpm nor the drizzle source, by design — only the
+# Nitro bundle).
+FROM builder AS migrator
+WORKDIR /app/apps/web
+# Both migrations run sequentially; either failing aborts the up.
+CMD ["sh", "-c", "pnpm run db:migrate && pnpm run db:auth:migrate"]
+
 # ─── runner ───────────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app

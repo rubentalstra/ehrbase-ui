@@ -135,24 +135,46 @@ services:
       start_period: 30s
     networks: [ehrbase-net]
 
-  # Demo-user seeder — one-shot, gated by the `demo` Compose profile so
-  # production never activates it. See docs/demo-accounts.md. Default
-  # `.env.example` sets COMPOSE_PROFILES=demo so `docker compose up` in dev
-  # picks the four demo users; production sets `COMPOSE_PROFILES=` (empty)
-  # or omits the var, and the service does not start.
-  #
-  # The realm import (keycloak/import/ehrbase.json) carries NO users — it is
-  # the prod-safe baseline. Demo identities are seeded post-startup via
-  # kcadm.sh, idempotently, so they belong to the dev story end-to-end.
-  keycloak-seed-demo-users:
+  # Grafana OIDC client sync — one-shot, always runs (NOT profile-gated).
+  # Self-heals the gap where Keycloak's `start-dev --import-realm` skips
+  # re-import when the realm already exists in the DB (Strategy:
+  # IGNORE_EXISTING). Any client added to the realm JSON after the FIRST
+  # boot would otherwise be silently missing — what bit operators upgrading
+  # from M4 to M5 when the `grafana` client landed. The script is
+  # idempotent: create-or-update on every up, < 1 s wall-clock.
+  keycloak-sync-grafana-client:
     image: quay.io/keycloak/keycloak:26.6.2
-    profiles: ['demo']
     depends_on:
       keycloak: { condition: service_healthy }
     environment:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-dev-only-rotate-in-prod}
+    volumes:
+      - ./keycloak/scripts:/scripts:ro
+    entrypoint: ['/bin/bash', '/scripts/sync-grafana-client.sh']
+    networks: [ehrbase-net]
+    restart: 'no'
+
+  # Demo-user seeder — one-shot. Runs every dev `docker compose up` so the
+  # four demo identities (one per realm role) exist for both the app login
+  # and Grafana SSO. Idempotent — kcadm seed loop short-circuits if a user
+  # already exists. The realm import (keycloak/import/ehrbase.json) carries
+  # NO users — that file is the prod-safe baseline.
+  #
+  # Production deployments either delete this service from their own
+  # compose override, or set SEED_DEMO_USERS=skip in the env to make the
+  # script no-op out. See docs/demo-accounts.md for the credentials.
+  keycloak-seed-demo-users:
+    image: quay.io/keycloak/keycloak:26.6.2
+    depends_on:
+      keycloak: { condition: service_healthy }
+    environment:
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      SEED_DEMO_USERS: ${SEED_DEMO_USERS:-on}
     volumes:
       - ./keycloak/scripts:/scripts:ro
     entrypoint: ['/bin/bash', '/scripts/seed-demo-users.sh']
@@ -335,6 +357,24 @@ services:
       # `localhost` from inside its container to the host.
       - 'localhost:host-gateway'
 
+  # One-shot drizzle-kit migration runner. Uses the builder Docker stage so
+  # it has pnpm + the source-tree drizzle migration files (the runner image
+  # only ships the Nitro bundle). Runs BOTH audit + auth migrations before
+  # the ui starts, idempotent — drizzle-kit's __drizzle_migrations bookkeeping
+  # table means re-runs no-op.
+  db-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    depends_on:
+      platform-db: { condition: service_healthy }
+    environment:
+      AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@platform-db:5432/audit
+      AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@platform-db:5432/auth
+    networks: [ehrbase-net]
+    restart: 'no'
+
   ui:
     build:
       context: .
@@ -350,6 +390,7 @@ services:
       valkey: { condition: service_healthy }
       platform-db: { condition: service_healthy }
       seaweedfs: { condition: service_healthy }
+      db-migrate: { condition: service_completed_successfully }
     # The Better Auth SSO plugin uses ONE issuer URL per provider — both the
     # server-side OIDC discovery fetch AND the browser redirect target use
     # the same URL. The browser needs `http://localhost:8180`; we therefore
@@ -380,7 +421,9 @@ services:
       # transition; both can point at the same realm.
       AUTH_DB_URL: postgres://auth_writer:auth_writer@platform-db:5432/auth
       AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@platform-db:5432/auth
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-rotate-in-prod}
+      # ≥32 char dev secret — Better Auth warns at startup below that floor.
+      # Production injects a real value via the env (see .env.example).
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-rotate-in-prod-please-this-is-32-chars}
       BETTER_AUTH_URL: http://localhost:3000
       SSO_KEYCLOAK_PROVIDER_ID: keycloak
       # Single URL — see the `extra_hosts: localhost:host-gateway` block

@@ -144,6 +144,20 @@ describe('checkReadiness — §13.4 readiness aggregator', () => {
     expect(body.checks.keycloak).toBe('ok')
   })
 
+  it('treats a 401 from EHRbase as ok (auth-required → server is alive)', async () => {
+    setUpHappyPath()
+    fetchMock.mockImplementation((url) => {
+      const href = typeof url === 'string' ? url : url instanceof URL ? url.href : ''
+      if (href.includes('//ehrbase:')) {
+        return Promise.resolve(new Response(null, { status: 401 }))
+      }
+      return Promise.resolve(new Response(null, { status: 200 }))
+    })
+    const res = await checkReadiness()
+    const body = await readBody(res)
+    expect(body.checks.ehrbase).toBe('ok')
+  })
+
   it('returns 503 when Keycloak discovery URL is unreachable', async () => {
     setUpHappyPath()
     fetchMock.mockImplementation((url) => {

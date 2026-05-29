@@ -1,16 +1,25 @@
 # Single-binary Tempo 3.x dev config (docs/architecture.md §13.2).
 #
-# Tempo 3.0 removed the legacy ingester block path; this config follows the
-# "single binary, local-disk backend" pattern from the migrate-to-3 guide:
-#   https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/migrate-to-3/
+# Tempo 3.0 (May 2026) reorganised the config surface — see
+#   https://github.com/grafana/tempo/blob/v3.0.0/example/docker-compose/single-binary/tempo.yaml
+# Key shape changes vs the 2.x configs in older guides:
+#   - The standalone `compactor:` block was removed; compaction is built-in
+#     and configured under the new `backend-scheduler:` if you need to tune
+#     it. The default 30-day retention is fine for dev.
+#   - The `storage.trace.block.version` key was removed; vParquet5 is the
+#     default and the only supported encoding in 3.x.
+#   - `query_frontend.mcp_server.enabled` is new — exposes the MCP server.
+#   - `usage_report.reporting_enabled` opts out of Grafana telemetry.
 #
 # Production deployments swap the `local` storage backend for S3 / GCS /
 # Azure (whichever EU object store the hospital uses) and add the
 # replication/redundancy block. v1.0 dev is single-binary local disk.
 
+stream_over_http_enabled: true
+
 server:
   http_listen_port: 3200
-  grpc_listen_port: 9095
+  log_level: info
 
 distributor:
   receivers:
@@ -21,32 +30,33 @@ distributor:
         http:
           endpoint: 0.0.0.0:4318
 
-# vParquet5 — the Tempo 3.0 default block encoding.
-storage:
-  trace:
-    backend: local
-    local:
-      path: /var/tempo/blocks
-    wal:
-      path: /var/tempo/wal
-    block:
-      version: vParquet5
-
-compactor:
-  compaction:
-    block_retention: 720h # 30 days — fine for dev; tune for prod
-
 metrics_generator:
   registry:
     external_labels:
       source: tempo
+      cluster: docker-compose
   storage:
     path: /var/tempo/generator/wal
     remote_write:
       - url: http://prometheus:9090/api/v1/write
         send_exemplars: true
 
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
 overrides:
   defaults:
     metrics_generator:
-      processors: [service-graphs, span-metrics]
+      processors: ['span-metrics', 'service-graphs']
+      generate_native_histograms: both
+
+# Opt out of Grafana Labs anonymous usage telemetry (cluster-id, version,
+# enabled-feature counts). Hospital deployments default to no outbound
+# telemetry on principle.
+usage_report:
+  reporting_enabled: false

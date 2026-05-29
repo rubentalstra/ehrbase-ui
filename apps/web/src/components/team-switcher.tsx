@@ -12,7 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@ehrbase-ui/ui/components/sidebar'
+} from '@/components/ui/sidebar'
 
 export function BrandHeader() {
   return (

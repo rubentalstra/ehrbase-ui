@@ -65,15 +65,25 @@ export async function probeEhrbase(): Promise<ProbeOutcome> {
   return withTimeout(async () => {
     const base = process.env.EHRBASE_URL
     if (!base) throw new Error('ehrbase_url_unset')
+    // EHRbase 2.x exposes its Spring Boot actuator at
+    // `<context>/management/health` — `<context>` is `/ehrbase` in the
+    // upstream image. EHRBASE_URL is the openEHR REST root
+    // (.../ehrbase/rest/openehr/v1), so we strip the `/rest/...` suffix
+    // and append `/management/health`.
     const url = new URL(base)
-    // EHRbase 2.x exposes /management/health (actuator-style). Fall back to
-    // the root REST surface if the management endpoint is firewalled off
-    // in this deployment.
-    const probeUrl = new URL('/management/health', url.origin).toString()
+    const path = url.pathname.replace(/\/rest\/.*$/, '/management/health')
+    const probeUrl = new URL(path, url.origin).toString()
     const r = await fetch(probeUrl, {
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS - 50),
     })
-    if (!r.ok) throw new Error(`ehrbase_status_${r.status}`)
+    // 401 means the OAuth resource-server filter is active and the JWT
+    // decoder is loaded — i.e. EHRbase is alive and gating PHI. For
+    // readiness we treat that as 'ok' (the alternative is to mint a token
+    // for every probe, which adds Keycloak round-trips to every poll and
+    // floods the audit log). Anything outside [2xx, 401] is a fail.
+    if (!r.ok && r.status !== 401) {
+      throw new Error(`ehrbase_status_${r.status}`)
+    }
   })
 }
 

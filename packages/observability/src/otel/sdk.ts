@@ -28,15 +28,11 @@
 //     EHRbase / Keycloak that share our collector. If a future SDK release
 //     exposes a typed mutation API, layer 2 can be added as defense in depth.
 
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api'
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto'
 import { resourceFromAttributes } from '@opentelemetry/resources'
-import {
-  PeriodicExportingMetricReader,
-  type MetricReader,
-} from '@opentelemetry/sdk-metrics'
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-node'
 import {
@@ -48,28 +44,12 @@ import { redactHttpRequestPath } from './redact.ts'
 
 let started = false
 
-// Map a string-valued OTEL_LOG_LEVEL env var to the enum without an `as`
-// cast (CLAUDE.md Inviolable rule 3 forbids them).
-function parseDiagLogLevel(raw: string): DiagLogLevel {
-  switch (raw.toUpperCase()) {
-    case 'NONE':
-      return DiagLogLevel.NONE
-    case 'ERROR':
-      return DiagLogLevel.ERROR
-    case 'WARN':
-      return DiagLogLevel.WARN
-    case 'INFO':
-      return DiagLogLevel.INFO
-    case 'DEBUG':
-      return DiagLogLevel.DEBUG
-    case 'VERBOSE':
-      return DiagLogLevel.VERBOSE
-    case 'ALL':
-      return DiagLogLevel.ALL
-    default:
-      return DiagLogLevel.WARN
-  }
-}
+// NodeSDK installs its own DiagConsoleLogger at construction time. We
+// previously called `diag.setLogger(...)` here as well — but doing so before
+// `new NodeSDK()` is silently overridden, and doing so after produces the
+// "Current logger will overwrite one already registered" warning on every
+// boot. Hospital deployments that want a different OTel diag level set the
+// standard OTEL_LOG_LEVEL env var, which NodeSDK reads natively.
 
 /**
  * Start the OpenTelemetry SDK. Idempotent — subsequent calls return without
@@ -87,22 +67,9 @@ export function startOtelSdk(): void {
   if (process.env.OTEL_ENABLED !== 'true') return
   started = true
 
-  // Surface SDK self-errors on stderr at WARN level (info is noisy; ERROR
-  // would mask config-load failures). Hospital deployments flip
-  // OTEL_LOG_LEVEL=DEBUG when investigating a missing-trace incident.
-  diag.setLogger(
-    new DiagConsoleLogger(),
-    parseDiagLogLevel(process.env.OTEL_LOG_LEVEL ?? 'WARN'),
-  )
-
   const endpoint =
     process.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? 'http://otel-collector:4318'
   const sampleRatio = Number.parseFloat(process.env.OTEL_SAMPLE_RATIO ?? '0.1')
-
-  const metricReader: MetricReader = new PeriodicExportingMetricReader({
-    exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
-    exportIntervalMillis: 60_000,
-  })
 
   const sdk = new NodeSDK({
     resource: resourceFromAttributes({
@@ -111,7 +78,16 @@ export function startOtelSdk(): void {
     }),
     sampler: new TraceIdRatioBasedSampler(sampleRatio),
     traceExporter: new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }),
-    metricReader,
+    // `metricReader` (singular) was deprecated in @opentelemetry/sdk-node
+    // 0.213 in favour of an array; the array form composes cleanly when a
+    // deployment wants to fan metrics to a second receiver (e.g. a local
+    // Prometheus scrape AND the OTLP push to the collector).
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({ url: `${endpoint}/v1/metrics` }),
+        exportIntervalMillis: 60_000,
+      }),
+    ],
     instrumentations: [
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-fs': { enabled: false },

@@ -17,15 +17,15 @@ import { m } from '@ehrbase-ui/i18n/messages'
 import type { AuditOutcome } from '@ehrbase-ui/audit'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import { getMyAuditEvents } from '@/server/functions/access-log.functions'
-import { Alert, AlertDescription } from '@ehrbase-ui/ui/components/alert'
-import { Button } from '@ehrbase-ui/ui/components/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@ehrbase-ui/ui/components/card'
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -33,7 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@ehrbase-ui/ui/components/table'
+} from '@/components/ui/table'
 
 export const Route = createFileRoute('/_authed/me_/access-log')({
   component: AccessLog,
