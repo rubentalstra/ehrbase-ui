@@ -13,11 +13,11 @@
 
 import { z } from 'zod'
 
-import { auth as betterAuth } from '@/lib/auth/auth.server'
+import { getAuthInstance } from './instance.server.ts'
 import { logAudit } from '@ehrbase-ui/audit'
 import { checkRateLimit } from '@ehrbase-ui/http-bff'
 import { valkey } from '@ehrbase-ui/valkey'
-import type { RoleContext } from '@/lib/auth/require-role.server'
+import type { RoleContext } from './require-role.server.ts'
 
 export const GRANT_TTL_SECONDS = 60 * 60
 export const MIN_JUSTIFICATION = 30
@@ -61,7 +61,7 @@ export async function grantEmergencyAccess(
     // Force re-auth: revoke every active session for this user via Better
     // Auth's admin API. The user is signed out of every device and the
     // M15 audit-reviewer dashboard sees the gap.
-    await betterAuth.api
+    await getAuthInstance().api
       .revokeUserSessions({
         body: { userId: auth.user.id },
         headers: new Headers(),

@@ -2,10 +2,10 @@
 //
 // Components import `authClient` to start the SSO sign-in flow, sign out,
 // list organizations, and call the admin/org plugin endpoints. Server code
-// uses `auth.api.*` instead.
+// uses the auth-instance getter from @ehrbase-ui/auth instead.
 //
-// Plugin clients mirror the server-side `auth.server.ts` config: SSO for
-// Keycloak, admin + organization for the M15 admin/multi-hospital surfaces.
+// Plugin clients mirror the server-side factory: SSO for Keycloak, admin +
+// organization for the M17 admin / M7 multi-hospital surfaces.
 
 import { adminClient, organizationClient } from 'better-auth/client/plugins'
 import { ssoClient } from '@better-auth/sso/client'

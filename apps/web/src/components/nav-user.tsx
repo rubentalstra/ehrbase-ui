@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 
-import { authClient } from '@/lib/auth/auth-client'
+import { authClient } from '@ehrbase-ui/auth/client'
 import { m } from '@/paraglide/messages.js'
 import { Avatar, AvatarFallback } from '@ehrbase-ui/ui/components/avatar'
 import {

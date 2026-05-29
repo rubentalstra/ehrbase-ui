@@ -16,8 +16,8 @@ import { auth as betterAuth } from '@/lib/auth/auth.server'
 import {
   BreakGlassRequestSchema,
   grantEmergencyAccess,
-} from '@/lib/auth/break-glass.server'
-import type { RoleContext } from '@/lib/auth/require-role.server'
+} from '@ehrbase-ui/auth'
+import type { RoleContext } from '@ehrbase-ui/auth'
 import {
   consumeCsrfToken,
   isAllowedOrigin,

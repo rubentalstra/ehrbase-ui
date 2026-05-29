@@ -17,15 +17,16 @@
 // server fns).
 
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start'
-import { getRequestHeader } from '@tanstack/react-start/server'
+import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
 
 import { setAuditRequestContextProvider } from '@ehrbase-ui/audit'
-import { applySecurityHeaders, generateNonce } from '@ehrbase-ui/http-bff'
-import { runWithNonce } from '@ehrbase-ui/http-bff'
+import { setAuthRequestContextProvider } from '@ehrbase-ui/auth'
+import { applySecurityHeaders, generateNonce, runWithNonce } from '@ehrbase-ui/http-bff'
 
-// Wire the framework-agnostic @ehrbase-ui/audit package to TanStack Start's
-// request-context API (ADR-0030 — packages are framework-agnostic; the host
-// app binds the runtime). Called once at module load.
+// Wire the framework-agnostic @ehrbase-ui/audit + @ehrbase-ui/auth packages
+// to TanStack Start's request-context API (ADR-0030 — packages are
+// framework-agnostic; the host app binds the runtime). Called once at
+// module load.
 setAuditRequestContextProvider({
   getHeader: (name) => {
     try {
@@ -36,6 +37,12 @@ setAuditRequestContextProvider({
       return undefined
     }
   },
+})
+setAuthRequestContextProvider({
+  // requireRole + the M5+ server functions feed these Headers into
+  // Better Auth's getSession({ headers }) call. Throws when called outside
+  // a request scope — auth flows truly require a request.
+  getHeaders: () => getRequest().headers,
 })
 
 const csrfMiddleware = createCsrfMiddleware({

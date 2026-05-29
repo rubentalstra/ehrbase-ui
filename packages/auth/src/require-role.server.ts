@@ -16,7 +16,8 @@ import { z } from 'zod'
 import { authDb } from '@ehrbase-ui/db-platform/auth-client'
 import { account as accountTable } from '@ehrbase-ui/db-platform/auth'
 import { logAudit } from '@ehrbase-ui/audit'
-import { auth as betterAuth } from '@/lib/auth/auth.server'
+import { getAuthInstance } from './instance.server.ts'
+import { getAuthRequestHeaders } from './request-context.server.ts'
 
 const RealmAccessSchema = z
   .object({
@@ -88,9 +89,8 @@ export async function requireRole(
   roles: string[],
   options: RequireRoleOptions = {},
 ): Promise<RoleContext> {
-  const { getRequest } = await import('@tanstack/react-start/server')
-  const session = await betterAuth.api.getSession({
-    headers: getRequest().headers,
+  const session = await getAuthInstance().api.getSession({
+    headers: getAuthRequestHeaders(),
   })
   if (!session) throw unauthorized()
 

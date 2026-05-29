@@ -17,7 +17,7 @@ import { runTask } from 'nitro/task'
 import { z } from 'zod'
 
 import { logAudit } from '@ehrbase-ui/audit'
-import { requireRole } from '@/lib/auth/require-role.server'
+import { requireRole } from '@ehrbase-ui/auth'
 import {
   consumeCsrfToken,
   isAllowedOrigin,

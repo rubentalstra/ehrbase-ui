@@ -2,7 +2,14 @@
 node_modules/
 .pnpm-store/
 
-# TanStack Start / Nitro / Vite build output
+# Turborepo cache + log directory (per-workspace + at repo root)
+.turbo/
+
+# TypeScript project-references build info (per-package)
+*.tsbuildinfo
+
+# TanStack Start / Nitro / Vite build output (per-app, but the patterns
+# are unanchored so they match in any directory)
 .output/
 .nitro/
 .vinxi/
@@ -10,14 +17,18 @@ node_modules/
 dist/
 build/
 
-# Paraglide compiled output (regenerated on build)
-src/paraglide/
-app/paraglide/
+# Paraglide compiled output (regenerated on build) — lives under apps/web
+# per the monorepo layout (ADR-0030).
+apps/web/src/paraglide/
 
-# orval generated output (regenerated on demand)
-src/lib/api/ehrbase-generated/
+# orval generated output (regenerated on demand) — lives in the openehr
+# REST client package per ADR-0030 / ADR-0032.
+packages/openehr-its-rest/src/generated/
 
-# Test artefacts
+# TanStack Router generated route tree
+apps/web/src/routeTree.gen.ts
+
+# Test artefacts (any package may generate them)
 coverage/
 playwright-report/
 playwright/.cache/
