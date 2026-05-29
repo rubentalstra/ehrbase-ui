@@ -16,7 +16,7 @@ import { Link, useNavigate } from '@tanstack/react-router'
 
 import { authClient } from '@ehrbase-ui/auth/client'
 import { m } from '@ehrbase-ui/i18n/messages'
-import { Avatar, AvatarFallback } from '@ehrbase-ui/ui/components/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,13 +25,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@ehrbase-ui/ui/components/dropdown-menu'
+} from '@/components/ui/dropdown-menu'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from '@ehrbase-ui/ui/components/sidebar'
+} from '@/components/ui/sidebar'
 
 export type NavUserData = {
   name: string

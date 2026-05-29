@@ -1,0 +1,59 @@
+# Grafana datasource auto-provisioning (docs/architecture.md §13).
+#
+# Tempo + Loki + Prometheus are wired automatically when Grafana boots, so
+# the operator never has to click through the UI to register them. Trace ↔
+# metric ↔ log correlation is enabled via Tempo's tracesToLogsV2 + Loki's
+# derivedFields config — clicking a trace span in Tempo jumps to the
+# corresponding Loki log line by service.name + trace_id; clicking a Loki
+# log line with a trace_id field jumps back to the Tempo span.
+
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    access: proxy
+    orgId: 1
+    uid: tempo
+    url: http://tempo:3200
+    jsonData:
+      httpMethod: GET
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -2m
+        spanEndTimeShift: 2m
+        tags:
+          - { key: service.name, value: service_name }
+        filterByTraceID: true
+        filterBySpanID: false
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki
+
+  - name: Loki
+    type: loki
+    access: proxy
+    orgId: 1
+    uid: loki
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        - name: trace_id
+          matcherType: regex
+          matcherRegex: 'trace_id=(\w+)'
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    orgId: 1
+    uid: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s

@@ -2,8 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
-import { Alert, AlertDescription } from '@ehrbase-ui/ui/components/alert'
-import { Button } from '@ehrbase-ui/ui/components/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({
   validateSearch: z.object({ auth_error: z.coerce.number().optional() }),

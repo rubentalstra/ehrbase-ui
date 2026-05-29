@@ -34,9 +34,9 @@ import {
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from '@ehrbase-ui/ui/components/breadcrumb'
-import { Separator } from '@ehrbase-ui/ui/components/separator'
-import { SidebarProvider, SidebarTrigger } from '@ehrbase-ui/ui/components/sidebar'
+} from '@/components/ui/breadcrumb'
+import { Separator } from '@/components/ui/separator'
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async ({ location }) => {

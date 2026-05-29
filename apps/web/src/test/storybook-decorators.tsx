@@ -13,7 +13,7 @@ import {
 import type { Decorator } from '@storybook/react-vite'
 
 import { ThemeProvider } from '@/components/theme/theme-provider'
-import { TooltipProvider } from '@ehrbase-ui/ui/components/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const STUB_PATHS = ['/', '/me', '/me/access-log', '/accessibility']
 

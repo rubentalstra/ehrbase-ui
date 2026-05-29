@@ -16,7 +16,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { m } from '@ehrbase-ui/i18n/messages'
 import type { AppNavRoute } from '@/lib/router/routes'
-import { Button } from '@ehrbase-ui/ui/components/button'
+import { Button } from '@/components/ui/button'
 import {
   Command,
   CommandDialog,
@@ -27,7 +27,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from '@ehrbase-ui/ui/components/command'
+} from '@/components/ui/command'
 
 const navItems: { to: AppNavRoute; label: () => string; icon: LucideIcon }[] = [
   { to: '/', label: () => m.app_title(), icon: HomeIcon },

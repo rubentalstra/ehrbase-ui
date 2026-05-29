@@ -38,6 +38,7 @@ onlyBuiltDependencies:
 allowBuilds:
   esbuild: true
   msw: true
+  protobufjs: true
 
 minimumReleaseAgeExclude:
   - ioredis@5.11.0
@@ -55,6 +56,17 @@ minimumReleaseAgeExclude:
 #                                                          buffer-bounds
 #                                                          check in v3/v5/v6
 #                                                          with `buf` arg)
+#   protobufjs >= 8.2.0  → seven HIGH advisories closed across
+#                          GHSA-66ff-xgx4-vchm (toObject code injection),
+#                          GHSA-75px-5xx7-5xc7 (proto-pollution gadget),
+#                          GHSA-jvwf-75h9-cwgg (process-wide DoS),
+#                          GHSA-685m-2w69-288q (unbounded-recursion DoS),
+#                          plus moderate advisories. Latest stable 8.4.2
+#                          (2026-05-22). Pulled transitively by every
+#                          @opentelemetry/exporter-*-otlp-proto package
+#                          (M5 — ADR-0009) — the upstream pin of 8.0.1 in
+#                          our tree predates the May 2026 patches.
 overrides:
   samlify: 2.13.1
   uuid: 11.1.1
+  protobufjs: 8.4.2

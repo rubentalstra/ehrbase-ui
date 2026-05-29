@@ -1,0 +1,168 @@
+# OTel Collector config (docs/architecture.md §13.2).
+#
+# Three pipelines:
+#   - traces : OTLP in → attributes + transform + tail_sampling + batch → Tempo
+#   - metrics: OTLP in → batch → Prometheus's OTLP receiver
+#   - logs   : OTLP in → attributes + batch → Loki
+#
+# The `attributes` and `transform` processors implement PHI-redaction layers
+# 3 and 4 (§13.2). Layers 1 and 2 happen in-process inside the OTel SDK
+# (packages/observability/src/otel/sdk.ts) — these collector-tier passes are
+# defence-in-depth that also catches spans emitted by EHRbase / Keycloak
+# (both Spring-Boot OTel exporters point at the same collector).
+#
+# Tail sampling: head sampling at the SDK drops 90% of traces uniformly,
+# then tail sampling promotes back to 100% for errors, slow requests (p99
+# threshold ~ 1 s), admin-area paths, and the /me/access-log surface — every
+# trace forensic responders need is therefore guaranteed to be in the
+# backend regardless of the head ratio.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {}
+
+  # PHI redaction layer 3 — drop block-listed attribute keys outright.
+  # Matches case-insensitively against attribute keys; mirrors the in-process
+  # block-list in packages/observability/src/otel/redact.ts.
+  attributes/redact-phi:
+    actions:
+      - key: password
+        action: delete
+      - key: passwd
+        action: delete
+      - key: secret
+        action: delete
+      - key: token
+        action: delete
+      - key: access_token
+        action: delete
+      - key: refresh_token
+        action: delete
+      - key: id_token
+        action: delete
+      - key: authorization
+        action: delete
+      - key: cookie
+        action: delete
+      - key: set-cookie
+        action: delete
+      - key: email
+        action: delete
+      - key: bsn
+        action: delete
+      - key: niss
+        action: delete
+      - key: nir
+        action: delete
+      - key: kvnr
+        action: delete
+      - key: pesel
+        action: delete
+      - key: codice_fiscale
+        action: delete
+      - key: tis
+        action: delete
+      - key: nuts
+        action: delete
+      - key: bpk
+        action: delete
+      - key: mrn
+        action: delete
+      - key: http.url.query
+        action: delete
+      - key: db.statement
+        action: delete
+      - key: request.body
+        action: delete
+
+  # PHI redaction layer 4 — catch-all UUID → :id on every span name and the
+  # http.target attribute. Same regex source as redact.ts. The OTTL syntax:
+  #   replace_pattern(target, regex, replacement)
+  # Collector v0.122+ deprecated the bare path form: every path must be
+  # prefixed with its context (`span.`) since the parser-collection unified
+  # the trace/metric/log dialects (otelcol#11572).
+  transform/redact-uuids:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - replace_pattern(span.name, "[0-9a-f-]{36}", ":id")
+          - >-
+            replace_pattern(span.attributes["http.target"], "[0-9a-f-]{36}", ":id")
+            where span.attributes["http.target"] != nil
+
+  # Tail sampling — promote PHI-sensitive / failure / slow traces to 100%
+  # regardless of the head sampler's 10% ratio.
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    policies:
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      - name: slow
+        type: latency
+        latency:
+          threshold_ms: 1000
+      - name: admin_routes
+        type: string_attribute
+        string_attribute:
+          key: http.target
+          values: ['/_authed/admin']
+          enabled_regex_matching: true
+      - name: access_log
+        type: string_attribute
+        string_attribute:
+          key: http.target
+          values: ['/me/access-log']
+          enabled_regex_matching: true
+      - name: keep_head_sample
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 100
+
+# `otlphttp` was renamed to `otlp_http` in v0.122. The old alias still works
+# but emits a deprecation warning on every boot — we use the canonical name.
+exporters:
+  otlp_http/tempo:
+    endpoint: http://tempo:4318
+    tls:
+      insecure: true
+  otlp_http/loki:
+    # Loki accepts OTLP/HTTP natively in 3.x.
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+  otlp_http/prometheus:
+    # Prometheus 3.x has a native OTLP receiver — see prometheus.yml's
+    # --web.enable-otlp-receiver flag and the dedicated otlp/v1/metrics route.
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors:
+        [attributes/redact-phi, transform/redact-uuids, tail_sampling, batch]
+      exporters: [otlp_http/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_http/prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [attributes/redact-phi, batch]
+      exporters: [otlp_http/loki]
+  telemetry:
+    logs:
+      level: info

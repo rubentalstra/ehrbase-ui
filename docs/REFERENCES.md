@@ -105,13 +105,28 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Observability stack (M5 — ADR-0009, web-verified 2026-05-29)
 
-| Service                  | Verified            | Pinned                | Source                                                             |
-| ------------------------ | ------------------- | --------------------- | ------------------------------------------------------------------ |
-| OTel Collector (contrib) | 0.118.0             | **0.118.0** (sha-pin) | https://hub.docker.com/r/otel/opentelemetry-collector-contrib/tags |
-| Grafana Tempo            | 3.0.0 (28 May 2025) | **2.7.x**             | https://github.com/grafana/tempo/releases                          |
-| Grafana Loki             | 3.7.2 (13 May 2026) | **3.7.2**             | https://github.com/grafana/loki/releases                           |
-| Prometheus               | v3.12.0             | **v3.12.0**           | https://hub.docker.com/r/prom/prometheus/tags                      |
-| Grafana                  | 11.6.x              | **11.x**              | https://hub.docker.com/r/grafana/grafana/tags                      |
+| Service                  | Verified              | Pinned                                    | Source                                                             |
+| ------------------------ | --------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| OTel Collector (contrib) | 0.153.0 (26 May 2026) | **0.153.0**                               | https://hub.docker.com/r/otel/opentelemetry-collector-contrib/tags |
+| Grafana Tempo            | 3.0.0 (28 May 2025)   | **3.0.0** (greenfield — adopted directly) | https://github.com/grafana/tempo/releases                          |
+| Grafana Loki             | 3.7.2 (13 May 2026)   | **3.7.2**                                 | https://github.com/grafana/loki/releases                           |
+| Prometheus               | v3.12.0               | **v3.12.0**                               | https://hub.docker.com/r/prom/prometheus/tags                      |
+| Grafana (OSS variant)    | 13.0.1                | **grafana/grafana-oss:13.0.1**            | https://hub.docker.com/r/grafana/grafana-oss/tags                  |
+
+OTel SDK + transport (verified 2026-05-29 via `npm view`):
+
+| Package                                      | Verified | Pinned      |
+| -------------------------------------------- | -------- | ----------- |
+| `@opentelemetry/api`                         | 1.9.1    | **1.9.1**   |
+| `@opentelemetry/sdk-node`                    | 0.218.0  | **0.218.0** |
+| `@opentelemetry/auto-instrumentations-node`  | 0.76.0   | **0.76.0**  |
+| `@opentelemetry/exporter-trace-otlp-proto`   | 0.218.0  | **0.218.0** |
+| `@opentelemetry/exporter-metrics-otlp-proto` | 0.218.0  | **0.218.0** |
+| `@opentelemetry/resources`                   | 2.7.1    | **2.7.1**   |
+| `@opentelemetry/semantic-conventions`        | 1.41.1   | **1.41.1**  |
+| `@opentelemetry/sdk-trace-node`              | 2.7.1    | **2.7.1**   |
+| `@opentelemetry/sdk-metrics`                 | 2.7.1    | **2.7.1**   |
+| `pino-opentelemetry-transport`               | 3.0.0    | **3.0.0**   |
 
 > Note: Tempo 3.0 (May 2025) introduced breaking ingest/write architecture changes; v1.0 pins to the last 2.x line until the arch doc has migrated forward.
 

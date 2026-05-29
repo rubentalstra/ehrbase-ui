@@ -12,14 +12,14 @@ import { useState } from 'react'
 import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
-import { Button } from '@ehrbase-ui/ui/components/button'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@ehrbase-ui/ui/components/card'
+} from '@/components/ui/card'
 import { authClient } from '@ehrbase-ui/auth/client'
 import { getSession } from '@/lib/auth/auth.functions'
 

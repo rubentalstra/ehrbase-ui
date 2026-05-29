@@ -6,13 +6,13 @@ import { MoonIcon, SunIcon } from 'lucide-react'
 
 import { useTheme } from '@/components/theme/theme-provider'
 import { m } from '@ehrbase-ui/i18n/messages'
-import { Button } from '@ehrbase-ui/ui/components/button'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@ehrbase-ui/ui/components/dropdown-menu'
+} from '@/components/ui/dropdown-menu'
 
 export function ModeToggle() {
   const { setTheme } = useTheme()
