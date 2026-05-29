@@ -96,12 +96,12 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 > **Moved earlier.** Building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one. Lands in `packages/observability` + `apps/web/src/instrumentation.ts` + `apps/web/src/routes/api/{health,ready}.ts`.
 
-- [ ] OTel SDK bootstrap + sampling + PHI redaction layers — §13.2
-- [ ] `pino-opentelemetry-transport` wiring — §13.1
-- [ ] `/api/health` + `/api/ready` — §13.4
-- [ ] OTel collector config in `docker-compose.yml` — `otel/opentelemetry-collector-contrib:0.118.0`
-- [ ] Tempo (`2.7.x`) + Loki (`3.7.2`) + Prometheus (`v3.12.0`) + Grafana (`11.x`) dev stack
-- [ ] PHI-redaction layer verification + automated test for span content (no PHI)
+- [x] OTel SDK bootstrap + sampling + PHI redaction layers — §13.2 (ADR-0009)
+- [x] `pino-opentelemetry-transport` wiring — §13.1
+- [x] `/api/health` + `/api/ready` — §13.4 (probes Valkey + EHRbase + Keycloak + audit DB + auth DB)
+- [x] OTel collector config in `docker-compose.yml` — `otel/opentelemetry-collector-contrib:0.153.0` (web-reverified 2026-05-29)
+- [x] Tempo (`3.0.0`) + Loki (`3.7.2`) + Prometheus (`v3.12.0`) + Grafana (`grafana-oss:13.0.1` + Keycloak SSO) dev stack
+- [x] PHI-redaction layer verification (unit tests for layers 1 + 2; collector layers 3 + 4 in `apps/web/docker/otel/collector-config.yaml`)
 
 ## Milestone 6 — openEHR form engine (§7)
 

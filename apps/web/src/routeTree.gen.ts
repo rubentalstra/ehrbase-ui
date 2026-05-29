@@ -13,6 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AccessibilityRouteImport } from './routes/accessibility'
 import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiReadyRouteImport } from './routes/api/ready'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
 import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
@@ -39,6 +41,16 @@ const AuthedRouteRoute = AuthedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiReadyRoute = ApiReadyRouteImport.update({
+  id: '/api/ready',
+  path: '/api/ready',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCspReportRoute = ApiCspReportRouteImport.update({
@@ -88,6 +100,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/ready': typeof ApiReadyRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
@@ -101,6 +115,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/ready': typeof ApiReadyRoute
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
@@ -116,6 +132,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authed/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
+  '/api/health': typeof ApiHealthRoute
+  '/api/ready': typeof ApiReadyRoute
   '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
@@ -131,6 +149,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/api/csp-report'
+    | '/api/health'
+    | '/api/ready'
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
@@ -144,6 +164,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/me'
     | '/api/csp-report'
+    | '/api/health'
+    | '/api/ready'
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
@@ -158,6 +180,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authed/me'
     | '/api/csp-report'
+    | '/api/health'
+    | '/api/ready'
     | '/_authed/me_/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
@@ -172,6 +196,8 @@ export interface RootRouteChildren {
   AccessibilityRoute: typeof AccessibilityRoute
   LoginRoute: typeof LoginRoute
   ApiCspReportRoute: typeof ApiCspReportRoute
+  ApiHealthRoute: typeof ApiHealthRoute
+  ApiReadyRoute: typeof ApiReadyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthBreakGlassRoute: typeof ApiAuthBreakGlassRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
@@ -207,6 +233,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ready': {
+      id: '/api/ready'
+      path: '/api/ready'
+      fullPath: '/api/ready'
+      preLoaderRoute: typeof ApiReadyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/csp-report': {
@@ -288,6 +328,8 @@ const rootRouteChildren: RootRouteChildren = {
   AccessibilityRoute: AccessibilityRoute,
   LoginRoute: LoginRoute,
   ApiCspReportRoute: ApiCspReportRoute,
+  ApiHealthRoute: ApiHealthRoute,
+  ApiReadyRoute: ApiReadyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthBreakGlassRoute: ApiAuthBreakGlassRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,

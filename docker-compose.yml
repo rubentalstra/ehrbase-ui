@@ -222,40 +222,118 @@ services:
     networks: [ehrbase-net]
     restart: 'no'
 
-  # Observability stack — uncomment together once Milestone 7 wires OTel.
-  # otel-collector:
-  #   image: otel/opentelemetry-collector-contrib:0.110.0
-  #   command: ["--config=/etc/otel-collector-config.yaml"]
-  #   volumes:
-  #     - ./otel/collector-config.yaml:/etc/otel-collector-config.yaml:ro
-  #   ports:
-  #     - "4317:4317"   # OTLP gRPC
-  #     - "4318:4318"   # OTLP HTTP
-  #   networks: [ehrbase-net]
-  #
-  # tempo:
-  #   image: grafana/tempo:2.6.0
-  #   command: ["-config.file=/etc/tempo.yaml"]
-  #   volumes:
-  #     - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
-  #     - tempo_data:/var/tempo
-  #   networks: [ehrbase-net]
-  #
-  # loki:
-  #   image: grafana/loki:3.0.0
-  #   command: -config.file=/etc/loki/local-config.yaml
-  #   ports: ["3100:3100"]
-  #   networks: [ehrbase-net]
-  #
-  # prometheus:
-  #   image: prom/prometheus:v3.0.0
-  #   command:
-  #     - --config.file=/etc/prometheus/prometheus.yml
-  #     - --web.enable-otlp-receiver
-  #   volumes:
-  #     - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-  #     - prometheus_data:/prometheus
-  #   networks: [ehrbase-net]
+  # Observability stack (Milestone 5 — docs/architecture.md §13).
+  # OTel collector → Tempo (traces) + Loki (logs) + Prometheus (metrics) →
+  # Grafana (UI, Keycloak-SSO-gated). All image tags web-verified May 2026.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.153.0
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./apps/web/docker/otel/collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP
+      - '8888:8888' # collector self-telemetry (Prometheus scrape)
+    networks: [ehrbase-net]
+    depends_on:
+      tempo: { condition: service_started }
+      loki: { condition: service_started }
+      prometheus: { condition: service_started }
+
+  tempo:
+    image: grafana/tempo:3.0.0
+    command: ['-config.file=/etc/tempo.yaml']
+    volumes:
+      - ./apps/web/docker/otel/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - '3200:3200' # Tempo HTTP query API (Grafana datasource)
+    networks: [ehrbase-net]
+
+  loki:
+    image: grafana/loki:3.7.2
+    command: ['-config.file=/etc/loki.yaml']
+    volumes:
+      - ./apps/web/docker/otel/loki.yaml:/etc/loki.yaml:ro
+      - loki_data:/loki
+    ports:
+      - '3100:3100'
+    networks: [ehrbase-net]
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-otlp-receiver'
+      - '--web.enable-remote-write-receiver'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./apps/web/docker/otel/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    networks: [ehrbase-net]
+
+  grafana:
+    # OSS variant (NOT grafana/grafana — the unified image that can switch
+    # to Enterprise with a license). Explicit OSS posture for the open-source
+    # project.
+    image: grafana/grafana-oss:13.0.1
+    depends_on:
+      tempo: { condition: service_started }
+      loki: { condition: service_started }
+      prometheus: { condition: service_started }
+      keycloak: { condition: service_healthy }
+    environment:
+      GF_SERVER_ROOT_URL: http://localhost:3030
+      # Disable Grafana's built-in login form — Keycloak SSO is the only
+      # auth path. Hospital admins sign in with their realm identities.
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      # Break-glass local admin in case Keycloak is unreachable (login form
+      # is disabled, but the OAuth bypass route works for the local admin).
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Generic OAuth → Keycloak realm 'ehrbase'.
+      GF_AUTH_GENERIC_OAUTH_ENABLED: 'true'
+      GF_AUTH_GENERIC_OAUTH_NAME: Keycloak
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: 'true'
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-dev-only-rotate-in-prod}
+      GF_AUTH_GENERIC_OAUTH_SCOPES: 'openid profile email offline_access'
+      # The auth_url is browser-redirected (must be reachable from the
+      # operator's browser); token + api URLs are server-to-server inside
+      # the Docker network, so we route them via the internal hostname.
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: http://localhost:8180/realms/ehrbase/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/userinfo
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: preferred_username
+      GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: name
+      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_PATH: email
+      # JMESPath over the realm_access.roles claim:
+      #   admin           → Grafana 'Admin'
+      #   audit-reviewer  → 'Editor'   (can build compliance dashboards)
+      #   anyone else     → 'Viewer'
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: contains(realm_access.roles[*], 'admin') && 'Admin' || contains(realm_access.roles[*], 'audit-reviewer') && 'Editor' || 'Viewer'
+      # Server-admin role assignment off by default — flip on in production
+      # if you want Keycloak to also drive server-level admin rights.
+      GF_AUTH_GENERIC_OAUTH_ALLOW_ASSIGN_GRAFANA_ADMIN: 'false'
+      # OAuth public-client best practices.
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: 'true'
+      GF_AUTH_GENERIC_OAUTH_USE_REFRESH_TOKEN: 'true'
+      # Single-logout — signing out of Grafana also kills the Keycloak SSO
+      # session via post-logout redirect.
+      GF_AUTH_GENERIC_OAUTH_SIGNOUT_REDIRECT_URL: 'http://localhost:8180/realms/ehrbase/protocol/openid-connect/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A3030%2Flogin'
+    ports:
+      - '3030:3000' # Grafana on host 3030 — 3000 is reserved for the app.
+    volumes:
+      - ./apps/web/docker/otel/grafana-provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks: [ehrbase-net]
+    extra_hosts:
+      # Same host-gateway hack as the ui service — Keycloak's browser-
+      # facing URL is http://localhost:8180 but Grafana needs to resolve
+      # `localhost` from inside its container to the host.
+      - 'localhost:host-gateway'
 
   ui:
     build:
@@ -331,12 +409,18 @@ services:
       SESSION_IDLE_TIMEOUT_SECONDS: '900'
       SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info
-      # OTel kept off in dev until M7.
-      OTEL_ENABLED: 'false'
+      # OTel ON (M5). The SDK starts in apps/web/src/server.ts and ships
+      # traces/metrics/logs to the collector. OTEL_SAMPLE_RATIO is the
+      # head-sampler knob; tail sampling (errors / slow / admin / access-log
+      # → 100%) lives in apps/web/docker/otel/collector-config.yaml.
+      OTEL_ENABLED: 'true'
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: ehrbase-ui
+      OTEL_SAMPLE_RATIO: '0.1'
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
       OTEL_TRACES_SAMPLER_ARG: '0.1'
+      OTEL_LOG_LEVEL: WARN
+      APP_VERSION: dev
     volumes:
       - audit_logs:/var/log/ehrbase-ui
     ports: ['3000:3000']
@@ -348,8 +432,10 @@ volumes:
   valkey_data:
   audit_logs:
   seaweedfs_data:
-  # tempo_data:
-  # prometheus_data:
+  tempo_data:
+  loki_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   ehrbase-net:

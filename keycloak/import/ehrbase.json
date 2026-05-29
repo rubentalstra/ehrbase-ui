@@ -82,6 +82,32 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "fullScopeAllowed": true
+    },
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "description": "Grafana Cloud-OSS dashboards — confidential OAuth client with PKCE. Used by admins to inspect traces (Tempo), logs (Loki), metrics (Prometheus). Per-realm role mapping (admin→Admin, audit-reviewer→Editor, else→Viewer) is enforced via JMESPath in the Grafana env (see docker-compose.yml).",
+      "enabled": true,
+      "alwaysDisplayInConsole": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "dev-only-rotate-in-prod",
+      "redirectUris": ["http://localhost:3030/login/generic_oauth"],
+      "webOrigins": ["http://localhost:3030"],
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3030/login##http://localhost:3030/*",
+        "use.refresh.tokens": "true",
+        "client_credentials.use_refresh_token": "false"
+      },
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["offline_access", "phone", "address"]
     }
   ],
   "groups": [],

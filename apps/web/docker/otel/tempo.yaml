@@ -1,0 +1,52 @@
+# Single-binary Tempo 3.x dev config (docs/architecture.md §13.2).
+#
+# Tempo 3.0 removed the legacy ingester block path; this config follows the
+# "single binary, local-disk backend" pattern from the migrate-to-3 guide:
+#   https://grafana.com/docs/tempo/latest/set-up-for-tracing/setup-tempo/migrate-to-3/
+#
+# Production deployments swap the `local` storage backend for S3 / GCS /
+# Azure (whichever EU object store the hospital uses) and add the
+# replication/redundancy block. v1.0 dev is single-binary local disk.
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9095
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# vParquet5 — the Tempo 3.0 default block encoding.
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
+    block:
+      version: vParquet5
+
+compactor:
+  compaction:
+    block_retention: 720h # 30 days — fine for dev; tune for prod
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: true
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
