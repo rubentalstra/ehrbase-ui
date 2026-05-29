@@ -1,5 +1,5 @@
 // Server-only runtime wiring — registers the request-context providers that
-// @ehrbase-ui/audit and @ehrbase-ui/auth expose. Both packages are
+// @/server/audit and @/server/auth expose. Both packages are
 // framework-agnostic by design: they accept a provider at startup rather
 // than importing @tanstack/react-start/server themselves. apps/web is the
 // host that binds them.
@@ -11,8 +11,8 @@
 
 import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
 
-import { setAuditRequestContextProvider } from '@ehrbase-ui/audit/server'
-import { setAuthRequestContextProvider } from '@ehrbase-ui/auth'
+import { setAuditRequestContextProvider } from '@/server/audit/runtime'
+import { setAuthRequestContextProvider } from '@/server/auth'
 
 export function registerRuntimeProviders(): void {
   setAuditRequestContextProvider({

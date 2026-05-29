@@ -17,9 +17,9 @@
 
 import { desc, eq, count } from 'drizzle-orm'
 
-import { auditDb } from '@ehrbase-ui/db-platform/client'
-import { auditEvents } from '@ehrbase-ui/db-platform/audit'
-import { logAudit } from '@ehrbase-ui/audit/server'
+import { auditDb } from '@/server/db/client'
+import { auditEvents } from '@/server/db/audit'
+import { logAudit } from '@/server/audit/runtime'
 import { auth as betterAuth } from '@/lib/auth/auth.server'
 import type {
   AccessLogPageInput,

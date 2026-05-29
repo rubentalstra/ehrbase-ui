@@ -43,8 +43,9 @@ WORKDIR /app/apps/web
 # base. drizzle-kit only needs network access to platform-db + read of the
 # migration SQL files (already owned by uid 1000 from the COPY above).
 USER node
-# Both migrations run sequentially; either failing aborts the up.
-CMD ["sh", "-c", "pnpm run db:migrate && pnpm run db:auth:migrate"]
+# One command runs both audit + auth migrations sequentially (see the
+# db:migrate script in apps/web/package.json); either failing aborts the up.
+CMD ["pnpm", "run", "db:migrate"]
 
 # ─── runner ───────────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-alpine AS runner

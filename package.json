@@ -34,9 +34,8 @@
     "api:gen": "pnpm --filter @ehrbase-ui/web api:gen",
     "db:generate": "pnpm --filter @ehrbase-ui/web db:generate",
     "db:migrate": "pnpm --filter @ehrbase-ui/web db:migrate",
-    "db:studio": "pnpm --filter @ehrbase-ui/web db:studio",
-    "db:auth:generate": "pnpm --filter @ehrbase-ui/web db:auth:generate",
-    "db:auth:migrate": "pnpm --filter @ehrbase-ui/web db:auth:migrate",
+    "db:studio:audit": "pnpm --filter @ehrbase-ui/web db:studio:audit",
+    "db:studio:auth": "pnpm --filter @ehrbase-ui/web db:studio:auth",
     "prepare": "husky"
   },
   "devDependencies": {

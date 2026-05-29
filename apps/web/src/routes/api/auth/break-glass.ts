@@ -16,13 +16,13 @@ import { auth as betterAuth } from '@/lib/auth/auth.server'
 import {
   BreakGlassRequestSchema,
   grantEmergencyAccess,
-} from '@ehrbase-ui/auth'
-import type { RoleContext } from '@ehrbase-ui/auth'
+} from '@/server/auth'
+import type { RoleContext } from '@/server/auth'
 import {
   consumeCsrfToken,
   isAllowedOrigin,
   issueCsrfToken,
-} from '@ehrbase-ui/http-bff'
+} from '@/server/bff'
 
 const PostBodySchema = BreakGlassRequestSchema.extend({ csrfToken: z.string() })
 

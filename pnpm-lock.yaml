@@ -69,28 +69,13 @@ importers:
         version: 3.1054.0(@aws-sdk/client-s3@3.1054.0)
       '@better-auth/sso':
         specifier: 1.6.11
-        version: 1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))
-      '@ehrbase-ui/audit':
-        specifier: workspace:*
-        version: link:../../packages/audit
-      '@ehrbase-ui/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
+        version: 1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-kit@1.0.0-rc.4-273829f)(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../../packages/config-tsconfig
-      '@ehrbase-ui/db-platform':
-        specifier: workspace:*
-        version: link:../../packages/db-platform
-      '@ehrbase-ui/http-bff':
-        specifier: workspace:*
-        version: link:../../packages/http-bff
       '@ehrbase-ui/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
-      '@ehrbase-ui/observability':
-        specifier: workspace:*
-        version: link:../../packages/observability
       '@ehrbase-ui/openehr-its-rest':
         specifier: workspace:*
         version: link:../../packages/openehr-its-rest
@@ -106,6 +91,33 @@ importers:
       '@inlang/paraglide-js':
         specifier: 2.18.1
         version: 2.18.1(typescript@6.0.3)
+      '@opentelemetry/api':
+        specifier: 1.9.1
+        version: 1.9.1
+      '@opentelemetry/auto-instrumentations-node':
+        specifier: 0.76.0
+        version: 0.76.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))
+      '@opentelemetry/exporter-metrics-otlp-proto':
+        specifier: 0.218.0
+        version: 0.218.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/exporter-trace-otlp-proto':
+        specifier: 0.218.0
+        version: 0.218.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/resources':
+        specifier: 2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-metrics':
+        specifier: 2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-node':
+        specifier: 0.218.0
+        version: 0.218.0(@opentelemetry/api@1.9.1)
+      '@opentelemetry/sdk-trace-node':
+        specifier: 2.7.1
+        version: 2.7.1(@opentelemetry/api@1.9.1)
+      '@opentelemetry/semantic-conventions':
+        specifier: 1.41.1
+        version: 1.41.1
       '@tailwindcss/vite':
         specifier: 4.3.0
         version: 4.3.0(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
@@ -172,6 +184,9 @@ importers:
       pino:
         specifier: 10.3.1
         version: 10.3.1
+      pino-opentelemetry-transport:
+        specifier: 3.0.0
+        version: 3.0.0(@opentelemetry/api@1.9.1)(pino@10.3.1)
       postgres:
         specifier: 3.4.9
         version: 3.4.9
@@ -294,80 +309,6 @@ importers:
         specifier: 0.1.0
         version: 0.1.0(vitest@4.1.7)
 
-  packages/audit:
-    dependencies:
-      '@aws-sdk/client-s3':
-        specifier: 3.1054.0
-        version: 3.1054.0
-      '@aws-sdk/lib-storage':
-        specifier: 3.1054.0
-        version: 3.1054.0(@aws-sdk/client-s3@3.1054.0)
-      '@ehrbase-ui/db-platform':
-        specifier: workspace:*
-        version: link:../db-platform
-      '@ehrbase-ui/valkey':
-        specifier: workspace:*
-        version: link:../valkey
-      drizzle-orm:
-        specifier: 1.0.0-rc.4-273829f
-        version: 1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3)
-      ioredis:
-        specifier: 5.11.0
-        version: 5.11.0
-      pino:
-        specifier: 10.3.1
-        version: 10.3.1
-      postgres:
-        specifier: 3.4.9
-        version: 3.4.9
-      zod:
-        specifier: 4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-      vitest:
-        specifier: 4.1.7
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
-
-  packages/auth:
-    dependencies:
-      '@better-auth/sso':
-        specifier: 1.6.11
-        version: 1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))
-      '@ehrbase-ui/audit':
-        specifier: workspace:*
-        version: link:../audit
-      '@ehrbase-ui/db-platform':
-        specifier: workspace:*
-        version: link:../db-platform
-      '@ehrbase-ui/http-bff':
-        specifier: workspace:*
-        version: link:../http-bff
-      '@ehrbase-ui/valkey':
-        specifier: workspace:*
-        version: link:../valkey
-      better-auth:
-        specifier: 1.6.11
-        version: 1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-kit@1.0.0-rc.4-273829f)(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7)
-      drizzle-orm:
-        specifier: 1.0.0-rc.4-273829f
-        version: 1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3)
-      zod:
-        specifier: 4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-
   packages/config-eslint:
     dependencies:
       '@eslint-react/eslint-plugin':
@@ -393,25 +334,6 @@ importers:
         version: 8.60.0(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
 
   packages/config-tsconfig: {}
-
-  packages/db-platform:
-    dependencies:
-      drizzle-orm:
-        specifier: 1.0.0-rc.4-273829f
-        version: 1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3)
-      postgres:
-        specifier: 3.4.9
-        version: 3.4.9
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-      drizzle-kit:
-        specifier: 1.0.0-rc.4-273829f
-        version: 1.0.0-rc.4-273829f
 
   packages/demographic-adapter-fhir:
     dependencies:
@@ -439,28 +361,6 @@ importers:
         specifier: workspace:*
         version: link:../config-tsconfig
 
-  packages/http-bff:
-    dependencies:
-      '@ehrbase-ui/audit':
-        specifier: workspace:*
-        version: link:../audit
-      '@ehrbase-ui/valkey':
-        specifier: workspace:*
-        version: link:../valkey
-      rate-limiter-flexible:
-        specifier: 11.1.0
-        version: 11.1.0
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-      vitest:
-        specifier: 4.1.7
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
-
   packages/i18n:
     dependencies:
       '@inlang/paraglide-js':
@@ -470,61 +370,6 @@ importers:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
-
-  packages/observability:
-    dependencies:
-      '@ehrbase-ui/db-platform':
-        specifier: workspace:*
-        version: link:../db-platform
-      '@ehrbase-ui/valkey':
-        specifier: workspace:*
-        version: link:../valkey
-      '@opentelemetry/api':
-        specifier: 1.9.1
-        version: 1.9.1
-      '@opentelemetry/auto-instrumentations-node':
-        specifier: 0.76.0
-        version: 0.76.0(@opentelemetry/api@1.9.1)(@opentelemetry/core@2.7.1(@opentelemetry/api@1.9.1))
-      '@opentelemetry/exporter-metrics-otlp-proto':
-        specifier: 0.218.0
-        version: 0.218.0(@opentelemetry/api@1.9.1)
-      '@opentelemetry/exporter-trace-otlp-proto':
-        specifier: 0.218.0
-        version: 0.218.0(@opentelemetry/api@1.9.1)
-      '@opentelemetry/resources':
-        specifier: 2.7.1
-        version: 2.7.1(@opentelemetry/api@1.9.1)
-      '@opentelemetry/sdk-metrics':
-        specifier: 2.7.1
-        version: 2.7.1(@opentelemetry/api@1.9.1)
-      '@opentelemetry/sdk-node':
-        specifier: 0.218.0
-        version: 0.218.0(@opentelemetry/api@1.9.1)
-      '@opentelemetry/sdk-trace-node':
-        specifier: 2.7.1
-        version: 2.7.1(@opentelemetry/api@1.9.1)
-      '@opentelemetry/semantic-conventions':
-        specifier: 1.41.1
-        version: 1.41.1
-      drizzle-orm:
-        specifier: 1.0.0-rc.4-273829f
-        version: 1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3)
-      pino:
-        specifier: 10.3.1
-        version: 10.3.1
-      pino-opentelemetry-transport:
-        specifier: 3.0.0
-        version: 3.0.0(@opentelemetry/api@1.9.1)(pino@10.3.1)
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-      vitest:
-        specifier: 4.1.7
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/openehr-am:
     devDependencies:
@@ -8683,7 +8528,7 @@ snapshots:
       '@better-auth/core': 1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
       '@better-auth/utils': 0.4.0
 
-  '@better-auth/sso@1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))':
+  '@better-auth/sso@1.6.11(@better-auth/core@1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(better-auth@1.6.11(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0)))(drizzle-kit@1.0.0-rc.4-273829f)(drizzle-orm@1.0.0-rc.4-273829f(@opentelemetry/api@1.9.1)(@types/pg@8.15.6)(postgres@3.4.9)(zod@4.4.3))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(solid-js@1.9.13)(vitest@4.1.7))(better-call@1.3.5(zod@4.4.3))':
     dependencies:
       '@better-auth/core': 1.6.11(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.3.5(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0)
       '@better-auth/utils': 0.4.0

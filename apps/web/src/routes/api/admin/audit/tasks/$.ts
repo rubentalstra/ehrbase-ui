@@ -16,13 +16,13 @@ import { createFileRoute } from '@tanstack/react-router'
 import { runTask } from 'nitro/task'
 import { z } from 'zod'
 
-import { logAudit } from '@ehrbase-ui/audit/server'
-import { requireRole } from '@ehrbase-ui/auth'
+import { logAudit } from '@/server/audit/runtime'
+import { requireRole } from '@/server/auth'
 import {
   consumeCsrfToken,
   isAllowedOrigin,
   issueCsrfToken,
-} from '@ehrbase-ui/http-bff'
+} from '@/server/bff'
 
 const ALLOWED_TASKS = ['audit:integrity', 'audit:purge'] as const
 type AllowedTask = (typeof ALLOWED_TASKS)[number]

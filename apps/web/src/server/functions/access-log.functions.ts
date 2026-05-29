@@ -13,7 +13,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import type { AuditEventRow } from '@ehrbase-ui/audit'
+import type { AuditEventRow } from '@/server/audit'
 
 // ─── Contract ─────────────────────────────────────────────────────────────
 // Input

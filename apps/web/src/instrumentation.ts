@@ -16,6 +16,6 @@
 // `startOtelSdk()` is idempotent — the duplicate call from server.ts is a
 // no-op once this preload has already started it.
 
-import { startOtelSdk } from '@ehrbase-ui/observability/otel'
+import { startOtelSdk } from '@/server/observability/otel'
 
 startOtelSdk()

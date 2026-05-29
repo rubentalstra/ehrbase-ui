@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { authClient } from '@ehrbase-ui/auth/client'
+import { authClient } from '@/lib/auth-client'
 import { getSession } from '@/lib/auth/auth.functions'
 
 const LoginSearchSchema = z.object({

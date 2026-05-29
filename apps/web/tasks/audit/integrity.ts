@@ -9,8 +9,8 @@
 
 import { defineTask } from 'nitro/task'
 
-import { runIntegrityJob } from '@ehrbase-ui/audit/server'
-import { withTaskLock } from '@ehrbase-ui/audit/server'
+import { runIntegrityJob } from '@/server/audit/runtime'
+import { withTaskLock } from '@/server/audit/runtime'
 
 // Lock TTL = job-duration × 1.5. The verifier reads every audit row and walks
 // the chain in-memory; budgeting 10 min is generous for a v1.0 audit volume.
