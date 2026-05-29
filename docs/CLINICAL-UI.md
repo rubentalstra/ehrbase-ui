@@ -29,7 +29,7 @@ openEHR is the open standard that defines _how clinical data is modelled, stored
 
 A `COMPOSITION` references its subject via a `PARTY_PROXY` / `PARTY_SELF` / `PARTY_IDENTIFIED` — these are **references**, not the demographic data itself. The data lives in the demographic store.
 
-**EHRbase implements only the EHR side** (REST API: EHR / Query / Definition; no `/demographic/*`). Per ADR-0023 we **build the openEHR-spec Demographic service ourselves** as a module in this app (own Postgres schema + REST surface — see M7 in the implementation checklist).
+**EHRbase implements only the EHR side** (REST API: EHR / Query / Definition; no `/demographic/*`). Per ADR-0023 + [ADR-0031](adr/0031-pluggable-demographic-provider.md) we ship a **pluggable demographic provider** — the built-in adapter (`packages/demographic-core`) is the v1.0 default openEHR-spec service (own Postgres schema + REST surface); deployments with an existing PMI plug in the FHIR R4 adapter (`packages/demographic-adapter-fhir`) via the `DEMOGRAPHIC_PROVIDER` env var with no code change. HL7 v2 ADT + IHE PDQ adapter slots are reserved for v1.x. See M7 in the implementation checklist.
 
 ### The six RM entry classes
 
@@ -79,7 +79,7 @@ openEHR has a formal CDS spec: **GDL2** (`/releases/CDS/Release-2.0.1`). Rules b
 
 ### Task Planning — care plans + order sets
 
-openEHR's **PROC** component (`/releases/PROC/Release-1.7.0`) defines `WORK_PLAN` / `TASK_PLAN` / `PLAN_ITEM`. Each can reference a `care_pathway` / `care_plan` / `guideline` / `best_practice_ref` / `order_set_type` / `order_set_id`. Per ADR-0025 this is the canonical care-plan + order-set model in v1.0 (M11 orders, M13 care plan).
+openEHR's **PROC** component (`/releases/PROC/Release-1.7.0`) defines `WORK_PLAN` / `TASK_PLAN` / `PLAN_ITEM`. Each can reference a `care_pathway` / `care_plan` / `guideline` / `best_practice_ref` / `order_set_type` / `order_set_id`. Per ADR-0025 this is the canonical care-plan + order-set model in v1.0 (M13 orders, M14 care plan).
 
 ---
 
@@ -89,19 +89,19 @@ Five scenarios that drove milestone priority + which surfaces ship in v1.0.
 
 ### 3.1 Ward physician — morning round
 
-> Dr Iris opens the EPD at the start of her morning round. From her **physician home** she sees today's ward patients with critical-flag highlighting. She clicks the first patient → the **patient banner** loads (name + DOB + allergies summary + active-problems summary). She skims the **problem list** (M11), checks **vitals from the last 24 h** (M9 flowsheet), reviews **overnight labs** (M9 timeline) flagged abnormal. She opens the **clinical notes** tab (M10), starts a SOAP-structured progress note. Mid-note, she places a **lab order** (M12) — the CDS rule "elevated creatinine + nephrotoxic drug active" triggers and she adjusts. Note saved + signed. She moves to the next patient.
+> Dr Iris opens the EPD at the start of her morning round. From her **physician home** she sees today's ward patients with critical-flag highlighting. She clicks the first patient → the **patient banner** loads (name + DOB + allergies summary + active-problems summary). She skims the **problem list** (M12), checks **vitals from the last 24 h** (M10 flowsheet), reviews **overnight labs** (M10 timeline) flagged abnormal. She opens the **clinical notes** tab (M11), starts a SOAP-structured progress note. Mid-note, she places a **lab order** (M13) — the CDS rule (authored + evaluated by M9) "elevated creatinine + nephrotoxic drug active" triggers and she adjusts. Note saved + signed. She moves to the next patient.
 
 ### 3.2 Bedside nurse — vitals + medication round
 
-> Nurse Pieter starts his morning round at workstation-on-wheels. **Nurse home** lists his patients with overdue care-plan tasks highlighted. First patient: record morning vitals via **vitals quick-entry** (M9). Walk to next bed: administer the 09:00 medication → **medication administration** (M11) — the system confirms the right drug, dose, time; the **CDS** allergy check has already cleared at order-write time so no alert fires. Closes the **care-plan task** (M13) "vitals check 09:00". Throughout the round he sees the **patient banner** at the top of every screen with critical allergies in red.
+> Nurse Pieter starts his morning round at workstation-on-wheels. **Nurse home** lists his patients with overdue care-plan tasks highlighted. First patient: record morning vitals via **vitals quick-entry** (M10). Walk to next bed: administer the 09:00 medication → **medication administration** (M12) — the system confirms the right drug, dose, time; the **CDS** (M9 runtime) allergy check has already cleared at order-write time so no alert fires. Closes the **care-plan task** (M14) "vitals check 09:00". Throughout the round he sees the **patient banner** at the top of every screen with critical allergies in red.
 
 ### 3.3 GP outpatient consultation
 
-> Dr Anna's day is patient by patient. **GP home** = today's appointment list (read from a v1.x scheduling system, surfaced as a configured external feed). She clicks Mr Jansen → banner + problem list. She opens the **incoming referral letter** (M16 documents). Reads it. Opens the **encounter note** (M10), structured around the referral question. She writes a brief assessment. Updates the **problem list** (M11) with a new diagnosis. Sends a **referral letter** (M16) back to the referrer + an outgoing one to a specialist.
+> Dr Anna's day is patient by patient. **GP home** = today's appointment list (read from a v1.x scheduling system, surfaced as a configured external feed). She clicks Mr Jansen → banner + problem list. She opens the **incoming referral letter** (M15 documents). Reads it. Opens the **encounter note** (M11), structured around the referral question. She writes a brief assessment. Updates the **problem list** (M12) with a new diagnosis. Sends a **referral letter** (M15) back to the referrer + an outgoing one to a specialist.
 
 ### 3.4 Audit reviewer — quarterly sample-of-60
 
-> Compliance officer Sven opens the **audit-review dashboard** (M15). The sample-of-60 algorithm has pre-selected 60 random PHI-access events from the last quarter. He drills into the first: "user X read patient Y composition Z, purpose TREATMENT, lawful basis 9(2)(h)". He cross-checks user X had a care relationship with patient Y at the time. Marks **Reviewed: OK**. Repeats for the 59 others. The dashboard tracks his review status; the system audits _his_ access too (meta-audit).
+> Compliance officer Sven opens the **audit-review dashboard** (M17). The sample-of-60 algorithm has pre-selected 60 random PHI-access events from the last quarter. He drills into the first: "user X read patient Y composition Z, purpose TREATMENT, lawful basis 9(2)(h)". He cross-checks user X had a care relationship with patient Y at the time. Marks **Reviewed: OK**. Repeats for the 59 others. The dashboard tracks his review status; the system audits _his_ access too (meta-audit).
 
 ### 3.5 Patient — exercising Article 15
 
@@ -127,28 +127,29 @@ Five scenarios that drove milestone priority + which surfaces ship in v1.0.
 ├── patients
 │   ├── search                     # global patient search (M8)
 │   ├── recent                     # recently viewed (M8)
+│   ├── admin/patients             # FULL demographic admin UI (M7)
 │   └── $patientId/
 │       ├── (banner everywhere)    # cross-cutting; always visible
 │       ├── encounters             # encounter / visit list (M8)
-│       ├── problems               # problem list + allergies + immunisations (M11)
-│       ├── medications            # active meds + admin history (M11)
-│       ├── vitals                 # flowsheet + charts (M9)
-│       ├── labs                   # results timeline (M9)
-│       ├── notes                  # clinical notes (M10)
-│       ├── orders                 # CPOE — meds / labs / imaging (M12)
-│       ├── care-plan              # tasks + goals (M13)
-│       └── documents              # discharge / referrals / PDF / DICOM-list (M16)
+│       ├── problems               # problem list + allergies + immunisations (M12)
+│       ├── medications            # active meds + admin history (M12)
+│       ├── vitals                 # flowsheet + charts (M10)
+│       ├── labs                   # results timeline (M10)
+│       ├── notes                  # clinical notes (M11)
+│       ├── orders                 # CPOE — meds / labs / imaging (M13)
+│       ├── care-plan              # tasks + goals (M14)
+│       └── documents              # discharge / referrals / PDF / DICOM-list (M15)
 │
-├── inbox                          # messages + lab alerts + referrals incoming (M17)
-├── aql                            # power-user query editor (M14)
+├── inbox                          # messages + lab alerts + referrals incoming (M18)
+├── aql                            # power-user query editor (M16)
 │
 ├── me                             # current user account
 │   └── access-log                 # Article 15 patient-facing audit log
 │
 └── admin/                         # admin role only
-    ├── users                      # Keycloak admin proxy (M15)
-    ├── audit                      # sample-of-60 review dashboard (M15)
-    └── cds-rules                  # CDS rule authoring (M15)
+    ├── users                      # Keycloak admin proxy (M17)
+    ├── audit                      # sample-of-60 review dashboard (M17)
+    └── cds-rules                  # CDS rule authoring (M9)
 ```
 
 URL pattern is **symmetric per locale** — `/en/...`, `/nl/...`, `/de/...` etc. (per the M3 i18n setup; ADR-0014).
@@ -191,7 +192,7 @@ Five v1.0 roles. First-login picker per ADR-0017; switchable via the user menu t
 
 ## 6. Patient header model
 
-The banner that appears on every patient sub-route. Reads from the M7 demographic service + EHR `ehr_status` + a small set of summary AQL queries.
+The banner that appears on every patient sub-route. Reads from the M7 demographic **provider** (built-in or FHIR R4 per ADR-0031) + EHR `ehr_status` + a small set of summary AQL queries.
 
 | Field                                   | Source                                                                                        | Fallback                                                          |
 | --------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -232,7 +233,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 
 - **Purpose:** find a patient by name, DOB, MRN, or pseudonymised national-ID prefix.
 - **Roles:** physician, nurse, admin.
-- **openEHR:** queries the M7 Demographic Service (the EHR has no name to search). Cross-checks an EHR exists via `/ehr` lookup by `subject.external_ref`.
+- **openEHR:** queries the M7 demographic **provider** (the EHR has no name to search). Cross-checks an EHR exists via `/ehr` lookup by `subject.external_ref`.
 - **Components:** `Command` (cmdk), `Input`, `DataTable`.
 - **NEN-7513 audit:** `QUERY` on `PARTY`, purpose `TREATMENT`.
 - **CDS:** none.
@@ -262,7 +263,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/encounters`.
 - **Scope:** v1.0.
 
-### 7.5 Vitals flowsheet — M9
+### 7.5 Vitals flowsheet — M10
 
 - **Purpose:** time × vital-sign grid + trend lines.
 - **Roles:** physician, nurse (write); all clinical (read).
@@ -287,7 +288,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/vitals`.
 - **Scope:** v1.0.
 
-### 7.6 Lab results timeline — M9
+### 7.6 Lab results timeline — M10
 
 - **Purpose:** chronological lab results with abnormal-flag highlighting + trend.
 - **Roles:** physician (write/sign), nurse (read), all clinical (read).
@@ -297,11 +298,11 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **AQL:** `labs_recent_results`, `labs_results_by_loinc`.
 - **Components:** `DataTable`, Recharts `LineChart`, abnormal-flag `Badge`.
 - **NEN-7513 audit:** `READ` on `OBSERVATION`.
-- **CDS:** "elevated creatinine + nephrotoxic drug active" rule cross-references M11 active meds.
+- **CDS:** "elevated creatinine + nephrotoxic drug active" rule cross-references M12 active meds (rule defined + evaluated by M9 runtime).
 - **Route:** `/_authed/patients/$patientId/labs`.
 - **Scope:** v1.0.
 
-### 7.7 Clinical notes — M10
+### 7.7 Clinical notes — M11
 
 - **Purpose:** structured + free-text encounter notes (SOAP / narrative).
 - **Roles:** physician, nurse (with role-specific note types).
@@ -317,7 +318,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/notes`.
 - **Scope:** v1.0.
 
-### 7.8 Problem list — M11
+### 7.8 Problem list — M12
 
 - **Purpose:** active + resolved problems / diagnoses.
 - **Roles:** physician (write), all clinical (read).
@@ -330,7 +331,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/problems` (combined view with §7.9 + §7.10 + §7.11).
 - **Scope:** v1.0.
 
-### 7.9 Medications (active list) — M11
+### 7.9 Medications (active list) — M12
 
 - **Purpose:** active medication orders + administration history.
 - **Roles:** physician (prescribe), nurse (administer + read), all clinical (read).
@@ -343,7 +344,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/medications`.
 - **Scope:** v1.0.
 
-### 7.10 Allergies — M11
+### 7.10 Allergies — M12
 
 - **Purpose:** active allergy + adverse-reaction list with severity.
 - **Roles:** physician (write), nurse (write — for new-detected reactions), all clinical (read).
@@ -356,7 +357,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** combined with problems at `/_authed/patients/$patientId/problems`.
 - **Scope:** v1.0.
 
-### 7.11 Immunisations — M11
+### 7.11 Immunisations — M12
 
 - **Purpose:** vaccination history.
 - **Roles:** physician + nurse (write); all clinical (read).
@@ -368,7 +369,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/problems` (combined tab).
 - **Scope:** v1.0.
 
-### 7.12 Orders / CPOE — M12
+### 7.12 Orders / CPOE — M13
 
 - **Purpose:** prescribe medications, request labs, request imaging.
 - **Roles:** physician (write), nurse (read + flag for clarification).
@@ -388,7 +389,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/orders`.
 - **Scope:** v1.0.
 
-### 7.13 Care plan + tasks — M13
+### 7.13 Care plan + tasks — M14
 
 - **Purpose:** interdisciplinary tasks, goals, outcome measures.
 - **Roles:** physician + nurse + care-team members.
@@ -400,7 +401,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/care-plan`.
 - **Scope:** v1.0.
 
-### 7.14 AQL editor + result tables — M14
+### 7.14 AQL editor + result tables — M16
 
 - **Purpose:** power-user surface for ad-hoc queries.
 - **Roles:** researcher, audit-reviewer (with pseudonymised dataset).
@@ -412,7 +413,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/aql`.
 - **Scope:** v1.0.
 
-### 7.15 Admin — user / role management — M15
+### 7.15 Admin — user / role management — M17
 
 - **Purpose:** create users, assign roles, configure clinics / departments.
 - **Roles:** admin only.
@@ -422,7 +423,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/admin/users`.
 - **Scope:** v1.0.
 
-### 7.16 Audit-review dashboard — M15
+### 7.16 Audit-review dashboard — M17
 
 - **Purpose:** NEN-7513 sample-of-60 quarterly review (cited as the EU-baseline review SLA per architecture.md §14.13).
 - **Roles:** audit-reviewer.
@@ -432,7 +433,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/admin/audit`.
 - **Scope:** v1.0.
 
-### 7.17 CDS rule authoring — M15
+### 7.17 CDS rule authoring — M9
 
 - **Purpose:** view + author CDS rules in the GDL2-aligned internal format.
 - **Roles:** admin (with CDS-author sub-role).
@@ -441,7 +442,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/admin/cds-rules`.
 - **Scope:** v1.0.
 
-### 7.18 Discharge summary — M16
+### 7.18 Discharge summary — M15
 
 - **Purpose:** structured discharge document; assembles problems / meds / instructions / follow-up.
 - **Roles:** physician.
@@ -454,7 +455,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/documents/discharge`.
 - **Scope:** v1.0.
 
-### 7.19 Referrals — M16
+### 7.19 Referrals — M15
 
 - **Purpose:** incoming + outgoing referral letters.
 - **Roles:** physician (write), all clinical (read).
@@ -465,7 +466,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/documents/referrals`.
 - **Scope:** v1.0.
 
-### 7.20 Document viewer (PDF + image + DICOM-list) — M16
+### 7.20 Document viewer (PDF + image + DICOM-list) — M15
 
 - **Purpose:** display attached documents; list DICOM studies with external-viewer link.
 - **Roles:** all clinical.
@@ -475,7 +476,7 @@ National overrides (per ADR-0016, decision #11): a surface lists the internation
 - **Route:** `/_authed/patients/$patientId/documents`.
 - **Scope:** v1.0; embedded DICOM viewer is v1.x.
 
-### 7.21 Inbox / messaging — M17
+### 7.21 Inbox / messaging — M18
 
 - **Purpose:** in-app inbox for lab-result alerts, referral responses, internal messages.
 - **Roles:** all clinical.

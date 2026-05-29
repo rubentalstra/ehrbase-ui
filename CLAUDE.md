@@ -13,11 +13,13 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 5. **Pin every dependency exactly** in `package.json`. No `^`, no `~`. Same for GitHub Actions (SHA-pin, not tag) and Docker images (no `:latest`) (§17, §20.1, §5.12).
 6. **shadcn/ui registry first.** When a UI primitive is needed, check the official shadcn/ui registry before writing custom code (§6). Custom UI primitives are reserved for openEHR-specific concerns (dynamic form field renderer, composition tree viewer, AQL editor wrapper, vitals charts).
 7. **`.server.ts` suffix** for files that must never reach the client bundle (§17 Conventions).
-8. **Server functions live in `src/server/functions/<feature>.functions.ts`** (§17 Conventions).
+8. **Server functions live in `apps/web/src/server/functions/<feature>.functions.ts`** (§17 Conventions; ADR-0030 monorepo layout).
 9. **Never add a `Co-Authored-By:` trailer to git commits.** No "Co-Authored-By: Claude …", no other AI attribution, no automatic co-authors of any kind. Commits are authored by the human committer only. Applies to every commit Claude creates on this repo, on every branch, in every context.
 10. **Every PHI-touching UI component cites its CLINICAL-UI.md screen entry + openEHR archetype anchor in its file header.** Format: a leading comment block referencing `docs/CLINICAL-UI.md §7.<N>` and the CKM archetype ID(s) the component reads/writes. This is the readable cross-link between code and the openEHR standard. The `clinical-ui-reviewer` sub-agent enforces.
 11. **Every UI write to EHRbase emits BOTH layers of audit.** (a) the openEHR `CONTRIBUTION` (data lineage — set the `openEHR-COMMITTER-*` + `openEHR-AUDIT-CHANGE-TYPE` + `openEHR-AUDIT-DESCRIPTION` headers on the proxy call); (b) the NEN-7513 `logAudit(...)` call (access trail). Skipping either is non-compliant. ADR-0024 documents the relationship.
-12. **No demographic data inside compositions.** The subject of every composition is always a `PARTY_IDENTIFIED` reference with `external_ref.id.namespace + value` pointing into the M7 demographic service. Never embed name / DOB / national ID inline in an EHR composition — that violates the openEHR EHR/Demographic separation (BASE architecture overview). ADR-0023 commits us to the separate demographic service; the `openehr-archetype-reviewer` sub-agent enforces.
+12. **No demographic data inside compositions.** The subject of every composition is always a `PARTY_IDENTIFIED` reference with `external_ref.id.namespace + value` pointing into the M7 demographic provider. Never embed name / DOB / national ID inline in an EHR composition — that violates the openEHR EHR/Demographic separation (BASE architecture overview). ADR-0023 / ADR-0031 (pluggable provider — built-in or FHIR R4) commit us to a demographic provider behind a stable interface; the `openehr-archetype-reviewer` sub-agent enforces.
+
+13. **Build features end-to-end in one milestone.** Do not split a capability into "minimal scaffold now / full UI later" across two milestones — consolidate into the milestone that owns the capability. The cost of touching the same surface twice (re-review, re-audit, re-test) exceeds the cost of a slightly larger milestone PR. Exception: a capability that has two genuinely separated consumers in time (e.g. M3 access-log _route_ shipped without data → M4 governance fills it). Mark these on the checklist as `(fed by Mx)`, never as "minimal now, full later".
 
 ## Versions (verified 2026-05-26 — drift tracked in `docs/REFERENCES.md`)
 
@@ -35,10 +37,23 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 ## Where decisions live
 
-- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting.
+- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting. Cross-cutting structural ADRs that constrain everything M5+: ADR-0030 (monorepo: Turborepo + pnpm workspaces), ADR-0031 (pluggable demographic provider, supersedes ADR-0023 in shape), ADR-0032 (openEHR per-spec package mapping + type-generation), ADR-0033 (FHIR R4 adapter scope), ADR-0034 (pluggable terminology provider).
 - **Runbooks** in `docs/runbooks/` — operational procedures (breach response, audit-integrity check, key rotation, DR drill, signature verification).
 - **Compliance templates** in `docs/compliance/` — DPIA (§14.10), DPA (§14.1), RoPA (§14.1).
 - **Accessibility manual-test reports** in `docs/accessibility/manual-test-YYYY-MM-DD.md` — one per release (§12.7).
+
+## Monorepo layout (ADR-0030)
+
+Workspace root is the repo root. Code lives in:
+
+- **`apps/web/`** — the TanStack Start app. App-internal routes, components, server functions, and BFF live here. `apps/web/src/server/functions/` is the server-function location (Inviolable rule 8).
+- **`packages/openehr-*`** — per-openEHR-spec libraries (base, rm, am, aql, proc, cds, term, its-rest, flat, web-template). Types generated from openEHR JSON Schemas per ADR-0032. No third-party openEHR SDKs on the dependency graph.
+- **`packages/demographic-*`** — pluggable demographic provider (`demographic-core` built-in + `demographic-adapter-fhir`; HL7v2/PDQ slots reserved for v1.x). ADR-0031.
+- **`packages/term-*`** — pluggable terminology provider (`term-core` interface + `term-adapter-snowstorm` default + `term-adapter-generic-fhir`). ADR-0034.
+- **`packages/{ui,audit,auth,observability,db-platform,i18n,http-bff,valkey}`** — cross-cutting platform packages.
+- **`packages/config-{tsconfig,eslint,tailwind}`** — shared configs every package extends.
+
+Package names: `@ehrbase-ui/<slug>` (private; never published). Workspace deps: `workspace:*`. Task graph: `pnpm turbo run <build|typecheck|lint|test|e2e|dev>`.
 
 ## Sub-agents available
 
