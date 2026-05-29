@@ -1,0 +1,16 @@
+{
+  "name": "@ehrbase-ui/openehr-cds",
+  "version": "0.0.0",
+  "private": true,
+  "description": "openEHR CDS 2.0.1 — GDL2-aligned rule model. Per ADR-0021 we ship the JSON-aligned subset, not full GDL2 semantics. Consumed by M9 CDS infrastructure.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@ehrbase-ui/openehr-base",
+  "version": "0.0.0",
+  "private": true,
+  "description": "openEHR BASE 1.2.0 — LOCATABLE_REF + identifiers + foundational classes. Types generated from openEHR/specifications-ITS-JSON per ADR-0032. Empty until M6 populates.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*"
+  }
+}
