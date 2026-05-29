@@ -1,0 +1,19 @@
+{
+  "extends": "@ehrbase-ui/config-tsconfig/react.json",
+  "include": ["**/*.ts", "**/*.tsx", "src/paraglide/**/*.js", "vite.config.ts"],
+  "exclude": [
+    "node_modules",
+    ".output",
+    ".nitro",
+    "dist",
+    "storybook-static",
+    "eslint.config.js",
+    "prettier.config.js"
+  ],
+  "compilerOptions": {
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}

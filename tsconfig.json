@@ -1,46 +1,5 @@
 {
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "src/paraglide/**/*.js",
-    "vite.config.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".output",
-    ".nitro",
-    "dist",
-    "storybook-static",
-    "eslint.config.js",
-    "prettier.config.js"
-  ],
-  "compilerOptions": {
-    "target": "ES2022",
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "node"],
-
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-
-    "allowImportingTsExtensions": true,
-    "allowJs": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "resolveJsonModule": true,
-
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "skipLibCheck": true
-  }
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": [],
+  "references": [{ "path": "./apps/web" }]
 }

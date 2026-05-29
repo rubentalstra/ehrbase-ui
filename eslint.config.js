@@ -26,31 +26,41 @@ import globals from 'globals'
 export default defineConfig([
   globalIgnores([
     'node_modules/**',
-    '.output/**',
-    '.nitro/**',
-    'dist/**',
-    'build/**',
-    'coverage/**',
-    'playwright-report/**',
-    'storybook-static/**',
-    'src/paraglide/**',
-    'src/routeTree.gen.ts',
-    'src/lib/api/ehrbase-generated/**',
-    '.storybook/**',
+    '**/node_modules/**',
+    '**/.output/**',
+    '**/.nitro/**',
+    '**/dist/**',
+    '**/build/**',
+    '**/coverage/**',
+    '**/playwright-report/**',
+    '**/storybook-static/**',
+    'apps/web/src/paraglide/**',
+    'apps/web/src/routeTree.gen.ts',
+    'apps/web/src/lib/api/ehrbase-generated/**',
+    'apps/web/.storybook/**',
     // Vendored shadcn/ui primitives — copied verbatim via the shadcn CLI
     // (docs/architecture.md §6) and not our code to maintain. Excluded from
     // ESLint entirely (and from Prettier, see .prettierignore) so a routine
     // `shadcn add` doesn't fail the strict src/** rules. tsc still typechecks
-    // them via tsconfig's `src/**` — they remain type-valid.
-    'src/components/ui/**',
-    'src/hooks/use-mobile.ts',
+    // them via the app's tsconfig — they remain type-valid.
+    'apps/web/src/components/ui/**',
+    'apps/web/src/hooks/use-mobile.ts',
+    // Workspace package generated outputs / vendored content can extend the
+    // ignore list here when packages start owning code (Phase 0 + later).
+    'packages/*/dist/**',
+    'packages/*/.tsbuildinfo',
   ]),
 
   // ───────────────────────────────────────────────────────────────────────
-  // Source code (src/, e2e/) — TS, with type information.
+  // Source code (apps/web/src/, apps/web/e2e/, packages/*/src/) — TS, with
+  // type information.
   // ───────────────────────────────────────────────────────────────────────
   {
-    files: ['src/**/*.{ts,tsx}', 'e2e/**/*.ts'],
+    files: [
+      'apps/web/src/**/*.{ts,tsx}',
+      'apps/web/e2e/**/*.ts',
+      'packages/*/src/**/*.{ts,tsx}',
+    ],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommendedTypeChecked,
@@ -155,7 +165,7 @@ export default defineConfig([
   // Tests can use any-type assertions.
   // ───────────────────────────────────────────────────────────────────────
   {
-    files: ['**/*.test.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}', 'e2e/**/*.ts'],
+    files: ['**/*.test.{ts,tsx}', '**/__tests__/**/*.{ts,tsx}', 'apps/web/e2e/**/*.ts'],
     rules: {
       '@typescript-eslint/consistent-type-assertions': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
