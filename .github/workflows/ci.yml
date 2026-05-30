@@ -192,6 +192,11 @@ jobs:
       AUDIT_PSEUDONYM_SECRET: dev-only-rotate-in-prod
       AUTH_DB_URL: postgres://auth_writer:auth_writer@localhost:5432/auth
       AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@localhost:5432/auth
+      # M7 demographic DB (ADR-0031) — created on fresh-volume boot by
+      # platform-db-init/demographic.sql; db:migrate now runs its config too.
+      DEMOGRAPHIC_PROVIDER: builtin
+      DEMOGRAPHIC_DB_URL: postgres://demographic_writer:demographic_writer@localhost:5432/demographic
+      DEMOGRAPHIC_DB_OWNER_URL: postgres://demographic_owner:demographic_owner@localhost:5432/demographic
       BETTER_AUTH_SECRET: dev-only-rotate-in-prod
       BETTER_AUTH_URL: http://localhost:3000
       SSO_KEYCLOAK_PROVIDER_ID: keycloak
@@ -233,7 +238,7 @@ jobs:
         # e2e/auth.spec.ts beforeAll races config application and can see a
         # fresh Keycloak without the realm/clients/demo identities. ADR-0036.
         run: docker compose run --rm keycloak-config
-      - name: Apply DB migrations (audit + auth)
+      - name: Apply DB migrations (audit + auth + demographic)
         run: pnpm db:migrate
       - name: Install Playwright Chromium
         run: pnpm --filter @ehrbase-ui/web exec playwright install --with-deps chromium
