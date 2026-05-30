@@ -100,6 +100,12 @@ importers:
       '@inlang/paraglide-js':
         specifier: 2.18.1
         version: 2.18.1(typescript@6.0.3)
+      '@noble/ciphers':
+        specifier: 2.2.0
+        version: 2.2.0
+      '@noble/hashes':
+        specifier: 2.2.0
+        version: 2.2.0
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
