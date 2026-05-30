@@ -1,0 +1,7 @@
+{
+  "component": "TERM",
+  "specVersion": "3.0.0",
+  "schemaSource": "openEHR/terminology",
+  "schemaRef": "openEHR_RM/en/openehr_terminology.xml",
+  "schemaCommit": "05b10c619e64bc5abc3893f5872040c893cc5341"
+}
