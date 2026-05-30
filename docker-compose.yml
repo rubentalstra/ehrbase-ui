@@ -190,6 +190,27 @@ services:
       timeout: 3s
       retries: 5
 
+  # Virus scanning for DV_MULTIMEDIA uploads (§7.x). Runs as a SIDECAR (not in
+  # our process) so ClamAV's GPLv2 stays well-fenced from the Apache-2.0 app.
+  # clamd listens on TCP 3310 (INSTREAM); freshclam keeps signatures current.
+  # The UI gates on service_started (uploads are scanned lazily at request time,
+  # and the first-boot signature load takes a few minutes via freshclam).
+  clamav:
+    image: clamav/clamav:1.4.3
+    restart: unless-stopped
+    volumes:
+      - clamav_data:/var/lib/clamav
+    # Exposed for host-side `pnpm dev` upload scanning. Not exposed in production.
+    ports: ['3310:3310']
+    networks: [ehrbase-net]
+    healthcheck:
+      # clamdcheck.sh PINGs clamd; only healthy once signatures are loaded.
+      test: ['CMD', 'clamdcheck.sh']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+
   # Audit-log cold-tier archive (M4 — ADR-0027). SeaweedFS is the open-source
   # dev default; AWS S3 is the production WORM-compliant alternative. The
   # warm Postgres tier (ADR-0013 trigger) is the AUTHORITATIVE immutability
@@ -389,6 +410,9 @@ services:
       valkey: { condition: service_healthy }
       platform-db: { condition: service_healthy }
       seaweedfs: { condition: service_healthy }
+      # Uploads are scanned lazily; don't block UI boot on the slow first-boot
+      # ClamAV signature load.
+      clamav: { condition: service_started }
       db-migrate: { condition: service_completed_successfully }
     # The Better Auth SSO plugin uses ONE issuer URL per provider — both the
     # server-side OIDC discovery fetch AND the browser redirect target use
@@ -432,6 +456,9 @@ services:
       SSO_KEYCLOAK_CLIENT_ID: ehrbase-ui
       SSO_KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
       VALKEY_URL: redis://valkey:6379
+      # ClamAV sidecar for DV_MULTIMEDIA upload scanning (§7.x).
+      CLAMAV_HOST: clamav
+      CLAMAV_PORT: '3310'
       # Runtime audit writes use the least-privilege audit_writer role (INSERT+
       # SELECT only). Migrations use the owner URL (see .env.example).
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
@@ -472,6 +499,7 @@ volumes:
   ehrbase_pg:
   platform_pg:
   valkey_data:
+  clamav_data:
   audit_logs:
   seaweedfs_data:
   tempo_data:

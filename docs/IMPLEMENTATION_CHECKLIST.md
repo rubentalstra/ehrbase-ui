@@ -159,16 +159,18 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 
 > The form-rendering substrate every clinical write surface (M10–M15) depends on. Lands across `packages/openehr-{base,rm,its-rest,flat,web-template}` + `packages/ui/src/components/openehr/*` + app-internal `apps/web/src/lib/openehr/*`.
 
-- [ ] Web-template fetch + cache (per archetype-catalogue ADR-0016) — §2, §7
-- [ ] Zod schema generator from web template — §7 Validation
-- [ ] `FieldRenderer` (rmType → shadcn map) — §7
-- [ ] `ArrayFieldRenderer` (`useFieldArray` cardinality) — §7
-- [ ] FLAT converter (write); STRUCTURED converter (read); CANONICAL converter (export) — `packages/openehr-flat`
-- [ ] `DV_MULTIMEDIA` upload + ClamAV sidecar (`clamav/clamav:1.5-debian`) — §7.x file uploads
-- [ ] Optimistic concurrency (If-Match ETag) + side-by-side diff modal — §7.x concurrent edits
-- [ ] Autosave drafts → encrypted Valkey, 24-hour TTL — §7.x autosave
-- [ ] `CompositionViewer` (STRUCTURED read-back) — §6
-- [ ] CONTRIBUTION header population on every write (`openEHR-COMMITTER-NAME`, `-ID`, `-CHANGE-TYPE`, `-DESCRIPTION`) — ADR-0024
+**Server-integration layer (Tranche 1 — done 2026-05-30, branch `feat/openehr-server-integration`).** The §7 server half — wires `openehr-{web-template,flat,rm,its-rest}` into `apps/web/src/server`. EHRbase 2.31 FLAT contract empirically verified live (`scripts/dev/ehrbase-composition-probe.sh`): write = `POST/PUT …/composition?format=FLAT&templateId=<id>`, `Content-Type: application/json` (NOT `application/openehr.wt.flat+json` → 415); version_uid in the ETag (full triple); committer derived from the forwarded token (ADR-0024 addendum). audit-compliance-reviewed (blocking findings fixed: CLINICAL_RECORD retention on writes, audit on validation/scan/decrypt failure paths, fail-closed scanner).
+
+- [x] Web-template fetch + cache (per archetype-catalogue ADR-0016) — §2, §7 — `template.{functions,server}.ts`, Valkey 1h TTL, `Accept: application/json`
+- [x] Zod schema generator from web template — §7 Validation — `generateFormSchema` (M5.5); re-validated server-side before every FLAT write
+- [ ] `FieldRenderer` (rmType → shadcn map) — §7 _(UI half)_
+- [ ] `ArrayFieldRenderer` (`useFieldArray` cardinality) — §7 _(UI half)_
+- [~] FLAT converter (write); STRUCTURED converter (read); CANONICAL converter (export) — `packages/openehr-flat` — FLAT write+read **wired** server-side (`composition.{functions,server}.ts` + `callEhrbase`); STRUCTURED/CANONICAL pending
+- [x] `DV_MULTIMEDIA` upload + ClamAV sidecar — §7.x file uploads — `upload.{functions,server}.ts` + `clamav/clamav:1.4.3` sidecar (clamd INSTREAM TCP), magic-byte sniff allow-list, JPEG EXIF strip, 50MB cap, inline-attachment descriptor (storage = EHRbase inline per §7.x, no object store)
+- [~] Optimistic concurrency (If-Match ETag) + side-by-side diff modal — §7.x concurrent edits — server half done (BFF + `callEhrbase` forward If-Match, map 412→typed CONFLICT with current etag); diff modal is UI
+- [x] Autosave drafts → encrypted Valkey, 24-hour TTL — §7.x autosave — `drafts.{functions,server}.ts` + AES-256-GCM (`field-encryption.server.ts`, HKDF from `AUDIT_PSEUDONYM_SECRET`)
+- [ ] `CompositionViewer` (STRUCTURED read-back) — §6 _(UI half)_
+- [~] CONTRIBUTION population on every write — ADR-0024 — **realization corrected (addendum 2026-05-30)**: EHRbase 2.31 derives the committer from the forwarded auth token, NOT from `openEHR-AUDIT_DETAILS`/`-COMMITTER-*` headers (it 415s/ignores them); richer audit_details via native `/contribution` deferred to M7
 - [ ] Terminology autocomplete wiring via `@ehrbase-ui/term-core` (ADR-0034) — pluggable Snowstorm default
 
 ## Milestone 7 — Demographic service (pluggable provider; ADR-0031)
