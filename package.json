@@ -36,6 +36,7 @@
     "db:generate": "pnpm --filter @ehrbase-ui/web db:generate",
     "db:migrate": "pnpm --filter @ehrbase-ui/web db:migrate",
     "db:studio:auth": "pnpm --filter @ehrbase-ui/web db:studio:auth",
+    "seed:templates": "bash scripts/dev/seed-templates.sh",
     "prepare": "husky"
   },
   "devDependencies": {
