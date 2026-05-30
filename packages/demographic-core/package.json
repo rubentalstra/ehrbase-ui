@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@ehrbase-ui/openehr-rm": "workspace:*",
+    "@noble/hashes": "2.2.0",
     "zod": "4.4.3"
   },
   "devDependencies": {

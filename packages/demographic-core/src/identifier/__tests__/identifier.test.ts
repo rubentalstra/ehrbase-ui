@@ -101,4 +101,12 @@ describe("pseudonymizeIdentifier", () => {
     expect(a).not.toContain("999990123");
     expect(a).not.toBe(pseudonymizeIdentifier("999990124"));
   });
+
+  it("matches the canonical HMAC-SHA256 vector (cross-store parity with §14.4)", () => {
+    // Pinned: @noble HMAC-SHA256 == OpenSSL HMAC-SHA256 for this (secret, value),
+    // so the demographic pseudonym equals the audit-DB pseudonym byte-for-byte.
+    expect(pseudonymizeIdentifier("999990123")).toBe(
+      "3bd201488fcdb18261ac01956e3d0367344f7ef290848da579cf5c358d101aaa",
+    );
+  });
 });
