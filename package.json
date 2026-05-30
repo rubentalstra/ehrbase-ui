@@ -35,7 +35,6 @@
     "regen:check": "turbo run regen:check",
     "db:generate": "pnpm --filter @ehrbase-ui/web db:generate",
     "db:migrate": "pnpm --filter @ehrbase-ui/web db:migrate",
-    "db:studio:audit": "pnpm --filter @ehrbase-ui/web db:studio:audit",
     "db:studio:auth": "pnpm --filter @ehrbase-ui/web db:studio:auth",
     "prepare": "husky"
   },

@@ -9,11 +9,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // execute() mocks are created via vi.hoisted so they keep a loose Mock type.
-// Going through vi.mocked(auditDb).execute would re-impose postgres's full
+// Going through vi.mocked(demographicDb).execute would re-impose postgres's full
 // RowList return type on mockResolvedValue — a shape the readiness probe never
 // inspects (it only awaits that the query resolves without throwing).
-const { auditExecuteMock, authExecuteMock } = vi.hoisted(() => ({
-  auditExecuteMock: vi.fn(),
+const { demographicExecuteMock, authExecuteMock } = vi.hoisted(() => ({
+  demographicExecuteMock: vi.fn(),
   authExecuteMock: vi.fn(),
 }))
 
@@ -21,13 +21,12 @@ vi.mock('@ehrbase-ui/valkey', () => ({
   valkey: { ping: vi.fn() },
 }))
 
-vi.mock('@/server/db/client', () => ({
-  auditDb: { execute: auditExecuteMock },
-  getAuditRetentionDb: vi.fn(),
-}))
-
 vi.mock('@/server/db/auth-client', () => ({
   authDb: { execute: authExecuteMock },
+}))
+
+vi.mock('@/server/db/demographic-client', () => ({
+  demographicDb: { execute: demographicExecuteMock },
 }))
 
 const fetchMock = vi.fn<typeof fetch>()
@@ -54,7 +53,7 @@ function setUpHappyPath() {
   process.env.KEYCLOAK_INTERNAL_ISSUER_URL =
     'http://keycloak:8080/realms/ehrbase'
   valkeyMock.ping.mockResolvedValue('PONG')
-  auditExecuteMock.mockResolvedValue(undefined)
+  demographicExecuteMock.mockResolvedValue(undefined)
   authExecuteMock.mockResolvedValue(undefined)
   fetchMock.mockResolvedValue(new Response(null, { status: 200 }))
 }
@@ -91,8 +90,8 @@ describe('checkReadiness — §13.4 readiness aggregator', () => {
       valkey: 'ok',
       ehrbase: 'ok',
       keycloak: 'ok',
-      audit_db: 'ok',
       auth_db: 'ok',
+      demographic_db: 'ok',
     })
   })
 
@@ -113,17 +112,17 @@ describe('checkReadiness — §13.4 readiness aggregator', () => {
     expect(raw).not.toContain('BSN=123')
   })
 
-  it('returns 503 when audit DB fails', async () => {
+  it('returns 503 when demographic DB fails', async () => {
     setUpHappyPath()
-    auditExecuteMock.mockRejectedValueOnce(
+    demographicExecuteMock.mockRejectedValueOnce(
       new Error(
-        'connection refused to platform-db:5432/audit (password=plaintext-leak)',
+        'connection refused to platform-db:5432/demographic (password=plaintext-leak)',
       ),
     )
     const res = await checkReadiness()
     expect(res.status).toBe(503)
     const body = await readBody(res)
-    expect(body.checks.audit_db).toBe('fail')
+    expect(body.checks.demographic_db).toBe('fail')
     expect(body.checks.auth_db).toBe('ok')
     const raw = JSON.stringify(body)
     expect(raw).not.toContain('plaintext-leak')

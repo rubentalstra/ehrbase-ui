@@ -43,7 +43,7 @@ WORKDIR /app/apps/web
 # base. drizzle-kit only needs network access to platform-db + read of the
 # migration SQL files (already owned by uid 1000 from the COPY above).
 USER node
-# One command runs both audit + auth migrations sequentially (see the
+# One command runs the auth + demographic migrations sequentially (see the
 # db:migrate script in apps/web/package.json); either failing aborts the up.
 CMD ["pnpm", "run", "db:migrate"]
 
@@ -56,13 +56,6 @@ ENV NODE_ENV=production
 RUN apk add --no-cache curl tini && \
     addgroup -S -g 1001 nodejs && \
     adduser -S -u 1001 -G nodejs ehrbase-ui
-
-# Pre-create the audit-log mount point owned by the app user. The audit_logs
-# named volume mounts here; an empty named volume inherits the ownership of the
-# image directory it covers, so this is what makes the volume writable by the
-# non-root ehrbase-ui user (otherwise Docker creates it root-owned → EACCES on
-# the NDJSON audit sink). docs/architecture.md §14.3.
-RUN mkdir -p /var/log/ehrbase-ui && chown -R ehrbase-ui:nodejs /var/log/ehrbase-ui
 
 # Copy the Nitro build output + app manifest. Both live under apps/web/ in
 # the monorepo layout (ADR-0030).

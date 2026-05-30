@@ -10,7 +10,6 @@
 import {
   FileTextIcon,
   SearchIcon,
-  ScrollTextIcon,
   ShieldIcon,
   UserIcon,
   UsersIcon,
@@ -32,10 +31,7 @@ function navSections(roles: string[]): NavSection[] {
   const sections: NavSection[] = [
     {
       label: m.nav_section_workspace(),
-      items: [
-        { label: m.nav_account(), icon: UserIcon, to: '/me' },
-        { label: m.nav_access_log(), icon: ScrollTextIcon, to: '/me/access-log' },
-      ],
+      items: [{ label: m.nav_account(), icon: UserIcon, to: '/me' }],
     },
     {
       label: m.nav_section_clinical(),

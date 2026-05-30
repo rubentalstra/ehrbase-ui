@@ -11,7 +11,7 @@ import { deLocalizeUrl, localizeUrl } from '@ehrbase-ui/i18n/runtime'
 const ROOT = 'http://localhost:3000'
 
 describe('i18n URL rewrite (symmetric /en prefix)', () => {
-  const bare = ['/', '/me', '/me/access-log', '/accessibility']
+  const bare = ['/', '/me', '/accessibility']
 
   it('localizes a bare path to /en/{path}', () => {
     for (const path of bare) {

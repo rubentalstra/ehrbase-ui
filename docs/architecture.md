@@ -1354,7 +1354,13 @@ EN 301 549 and EAA both require a public accessibility statement. We ship `/acce
 
 ## 13. Observability — App Logs, Metrics, Tracing
 
-_(Section describes v1.0 target architecture.)_
+> **❌ REMOVED in the core-refocus (2026-05-30).** OTel tracing + Tempo/Loki/Prometheus/Grafana
+>
+> - the 4-layer PHI redaction were removed to focus on the openEHR + EHRbase UI core. **Kept:**
+>   `/api/health` + `/api/ready` probes and plain-stdout Pino app logging. This section is retained
+>   as the post-core restore reference. See CLAUDE.md → "Deferred (post-core)".
+
+_(Section describes the deferred v1.0 target architecture.)_
 
 ### 13.1 Logs (v1.0)
 
@@ -1477,6 +1483,13 @@ Metrics flow via the same OTel SDK → Collector → Prometheus (which now nativ
 ---
 
 ## 14. GDPR & EU Healthcare Audit Logging
+
+> **❌ REMOVED in the core-refocus (2026-05-30).** The NEN-7513 audit subsystem (`logAudit`,
+> hash chain, pseudonymization, retention/purge, cold-store WORM, integrity job) and the
+> compliance docs (DPIA/DPA/RoPA, breach runbook) were removed to focus the pre-v1.0 build on
+> the openEHR + EHRbase UI core. **Deferred, not cancelled** — this MUST be restored before any
+> deployment touches real patient data. This section is retained as the restore reference. See
+> CLAUDE.md → "Deferred (post-core)".
 
 > **This section is mandatory reading.** Every EU clinical deployment must satisfy **GDPR** in full and the national healthcare-records law at the deployment site. Non-compliance penalties under GDPR Art. 83 reach **€20M or 4 % of global turnover**. The Portuguese DPA fined Hospital do Barreiro €400 000 in 2018 specifically for inadequate access controls and missing audit trails — exactly the kind of failure this section exists to prevent. National laws (e.g. NL: Wabvpz + NEN 7510/7512/7513 + WGBO; DE: §203 StGB + Bundesärzteordnung; FR: PGSSI-S + Code de la santé publique L1110-4) add their own requirements on top — the architecture treats those as configuration over a common EU baseline, not as the baseline itself.
 

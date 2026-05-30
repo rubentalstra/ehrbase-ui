@@ -1,8 +1,8 @@
-// Full auth-flow E2E (docs/architecture.md §5, §14). These require the live
-// stack (Keycloak + Valkey + the audit database + the dev server wired to
-// them), so they are gated behind E2E_FULL_STACK=1. The CI integration job
-// brings the stack up, runs db:migrate, and sets that flag; the fast default
-// `pnpm e2e` skips them and runs only the public smoke spec.
+// Full auth-flow E2E (docs/architecture.md §5). These require the live stack
+// (Keycloak + Valkey + the dev server wired to them), so they are gated behind
+// E2E_FULL_STACK=1. The CI integration job brings the stack up, runs
+// db:migrate, and sets that flag; the fast default `pnpm e2e` skips them and
+// runs only the public smoke spec.
 //
 // The realm has brute-force + quick-login protection (bruteForceProtected),
 // which locks a user that logs in repeatedly in quick succession. So we run
@@ -12,7 +12,6 @@
 
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import postgres from 'postgres'
 
 import { AXE_RULES, AXE_TAGS } from './axe-config'
 
@@ -148,32 +147,6 @@ test.describe('Authenticated flow', () => {
     await expect(page.getByText(/emergency access granted/i)).toBeVisible()
   })
 
-  test('the audit log records the LOGIN with an intact hash chain', async () => {
-    const sql = postgres(
-      process.env.AUDIT_DB_URL ??
-        'postgres://audit_writer:audit_writer@localhost:5432/audit',
-    )
-    try {
-      const rows = await sql<
-        { action: string; hash: string; previous_hash: string | null }[]
-      >`SELECT action, hash, previous_hash FROM audit_events ORDER BY timestamp ASC`
-      expect(rows.length).toBeGreaterThan(0)
-      expect(rows.some((r) => r.action === 'LOGIN')).toBe(true)
-      // No row may have a null hash, and every non-genesis row must link to a
-      // hash that exists earlier in the chain.
-      const hashes = new Set<string>()
-      for (const row of rows) {
-        expect(row.hash).toBeTruthy()
-        if (row.previous_hash !== null) {
-          expect(hashes.has(row.previous_hash)).toBe(true)
-        }
-        hashes.add(row.hash)
-      }
-    } finally {
-      await sql.end()
-    }
-  })
-
   test('the workspace shell renders its landmarks', async () => {
     await gotoStable(page, '/me')
     await expect(page.getByRole('banner')).toBeVisible()
@@ -264,18 +237,6 @@ test.describe('Authenticated flow', () => {
     await expect(skip).toBeFocused()
     await page.keyboard.press('Enter')
     await expect(page.locator('#main-content')).toBeFocused()
-  })
-
-  test('/me/access-log renders and is axe-clean', async () => {
-    await gotoStable(page, '/me/access-log')
-    await expect(
-      page.getByRole('heading', { level: 1, name: /my access log/i }),
-    ).toBeVisible()
-    const results = await new AxeBuilder({ page })
-      .withTags([...AXE_TAGS])
-      .options({ rules: AXE_RULES })
-      .analyze()
-    expect(results.violations).toEqual([])
   })
 
   test('no CSP violations surfaced while using the shell', () => {

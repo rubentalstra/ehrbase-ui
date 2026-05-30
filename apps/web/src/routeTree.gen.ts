@@ -22,8 +22,6 @@ import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
 import { Route as ApiDemographicSplatRouteImport } from './routes/api/demographic/$'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
-import { Route as ApiAdminAuditTasksSplatRouteImport } from './routes/api/admin/audit/tasks/$'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -89,16 +87,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedMeAccessLogRoute = AuthedMeAccessLogRouteImport.update({
-  id: '/me_/access-log',
-  path: '/me/access-log',
-  getParentRoute: () => AuthedRouteRoute,
-} as any)
-const ApiAdminAuditTasksSplatRoute = ApiAdminAuditTasksSplatRouteImport.update({
-  id: '/api/admin/audit/tasks/$',
-  path: '/api/admin/audit/tasks/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -108,13 +96,11 @@ export interface FileRoutesByFullPath {
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,13 +110,11 @@ export interface FileRoutesByTo {
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,13 +126,11 @@ export interface FileRoutesById {
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,13 +142,11 @@ export interface FileRouteTypes {
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -176,13 +156,11 @@ export interface FileRouteTypes {
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
   id:
     | '__root__'
     | '/'
@@ -193,13 +171,11 @@ export interface FileRouteTypes {
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/_authed/me_/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,7 +191,6 @@ export interface RootRouteChildren {
   ApiDemographicSplatRoute: typeof ApiDemographicSplatRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
   ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
-  ApiAdminAuditTasksSplatRoute: typeof ApiAdminAuditTasksSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -311,31 +286,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/me_/access-log': {
-      id: '/_authed/me_/access-log'
-      path: '/me/access-log'
-      fullPath: '/me/access-log'
-      preLoaderRoute: typeof AuthedMeAccessLogRouteImport
-      parentRoute: typeof AuthedRouteRoute
-    }
-    '/api/admin/audit/tasks/$': {
-      id: '/api/admin/audit/tasks/$'
-      path: '/api/admin/audit/tasks/$'
-      fullPath: '/api/admin/audit/tasks/$'
-      preLoaderRoute: typeof ApiAdminAuditTasksSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 interface AuthedRouteRouteChildren {
   AuthedMeRoute: typeof AuthedMeRoute
-  AuthedMeAccessLogRoute: typeof AuthedMeAccessLogRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
   AuthedMeRoute: AuthedMeRoute,
-  AuthedMeAccessLogRoute: AuthedMeAccessLogRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
@@ -355,7 +314,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDemographicSplatRoute: ApiDemographicSplatRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
   ApiLogClientErrorRoute: ApiLogClientErrorRoute,
-  ApiAdminAuditTasksSplatRoute: ApiAdminAuditTasksSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

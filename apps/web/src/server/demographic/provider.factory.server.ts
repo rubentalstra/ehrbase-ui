@@ -3,77 +3,28 @@
 // the process. Wires the two app-side dependencies the adapter packages cannot
 // own themselves:
 //
-//   1. the REAL NEN-7513 AuditSink — maps every PartyAuditEvent to logAudit()
-//      with resourceType:'PARTY' + source.adapterName (rule 1; ADR-0024). This
-//      is the access-trail layer; the data-lineage layer is the VERSIONED_PARTY
-//      committer columns the adapter writes (the demographic analogue of an
-//      openEHR CONTRIBUTION — there is no EHRbase in this path).
+//   1. an AuditSink — currently a no-op (the NEN-7513 audit subsystem was
+//      removed; the port stays so the demographic-core contract is unchanged
+//      and a real sink can be re-attached later).
 //   2. the pseudonymiser — HMAC-SHA256 keyed by AUDIT_PSEUDONYM_SECRET, kept
-//      app-side so the secret never enters an adapter package (§14.4, ADR-0037).
+//      app-side so the secret never enters an adapter package (rule 12, ADR-0037).
 //
 // `.server.ts`: imports the DB client + the secret-reading pseudonymiser; never
 // reaches the client bundle.
 
 import { createFhirProvider } from '@ehrbase-ui/demographic-adapter-fhir'
-import {
-  type AuditSink,
-  type DemographicProvider,
-  type PartyAuditEvent,
-} from '@ehrbase-ui/demographic-core'
+import { type AuditSink, type DemographicProvider } from '@ehrbase-ui/demographic-core'
 import { createBuiltinProvider } from '@ehrbase-ui/demographic-core/builtin'
 import { pseudonymizeIdentifier } from '@ehrbase-ui/demographic-core/pseudonymize'
 
-import { logAudit } from '@/server/audit/runtime'
 import { demographicDb } from '@/server/db/demographic-client'
 
-// PartyAuditAction → NEN-7513 AuditAction. The union is a strict subset of the
-// audit enum, so this is a passthrough (kept explicit so a new verb is a
-// compile error, not a silent drop).
-function auditActionOf(action: PartyAuditEvent['action']): Parameters<typeof logAudit>[0]['action'] {
-  return action
-}
-
-// The audit `source_correlation_id` column is a UUID; a non-UUID value would
-// fail validation and SILENTLY DROP the event (rule 1). The REST route always
-// supplies crypto.randomUUID(), but defend here: pass the correlationId through
-// only when it is UUID-shaped, else omit so logAudit mints a fresh one.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
-function uuidOrUndefined(value: string | undefined): string | undefined {
-  return value && UUID_RE.test(value) ? value : undefined
-}
-
-/** The real AuditSink: every PARTY op lands a NEN-7513 row tagged with the adapter name. */
-function createLogAuditSink(adapterName: string): AuditSink {
-  return {
-    async record(event: PartyAuditEvent): Promise<void> {
-      await logAudit({
-        actor: {
-          userId: event.ctx.actor.userId,
-          username: event.ctx.actor.username,
-          displayName: event.ctx.actor.displayName,
-          roles: event.ctx.actor.roles,
-        },
-        action: auditActionOf(event.action),
-        target: {
-          resourceType: 'PARTY',
-          resourceId: event.partyId,
-          subjectIdHash: event.subjectIdHash,
-        },
-        // Administrative governance ops (merge) are SYSTEM_ADMIN, not treatment —
-        // keeps the RoPA processing-activity mapping accurate (§14.2).
-        purpose: event.action === 'ADMIN_CHANGE' ? 'SYSTEM_ADMIN' : 'TREATMENT',
-        outcome: event.outcome,
-        outcomeDetail: event.detail,
-        // Demographic data is patient-identifying PHI → long retention (§14.7).
-        retentionPolicy: 'CLINICAL_RECORD',
-        source: {
-          sessionId: event.ctx.sessionId,
-          correlationId: uuidOrUndefined(event.ctx.correlationId),
-          adapterName,
-        },
-      })
-    },
-  }
+// No-op AuditSink: satisfies the demographic-core port without emitting
+// anything. The access-trail layer was removed with the audit subsystem; the
+// data-lineage layer is still the VERSIONED_PARTY committer columns the adapter
+// writes.
+const noopAuditSink: AuditSink = {
+  record: async () => {},
 }
 
 function build(): DemographicProvider {
@@ -92,7 +43,7 @@ function build(): DemographicProvider {
     return createFhirProvider({
       baseUrl,
       fhirVersion,
-      audit: createLogAuditSink('fhir-r4'),
+      audit: noopAuditSink,
       pseudonymize: pseudonymizeIdentifier,
       allowWrites: process.env.DEMOGRAPHIC_FHIR_ALLOW_WRITES === 'true',
       token: process.env.DEMOGRAPHIC_FHIR_TOKEN || undefined,
@@ -106,7 +57,7 @@ function build(): DemographicProvider {
 
   return createBuiltinProvider({
     db: demographicDb,
-    audit: createLogAuditSink('builtin'),
+    audit: noopAuditSink,
     pseudonymize: pseudonymizeIdentifier,
     partyRefNamespace,
   })

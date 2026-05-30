@@ -1,23 +1,33 @@
-// Request classification + audit mapping for the BFF EHRbase proxy
-// (docs/architecture.md §5.9, §14.3). Kept separate from the route so it is
-// unit-testable without a request.
+// Request classification for the BFF EHRbase proxy (docs/architecture.md §5.9).
+// Kept separate from the route so it is unit-testable without a request.
 
 import type { RateLimitClass } from './rate-limit.ts'
-import type { AuditAction, AuditResourceType } from '@/server/audit'
+
+// The openEHR REST verb + resource a call maps to. Used to pick the rate-limit
+// class (and is surfaced for callers that want to label the request).
+export type RequestAction = 'READ' | 'CREATE' | 'UPDATE' | 'DELETE' | 'QUERY'
+export type RequestResourceType =
+  | 'EHR'
+  | 'COMPOSITION'
+  | 'TEMPLATE'
+  | 'QUERY'
+  | 'CONTRIBUTION'
+  | 'FOLDER'
+  | 'SYSTEM'
 
 export type RequestClass = {
   rateLimit: RateLimitClass
-  action: AuditAction
-  resourceType: AuditResourceType
+  action: RequestAction
+  resourceType: RequestResourceType
 }
 
 // Maps an upstream openEHR REST call (method + path) onto the §5.9 rate-limit
-// class and the §14.2 audit action/resource.
+// class plus a coarse action/resource label.
 export function classifyRequest(method: string, path: string): RequestClass {
   const upper = method.toUpperCase()
   const p = path.toLowerCase()
 
-  const resourceType: AuditResourceType = p.includes('query')
+  const resourceType: RequestResourceType = p.includes('query')
     ? 'QUERY'
     : p.includes('composition')
       ? 'COMPOSITION'

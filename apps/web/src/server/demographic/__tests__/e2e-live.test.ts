@@ -1,7 +1,6 @@
 // LIVE end-to-end test for the demographic provider against the REAL dev stack
-// (platform-db `demographic` + `audit` DBs, Valkey hash-chain). Gated behind
-// DEMOGRAPHIC_E2E=1 so the normal `turbo test` run skips it (no live services in
-// CI). Run it with the stack up:
+// (platform-db `demographic` DB). Gated behind DEMOGRAPHIC_E2E=1 so the normal
+// `turbo test` run skips it (no live services in CI). Run it with the stack up:
 //
 //   docker compose up -d platform-db valkey
 //   pnpm -F @ehrbase-ui/web exec drizzle-kit migrate --config=drizzle.demographic.config.ts
@@ -9,11 +8,9 @@
 //     vitest run src/server/demographic/__tests__/e2e-live.test.ts
 //
 // It exercises the REAL wiring end-to-end: the provider factory → built-in
-// adapter over postgres-js → the real logAudit sink → the audit DB + Valkey
-// chain. This proves real-Postgres behaviour the PGlite contract suite cannot
-// (the partial-unique-active identifier index, jsonb snapshot, the writer-role
-// grants) AND that every PARTY op lands a NEN-7513 row (resourceType PARTY,
-// source.adapterName='builtin', pseudonymised subjectIdHash — no raw BSN).
+// adapter over postgres-js → real Postgres. This proves real-Postgres
+// behaviour the PGlite contract suite cannot (the partial-unique-active
+// identifier index, jsonb snapshot, the writer-role grants).
 
 import { FhirDemographicProvider } from "@ehrbase-ui/demographic-adapter-fhir";
 import { RecordingAuditSink } from "@ehrbase-ui/demographic-core/contract";
@@ -29,11 +26,9 @@ const RUN_FHIR = process.env.DEMOGRAPHIC_FHIR_E2E === "1";
 const FHIR_BASE = process.env.DEMOGRAPHIC_FHIR_BASE ?? "http://localhost:8090/fhir";
 const VALID_BSN = "111222333";
 
-describe.runIf(RUN)("demographic provider — LIVE e2e (built-in over real Postgres + audit)", () => {
-  // owner connection for clean-slate + audit read (writer cannot TRUNCATE/own).
+describe.runIf(RUN)("demographic provider — LIVE e2e (built-in over real Postgres)", () => {
+  // owner connection for clean-slate (writer cannot TRUNCATE/own).
   const owner = postgres("postgres://demographic_owner:demographic_owner@localhost:5432/demographic", { max: 2 });
-  const auditRead = postgres("postgres://audit_owner:audit_owner@localhost:5432/audit", { max: 2 });
-  let startTs: string;
 
   beforeAll(async () => {
     // Clean slate (DELETE, not TRUNCATE — keep it owner-portable).
@@ -42,16 +37,13 @@ describe.runIf(RUN)("demographic provider — LIVE e2e (built-in over real Postg
     await owner`delete from demographic_relationship`;
     await owner`delete from demographic_party_history`;
     await owner`delete from demographic_party`;
-    const now = await owner<{ ts: string }[]>`select now()::text as ts`;
-    startTs = now[0]?.ts ?? "epoch";
   });
 
   afterAll(async () => {
     await owner.end();
-    await auditRead.end();
   });
 
-  it("runs a full lifecycle against real Postgres and lands a dual-layer audit trail", async () => {
+  it("runs a full lifecycle against real Postgres", async () => {
     const { getDemographicProvider } = await import("../provider.factory.server.ts");
     const { DuplicateIdentifierError } = await import("@ehrbase-ui/demographic-core");
     const provider = getDemographicProvider();
@@ -130,35 +122,6 @@ describe.runIf(RUN)("demographic provider — LIVE e2e (built-in over real Postg
     // 10. deactivate
     await provider.deactivateParty(ref.id, "e2e cleanup", ctx);
     expect((await provider.getParty(ref.id, {}, ctx))?.active).toBe(false);
-
-    // ── DUAL-LAYER AUDIT: every PHI op landed a NEN-7513 PARTY row ────────────
-    // Give the fire-and-forget chain a moment to flush.
-    await new Promise((r) => setTimeout(r, 300));
-    const rows = await auditRead<
-      { action: string; adapter: string | null; hash: string | null; purpose: string }[]
-    >`select action, source_adapter_name as adapter, target_subject_id_hash as hash, purpose
-        from audit_events
-       where target_resource_type = 'PARTY' and timestamp >= ${startTs}
-       order by timestamp`;
-
-    const actions = rows.map((r) => r.action);
-    expect(actions).toContain("CREATE");
-    expect(actions).toContain("QUERY");
-    expect(actions).toContain("UPDATE");
-    expect(actions).toContain("ADMIN_CHANGE"); // merge
-    expect(actions).toContain("DELETE"); // deactivate
-
-    // adapterName recorded on every PARTY row.
-    expect(rows.every((r) => r.adapter === "builtin")).toBe(true);
-
-    // merge is SYSTEM_ADMIN purpose, not TREATMENT.
-    expect(rows.find((r) => r.action === "ADMIN_CHANGE")?.purpose).toBe("SYSTEM_ADMIN");
-
-    // subjectIdHash is pseudonymised — the raw BSN never appears in the trail.
-    const createRow = rows.find((r) => r.action === "CREATE");
-    expect(createRow?.hash).toBeTruthy();
-    expect(createRow?.hash).not.toContain(VALID_BSN);
-    expect(rows.every((r) => (r.hash ?? "") !== VALID_BSN)).toBe(true);
   });
 });
 

@@ -28,17 +28,6 @@ export default defineConfig({
         devtools(),
         nitro({
           rollupConfig: { external: [/^@sentry\//] },
-          // M4 audit-governance tasks (ADR-0026). The cron expressions are
-          // overridable via env so deployments can shift the windows; the
-          // task names match the file-based naming (tasks/audit/<name>.ts).
-          // Nitro tasks are still experimental and require the opt-in flag.
-          experimental: { tasks: true },
-          scheduledTasks: {
-            [process.env.AUDIT_INTEGRITY_CRON ?? '0 3 * * *']: [
-              'audit:integrity',
-            ],
-            [process.env.AUDIT_PURGE_CRON ?? '0 4 * * *']: ['audit:purge'],
-          },
         }),
         paraglideVitePlugin({
           // Configuration follows the official Paraglide TanStack Start

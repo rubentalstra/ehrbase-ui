@@ -65,7 +65,6 @@ export const Route = createFileRoute('/_authed')({
 })
 
 function currentPageLabel(pathname: string): string {
-  if (pathname.startsWith('/me/access-log')) return m.nav_access_log()
   if (pathname.startsWith('/me')) return m.nav_account()
   return m.app_title()
 }

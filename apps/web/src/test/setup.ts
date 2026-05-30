@@ -2,9 +2,10 @@
 // can be imported in unit tests without a live stack. Tests that exercise
 // Valkey/DB behavior mock those clients explicitly.
 process.env.VALKEY_URL ??= 'redis://localhost:6379'
+// Demographic identifier pseudonymisation HMAC key (demographic-core, rule 12).
 process.env.AUDIT_PSEUDONYM_SECRET ??= 'test-pseudonym-secret'
-process.env.AUDIT_DB_URL ??= 'postgres://audit_writer:audit_writer@localhost:5432/audit'
-process.env.AUDIT_DB_OWNER_URL ??= 'postgres://audit_owner:audit_owner@localhost:5432/audit'
+// Draft-at-rest encryption key (field-encryption.server.ts).
+process.env.DRAFT_ENCRYPTION_SECRET ??= 'test-draft-encryption-secret'
 process.env.KEYCLOAK_ISSUER_URL ??= 'http://localhost:8180/realms/ehrbase'
 process.env.KEYCLOAK_CLIENT_ID ??= 'ehrbase-ui'
 process.env.KEYCLOAK_CLIENT_SECRET ??= 'dev-only-rotate-in-prod'
