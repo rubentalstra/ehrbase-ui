@@ -7,10 +7,16 @@
 // `.server.ts` suffix (CLAUDE.md rule 7): never reaches the client bundle.
 
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 import { auth as betterAuth } from "@/lib/auth/auth.server";
 import { account as accountTable } from "@/server/db/auth";
 import { authDb } from "@/server/db/auth-client";
+
+// Mirror routes/api/ehrbase/$.ts: the Keycloak roles live on the Better Auth
+// user row; parse them so the audit actor.roles is accurate (audit-trail
+// integrity), never a hard-coded empty list.
+const UserShapeSchema = z.object({ keycloakRoles: z.array(z.string()).default([]) }).partial();
 
 export interface EhrbaseContext {
   user: { id: string; email: string; name: string; roles: string[] };
@@ -37,12 +43,15 @@ export async function getEhrbaseContext(headers: Headers): Promise<EhrbaseContex
   const accessToken = rows.find((r) => r.accessToken !== null)?.accessToken;
   if (!accessToken) return null;
 
+  const shape = UserShapeSchema.safeParse(session.user);
+  const roles = shape.success ? (shape.data.keycloakRoles ?? []) : [];
+
   return {
     user: {
       id: session.user.id,
       email: session.user.email ?? "",
       name: session.user.name ?? "",
-      roles: [],
+      roles,
     },
     accessToken,
     baseUrl: ehrbaseBaseUrl(),

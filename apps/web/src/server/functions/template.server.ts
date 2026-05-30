@@ -11,13 +11,25 @@ import { parseWebTemplate, type WebTemplate } from "@ehrbase-ui/openehr-web-temp
 import { valkey } from "@ehrbase-ui/valkey";
 
 import { logAudit } from "@/server/audit/runtime";
-import { classifyRequest } from "@/server/bff";
+import { checkRateLimit, classifyRequest, tooManyRequests } from "@/server/bff";
 import { getEhrbaseContext } from "@/server/bff/ehrbase-context.server";
 
 import type { TemplateRequest } from "./template.functions";
 
 const TEMPLATE_CACHE_TTL_SECONDS = 3600; // templates change rarely; 1h is ample
+
+// Cache key is GLOBAL (not per-principal) on purpose: operational templates are
+// system-wide DEFINITION-layer artefacts in EHRbase — not patient/tenant-scoped
+// and not PHI. Read access is uniform for any authenticated principal (the
+// fetchWebTemplate cache lookup is already gated behind a valid EhrbaseContext,
+// so an unauthenticated caller can never reach a cached value). If a future
+// deployment introduces per-realm template ACLs, this key MUST be namespaced by
+// that realm/tenant id before the lookup.
 const cacheKey = (id: string) => `webtemplate:${id}`;
+
+// The upstream route is FIXED; classify by its static shape, never by the
+// user-supplied templateId, so a crafted id can't skew the audit action/resource.
+const STATIC_TEMPLATE_PATH = "definition/template/adl1.4/";
 
 function fail(status: number, code: string): Response {
   return new Response(JSON.stringify({ code }), {
@@ -30,6 +42,12 @@ export async function fetchWebTemplate({ templateId }: TemplateRequest): Promise
   const { getRequest } = await import("@tanstack/react-start/server");
   const ctx = await getEhrbaseContext(getRequest().headers);
   if (!ctx) throw fail(401, "UNAUTHENTICATED");
+
+  // Rate-limit BEFORE the cache lookup so cache traffic is also bounded, matching
+  // the BFF proxy's single choke-point behaviour (§5.9). Keyed by session.
+  const cls = classifyRequest("GET", STATIC_TEMPLATE_PATH);
+  const limit = await checkRateLimit(cls.rateLimit, ctx.sid);
+  if (!limit.allowed) throw tooManyRequests(limit);
 
   // Cache hit — re-validate the cached JSON (cheap; avoids trusting stale shape).
   const cached = await valkey.get(cacheKey(templateId));
@@ -60,7 +78,6 @@ export async function fetchWebTemplate({ templateId }: TemplateRequest): Promise
 
   async function audit(outcome: "SUCCESS" | "FAILURE", detail?: string): Promise<void> {
     if (!ctx) return;
-    const cls = classifyRequest("GET", path);
     await logAudit({
       actor: {
         userId: ctx.user.id,
