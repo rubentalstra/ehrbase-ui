@@ -18,6 +18,7 @@
 
 import {
   CapabilityError,
+  CreatePartyInputSchema,
   DemographicValidationError,
   PartyNotFoundError,
   validateIdentifier,
@@ -131,23 +132,25 @@ export class FhirDemographicProvider implements DemographicProvider {
 
   async createParty(input: CreatePartyInput, ctx: ProviderContext): Promise<PartyRef> {
     this.#requireWrites();
-    this.#validate(input.identifiers);
+    // Validate + normalise at the boundary (§15) so array defaults are applied.
+    const norm = CreatePartyInputSchema.parse(input);
+    this.#validate(norm.identifiers);
     const draft: Party = {
       id: "",
       active: true,
       version: 1,
-      identifiers: input.identifiers,
-      names: input.names,
-      gender: input.gender,
-      birthDate: input.birthDate,
-      deceased: input.deceased,
-      addresses: input.addresses,
-      contacts: input.contacts,
+      identifiers: norm.identifiers,
+      names: norm.names,
+      gender: norm.gender,
+      birthDate: norm.birthDate,
+      deceased: norm.deceased,
+      addresses: norm.addresses,
+      contacts: norm.contacts,
     };
     return this.#audited(
       "CREATE",
       ctx,
-      { subjectIdHash: this.#subjectHash(input.identifiers) },
+      { subjectIdHash: this.#subjectHash(norm.identifiers) },
       async () => {
         const created = await this.#client.create(partyToPatient(draft));
         // A PartyRef with an empty id is not a valid EHR_STATUS.subject

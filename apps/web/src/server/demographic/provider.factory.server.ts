@@ -33,6 +33,15 @@ function auditActionOf(action: PartyAuditEvent['action']): Parameters<typeof log
   return action
 }
 
+// The audit `source_correlation_id` column is a UUID; a non-UUID value would
+// fail validation and SILENTLY DROP the event (rule 1). The REST route always
+// supplies crypto.randomUUID(), but defend here: pass the correlationId through
+// only when it is UUID-shaped, else omit so logAudit mints a fresh one.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+function uuidOrUndefined(value: string | undefined): string | undefined {
+  return value && UUID_RE.test(value) ? value : undefined
+}
+
 /** The real AuditSink: every PARTY op lands a NEN-7513 row tagged with the adapter name. */
 function createLogAuditSink(adapterName: string): AuditSink {
   return {
@@ -59,7 +68,7 @@ function createLogAuditSink(adapterName: string): AuditSink {
         retentionPolicy: 'CLINICAL_RECORD',
         source: {
           sessionId: event.ctx.sessionId,
-          correlationId: event.ctx.correlationId,
+          correlationId: uuidOrUndefined(event.ctx.correlationId),
           adapterName,
         },
       })

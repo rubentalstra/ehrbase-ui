@@ -21,6 +21,7 @@ import type { PgAsyncDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { AuditSink, PartyAuditAction } from "../audit.ts";
 import { validateIdentifier } from "../identifier/registry.ts";
 import {
+  CreatePartyInputSchema,
   PartySchema,
   type CreatePartyInput,
   type CreateRelationshipInput,
@@ -73,11 +74,18 @@ const CAPABILITIES: DemographicProviderCapabilities = {
   readonly: false,
 };
 
-// PGlite + postgres.js both surface a unique-violation as Postgres SQLSTATE
-// 23505. `in`-narrowing reads the code with no type assertion (rule 3).
+// A unique-violation is Postgres SQLSTATE 23505. PGlite puts `code` on the
+// thrown error directly; postgres-js (prod) wraps it — drizzle-orm raises a
+// DrizzleQueryError whose `.cause` is the postgres.js error carrying `.code`. So
+// walk the cause chain. `in`-narrowing reads `code`/`cause` with no type
+// assertion (rule 3). (Verified against the live stack — PGlite alone hid this.)
 function isUniqueViolation(err: unknown): boolean {
-  if (typeof err !== "object" || err === null || !("code" in err)) return false;
-  return err.code === "23505";
+  let cur: unknown = err;
+  while (cur !== null && typeof cur === "object") {
+    if ("code" in cur && cur.code === "23505") return true;
+    cur = "cause" in cur ? cur.cause : null;
+  }
+  return false;
 }
 
 export class BuiltinDemographicProvider implements DemographicProvider {
@@ -266,20 +274,23 @@ export class BuiltinDemographicProvider implements DemographicProvider {
   // ─── DemographicProvider ─────────────────────────────────────────────────────
 
   async createParty(input: CreatePartyInput, ctx: ProviderContext): Promise<PartyRef> {
-    this.#validateIdentifiers(input.identifiers);
+    // Validate + normalise at the boundary (§15) so array defaults (addresses /
+    // contacts) are applied even for a direct, partially-shaped programmatic call.
+    const norm = CreatePartyInputSchema.parse(input);
+    this.#validateIdentifiers(norm.identifiers);
     const id = this.#newId();
-    const identifiers = this.#reconcileIdentifiers(input.identifiers, []);
+    const identifiers = this.#reconcileIdentifiers(norm.identifiers, []);
     const party: Party = PartySchema.parse({
       id,
       active: true,
       version: 1,
       identifiers,
-      names: input.names,
-      gender: input.gender,
-      birthDate: input.birthDate,
-      deceased: input.deceased,
-      addresses: input.addresses,
-      contacts: input.contacts,
+      names: norm.names,
+      gender: norm.gender,
+      birthDate: norm.birthDate,
+      deceased: norm.deceased,
+      addresses: norm.addresses,
+      contacts: norm.contacts,
     });
 
     return this.#audited(
