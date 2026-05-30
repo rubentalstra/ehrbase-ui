@@ -90,3 +90,14 @@ layers still land for every write. **Richer audit_details** — committer as a d
 native `POST /ehr/{id}/contribution` endpoint with `audit_details` in the **body** (canonical versions), and are
 deferred to the M7 demographic phase (when a real PARTY ref exists). Inviolable rule 11's intent (every write
 records committer + access trail) is preserved; only the mechanism is corrected.
+
+**Empirically observed on EHRbase 2.31.0 (`scripts/dev/ehrbase-composition-probe.sh`, 2026-05-30).** A FLAT
+composition write with the dev-clinician token produces a CONTRIBUTION whose `audit_details.committer.name` is
+**`EHRbase Internal <uuid>`** with `change_type = "creation"`. The `<uuid>` is EHRbase's **internal user id for
+the authenticated principal** — stable per user (distinct clinicians ⇒ distinct uuids), so the data-lineage layer
+*does* tie each change to a specific authenticated user — but it is **not** the human-readable clinician name and
+**not** a demographic PARTY `external_ref`. That confirms the deferral above: until M7 wires the native
+`/contribution` endpoint with an explicit `audit_details.committer` (name + demographic `external_ref`), the
+human-identity answer to "who changed this?" is served by the **NEN-7513 `logAudit` layer** (full name / email /
+roles), cross-linked to the CONTRIBUTION by correlation id. No code change is required for M6; this is a tracked
+M7 enrichment, not a defect.
