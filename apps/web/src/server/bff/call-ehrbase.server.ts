@@ -100,6 +100,10 @@ export async function callEhrbase(ctx: EhrbaseContext, opts: CallEhrbaseOptions)
   };
 
   async function audit(outcome: "SUCCESS" | "FAILURE", detail?: string): Promise<void> {
+    // Clinical writes (CREATE/UPDATE/DELETE) are CLINICAL_RECORD-retained (20y,
+    // §14.7/WGBO); reads + queries are access-trail (AUDIT_LOG, 5y). logAudit
+    // defaults to AUDIT_LOG, so the write case MUST set it explicitly.
+    const isWrite = cls.action !== "READ" && cls.action !== "QUERY";
     await logAudit({
       actor: {
         userId: ctx.user.id,
@@ -112,6 +116,7 @@ export async function callEhrbase(ctx: EhrbaseContext, opts: CallEhrbaseOptions)
       purpose: "TREATMENT",
       outcome,
       outcomeDetail: detail,
+      retentionPolicy: isWrite ? "CLINICAL_RECORD" : "AUDIT_LOG",
       source: { sessionId: ctx.sid },
     });
   }

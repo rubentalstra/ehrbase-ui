@@ -13,6 +13,8 @@ import { formStateToFlat, flatToFormState, type FlatComposition } from "@ehrbase
 import { generateFormSchema } from "@ehrbase-ui/openehr-web-template";
 import { z } from "zod";
 
+import type { AuditAction } from "@/server/audit";
+import { logAudit } from "@/server/audit/runtime";
 import { callEhrbase, type EhrbaseOk } from "@/server/bff/call-ehrbase.server";
 import { getEhrbaseContext, type EhrbaseContext } from "@/server/bff/ehrbase-context.server";
 
@@ -75,11 +77,33 @@ function versionUidFrom(res: EhrbaseOk): string {
 }
 
 // Validate form-state against the template's generated schema, then convert to
-// FLAT. A schema miss is a generic 422 — never echo the (PHI-bearing) detail.
-function toFlatBody(template: Parameters<typeof formStateToFlat>[0], formState: unknown): string {
+// FLAT. Returns null on a schema miss (the caller audits the PHI-touching
+// failure + throws a generic 422 — the PHI-bearing detail is never echoed).
+function toFlatBody(template: Parameters<typeof formStateToFlat>[0], formState: unknown): string | null {
   const parsed = generateFormSchema(template).safeParse(formState);
-  if (!parsed.success) throw fail(422, "INVALID_FORM_STATE");
+  if (!parsed.success) return null;
   return JSON.stringify(formStateToFlat(template, parsed.data));
+}
+
+// Audit a PHI-touching event that fails BEFORE the EHRbase call (so callEhrbase's
+// own audit never fires) — e.g. server-side form-state validation rejection.
+// Clinical write attempt → CLINICAL_RECORD retention (§14.7).
+async function auditWriteFailure(
+  ctx: EhrbaseContext,
+  action: AuditAction,
+  ehrId: string,
+  detail: string,
+): Promise<void> {
+  await logAudit({
+    actor: { userId: ctx.user.id, username: ctx.user.email, displayName: ctx.user.name, roles: ctx.user.roles },
+    action,
+    target: { ehrId, resourceType: "COMPOSITION" },
+    purpose: "TREATMENT",
+    outcome: "FAILURE",
+    outcomeDetail: detail,
+    retentionPolicy: "CLINICAL_RECORD",
+    source: { sessionId: ctx.sid },
+  });
 }
 
 export async function createComposition(
@@ -88,6 +112,10 @@ export async function createComposition(
   const ctx = await requireContext();
   const template = await loadWebTemplate(ctx, input.templateId);
   const body = toFlatBody(template, input.formState);
+  if (body === null) {
+    await auditWriteFailure(ctx, "CREATE", input.ehrId, "invalid_form_state");
+    throw fail(422, "INVALID_FORM_STATE");
+  }
 
   const res = await callEhrbase(ctx, {
     method: "POST",
@@ -128,6 +156,10 @@ export async function reviseComposition(
   const ctx = await requireContext();
   const template = await loadWebTemplate(ctx, input.templateId);
   const body = toFlatBody(template, input.formState);
+  if (body === null) {
+    await auditWriteFailure(ctx, "UPDATE", input.ehrId, "invalid_form_state");
+    throw fail(422, "INVALID_FORM_STATE");
+  }
 
   const res = await callEhrbase(ctx, {
     method: "PUT",

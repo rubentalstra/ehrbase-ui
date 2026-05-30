@@ -11,7 +11,7 @@ import { valkey } from "@ehrbase-ui/valkey";
 import { z } from "zod";
 
 import { auth as betterAuth } from "@/lib/auth/auth.server";
-import type { AuditAction } from "@/server/audit";
+import type { AuditAction, AuditOutcome } from "@/server/audit";
 import { logAudit } from "@/server/audit/runtime";
 import { decryptString, encryptString } from "@/server/crypto/field-encryption.server";
 
@@ -76,8 +76,18 @@ export async function readDraft(input: DraftKeyInput): Promise<GetDraftResult> {
   const user = await requireUser();
   const raw = await valkey.get(draftKey(user.id, input.templateId, input.ehrId));
   if (raw === null) return { formState: null, savedAt: null };
-  const env = DraftEnvelopeSchema.parse(JSON.parse(raw));
-  const formState = decryptString(env.data);
+  // A parse/decrypt failure means corrupt or tampered Valkey data (AEAD tag
+  // mismatch). Audit it + return a generic error — never let the raw crypto/JSON
+  // error message reach the client (§10 rule 2).
+  let env: { savedAt: string; data: string };
+  let formState: string;
+  try {
+    env = DraftEnvelopeSchema.parse(JSON.parse(raw));
+    formState = decryptString(env.data);
+  } catch {
+    await audit(user, "READ", input.ehrId, "draft_corrupt_or_tampered", "FAILURE");
+    throw fail(422, "DRAFT_UNAVAILABLE");
+  }
   await audit(user, "READ", input.ehrId, "draft_resume");
   return { formState, savedAt: env.savedAt };
 }
@@ -94,13 +104,14 @@ async function audit(
   action: AuditAction,
   ehrId: string,
   detail: string,
+  outcome: AuditOutcome = "SUCCESS",
 ): Promise<void> {
   await logAudit({
     actor: { userId: user.id, username: user.email, displayName: user.name, roles: user.roles },
     action,
     target: { ehrId, resourceType: "COMPOSITION" },
     purpose: "TREATMENT",
-    outcome: "SUCCESS",
+    outcome,
     outcomeDetail: detail,
     source: { sessionId: user.sid },
   });

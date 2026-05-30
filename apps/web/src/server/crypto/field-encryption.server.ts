@@ -15,6 +15,10 @@ import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from "node:cr
 import { z } from "zod";
 
 const KEY_INFO = "ehrbase-ui:at-rest-encryption:v1";
+// Fixed, non-secret application salt (RFC 5869 §3.1 — a non-empty salt is
+// preferred even when the IKM is already high-entropy). Stable so the derived
+// key is reproducible across restarts; bump the suffix to rotate.
+const KEY_SALT = "ehrbase-ui:at-rest-salt:v1";
 const ALGORITHM = "aes-256-gcm";
 
 function derivedKey(): Buffer {
@@ -22,8 +26,8 @@ function derivedKey(): Buffer {
   if (!secret) {
     throw new Error("AUDIT_PSEUDONYM_SECRET is not set — cannot encrypt PHI at rest.");
   }
-  // HKDF-SHA256(ikm=secret, salt="", info=KEY_INFO) → 32-byte AES-256 key.
-  return Buffer.from(hkdfSync("sha256", secret, new Uint8Array(0), KEY_INFO, 32));
+  // HKDF-SHA256(ikm=secret, salt=KEY_SALT, info=KEY_INFO) → 32-byte AES-256 key.
+  return Buffer.from(hkdfSync("sha256", secret, KEY_SALT, KEY_INFO, 32));
 }
 
 const EnvelopeSchema = z.object({

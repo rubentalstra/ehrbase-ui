@@ -73,7 +73,16 @@ export async function handleUpload(): Promise<UploadResult> {
     throw fail(415, "UNSUPPORTED_MEDIA_TYPE");
   }
 
-  const scan = await scanBuffer(buf);
+  // Fail CLOSED: if the scanner is unreachable / times out, reject the upload
+  // (never accept unscanned PHI-bearing bytes) + audit. The raw clamd/transport
+  // error must not reach the client (§10 rule 2).
+  let scan;
+  try {
+    scan = await scanBuffer(buf);
+  } catch {
+    await audit(actor, "FAILURE", "scanner_unavailable");
+    throw fail(503, "SCAN_UNAVAILABLE");
+  }
   if (!scan.clean) {
     // Virus name → audit only; the user gets a generic message (§7.x).
     await audit(actor, "FAILURE", `upload_infected:${scan.signature ?? "unknown"}`);
