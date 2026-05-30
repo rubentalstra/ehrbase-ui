@@ -180,5 +180,30 @@
   "compose_array_remove": "Remove item {index}",
   "compose_multimedia_hint": "Choose a file",
   "compose_no_template": "Load a template above to render the composition form.",
-  "compose_loading_template": "Loading template…"
+  "compose_loading_template": "Loading template…",
+  "compose_value_empty": "—",
+
+  "workbench_tab_compositions": "Compositions",
+
+  "compositions_title": "Compositions",
+  "compositions_subtitle": "Browse compositions stored in an EHR.",
+  "compositions_ehr_id_label": "EHR ID",
+  "compositions_ehr_id_placeholder": "00000000-0000-0000-0000-000000000000",
+  "compositions_load": "Load compositions",
+  "compositions_loading": "Loading…",
+  "compositions_empty": "No compositions found for this EHR.",
+  "compositions_load_failed": "Could not load compositions. Check the EHR ID and try again.",
+  "compositions_col_uid": "UID",
+  "compositions_col_name": "Name",
+  "compositions_col_template": "Template",
+  "compositions_col_actions": "Actions",
+  "compositions_view": "View",
+  "compositions_no_ehr": "Enter an EHR ID above to browse its compositions.",
+
+  "viewer_title": "Composition",
+  "viewer_metadata_version_uid": "Version UID",
+  "viewer_metadata_template": "Template",
+  "viewer_loading": "Loading composition…",
+  "viewer_load_failed": "Could not load this composition.",
+  "viewer_close": "Close"
 }

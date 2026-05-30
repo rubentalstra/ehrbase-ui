@@ -25,6 +25,7 @@ function WorkbenchLayout() {
     { to: '/workbench/ehr', label: m.workbench_tab_ehr() },
     { to: '/workbench/aql', label: m.workbench_tab_aql() },
     { to: '/workbench/compose', label: m.workbench_tab_compose() },
+    { to: '/workbench/compositions', label: m.workbench_tab_compositions() },
   ]
 
   return (

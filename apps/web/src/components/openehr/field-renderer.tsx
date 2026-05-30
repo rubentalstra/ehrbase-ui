@@ -99,6 +99,11 @@ function errorMessage(error: FieldError | undefined): string | undefined {
   return error.message ?? 'Invalid value'
 }
 
+// Helper: type guard for composite form-state leaf records (DV_QUANTITY etc.).
+function isCompositeRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null && !Array.isArray(x)
+}
+
 // ── Required marker ───────────────────────────────────────────────────────────
 function RequiredMark() {
   return (
@@ -108,16 +113,35 @@ function RequiredMark() {
   )
 }
 
+// ── Read-only static value display ───────────────────────────────────────────
+// When readOnly=true, leaf values are rendered as labelled static text instead
+// of interactive inputs. This is the display mode used by CompositionViewer.
+
+interface ReadOnlyLeafProps {
+  label: string
+  value: string
+}
+
+function ReadOnlyField({ label, value }: ReadOnlyLeafProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+      <span className="text-sm">{value || m.compose_value_empty()}</span>
+    </div>
+  )
+}
+
 // ── Leaf renderers ────────────────────────────────────────────────────────────
 
 interface LeafProps {
   node: WebTemplateNode
   path: string
   control: Control<Record<string, unknown>>
+  readOnly?: boolean
 }
 
 // DV_TEXT → Input (short) / Textarea (long). §7 table row 1.
-function DvTextField({ node, path, control }: LeafProps) {
+function DvTextField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const long = isLongText(node)
   const label = nodeName(node)
@@ -130,6 +154,7 @@ function DvTextField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const val = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={val} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -171,7 +196,7 @@ function DvTextField({ node, path, control }: LeafProps) {
 // DV_CODED_TEXT → Select (≤7 options) / Combobox (>7 or open list). §7 table row 2.
 // Form-state shape: `{ code: string }` when a code suffix exists; scalar string
 // for single suffix-less input — matching leafSchema() in generate-form-schema.ts.
-function DvCodedTextField({ node, path, control }: LeafProps) {
+function DvCodedTextField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputs = node.inputs ?? []
@@ -190,6 +215,13 @@ function DvCodedTextField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const val = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+
+        if (readOnly) {
+          // Resolve the display label for the current code value.
+          const displayLabel = list.find((i) => i.value === val)
+            ?.localizedLabels?.['en'] ?? list.find((i) => i.value === val)?.label ?? val
+          return <ReadOnlyField label={label} value={displayLabel} />
+        }
 
         if (isSmall) {
           return (
@@ -259,7 +291,7 @@ function DvCodedTextField({ node, path, control }: LeafProps) {
 
 // DV_QUANTITY → number Input + unit Select. §7 table row 3.
 // Form-state shape: `{ magnitude: number, unit: string }` (composite leaf).
-function DvQuantityField({ node, path, control }: LeafProps) {
+function DvQuantityField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputs = node.inputs ?? []
@@ -268,6 +300,25 @@ function DvQuantityField({ node, path, control }: LeafProps) {
   const units = unitInput?.list ?? []
   const magId = `field-${path}.magnitude`
   const unitId = `field-${path}.unit`
+
+  if (readOnly) {
+    return (
+      <Controller
+        control={control}
+        name={path}
+        render={({ field }) => {
+          const composite = field.value
+          const raw = isCompositeRecord(composite) ? composite : {}
+          const mag = typeof raw['magnitude'] === 'number' ? raw['magnitude'] : undefined
+          const unit = typeof raw['unit'] === 'string' ? raw['unit'] : undefined
+          const display = [mag !== undefined ? String(mag) : '', unit ?? '']
+            .filter(Boolean)
+            .join(' ')
+          return <ReadOnlyField label={label} value={display} />
+        }}
+      />
+    )
+  }
 
   return (
     <fieldset className="flex flex-col gap-1">
@@ -348,7 +399,7 @@ function DvQuantityField({ node, path, control }: LeafProps) {
 
 // DV_COUNT → number Input (integer step). §7 table row 4.
 // Form-state shape: scalar number (single suffix-less INTEGER input).
-function DvCountField({ node, path, control }: LeafProps) {
+function DvCountField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -363,6 +414,7 @@ function DvCountField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const numVal = typeof field.value === 'number' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={numVal !== '' ? String(numVal) : ''} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -398,7 +450,7 @@ function DvCountField({ node, path, control }: LeafProps) {
 
 // DV_BOOLEAN → Switch with inline label. §7 table row 5.
 // Form-state shape: scalar boolean.
-function DvBooleanField({ node, path, control }: LeafProps) {
+function DvBooleanField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const switchId = `field-${path}`
@@ -410,6 +462,7 @@ function DvBooleanField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const checked = field.value === true
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={checked ? 'Yes' : 'No'} />
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
@@ -439,7 +492,7 @@ function DvBooleanField({ node, path, control }: LeafProps) {
 // DV_DATE → Calendar + Popover. §7 table row 6.
 // Form-state shape: ISO 8601 date string (bare FLAT key, no |suffix).
 // useState is in the component body (not inside the render callback) per the Rules of Hooks.
-function DvDateField({ node, path, control }: LeafProps) {
+function DvDateField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const triggerId = `field-${path}`
@@ -454,6 +507,8 @@ function DvDateField({ node, path, control }: LeafProps) {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const dateVal = strVal ? new Date(strVal) : undefined
         const err = errorMessage(fieldState.error)
+
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
 
         return (
           <div className="flex flex-col gap-1">
@@ -509,7 +564,7 @@ function DvDateField({ node, path, control }: LeafProps) {
 
 // DV_DATE_TIME → datetime-local Input. §7 table row 6 (full datetime).
 // Form-state shape: ISO 8601 datetime string (bare FLAT key, no |suffix).
-function DvDateTimeField({ node, path, control }: LeafProps) {
+function DvDateTimeField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -522,6 +577,7 @@ function DvDateTimeField({ node, path, control }: LeafProps) {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
         const localVal = strVal ? strVal.slice(0, 16) : ''
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -553,7 +609,7 @@ function DvDateTimeField({ node, path, control }: LeafProps) {
 
 // DV_TIME → time Input.
 // Form-state shape: ISO 8601 time string (bare FLAT key, no |suffix).
-function DvTimeField({ node, path, control }: LeafProps) {
+function DvTimeField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -565,6 +621,7 @@ function DvTimeField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -594,7 +651,7 @@ function DvTimeField({ node, path, control }: LeafProps) {
 
 // DV_ORDINAL → RadioGroup (≤7 options) / Select (>7). §7 table row 7.
 // Form-state shape: mirrors DV_CODED_TEXT (code suffix → `{ code }`, else scalar).
-function DvOrdinalField({ node, path, control }: LeafProps) {
+function DvOrdinalField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputs = node.inputs ?? []
@@ -612,6 +669,12 @@ function DvOrdinalField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const val = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+
+        if (readOnly) {
+          const displayLabel = list.find((i) => i.value === val)?.localizedLabels?.['en']
+            ?? list.find((i) => i.value === val)?.label ?? val
+          return <ReadOnlyField label={label} value={displayLabel} />
+        }
 
         if (isSmall) {
           return (
@@ -686,11 +749,30 @@ function DvOrdinalField({ node, path, control }: LeafProps) {
 
 // DV_PROPORTION → two number Inputs + slash. §7 table row 8.
 // Form-state shape: `{ numerator: number, denominator: number }`.
-function DvProportionField({ node, path, control }: LeafProps) {
+function DvProportionField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const numId = `field-${path}.numerator`
   const denomId = `field-${path}.denominator`
+
+  if (readOnly) {
+    return (
+      <Controller
+        control={control}
+        name={path}
+        render={({ field }) => {
+          const composite = field.value
+          const raw = isCompositeRecord(composite) ? composite : {}
+          const num = typeof raw['numerator'] === 'number' ? raw['numerator'] : undefined
+          const denom = typeof raw['denominator'] === 'number' ? raw['denominator'] : undefined
+          const display = [num !== undefined ? String(num) : '', denom !== undefined ? String(denom) : '']
+            .filter(Boolean)
+            .join(' / ')
+          return <ReadOnlyField label={label} value={display} />
+        }}
+      />
+    )
+  }
 
   return (
     <fieldset className="flex flex-col gap-1">
@@ -755,7 +837,7 @@ function DvProportionField({ node, path, control }: LeafProps) {
 
 // DV_DURATION → text Input (ISO 8601 duration string, e.g. "P1Y2M3DT4H5M6S").
 // Form-state shape: scalar string (bare FLAT key, no |suffix).
-function DvDurationField({ node, path, control }: LeafProps) {
+function DvDurationField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -767,6 +849,7 @@ function DvDurationField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -797,7 +880,7 @@ function DvDurationField({ node, path, control }: LeafProps) {
 
 // DV_IDENTIFIER → plain text Input. Not in §7 main table but well-defined.
 // Form-state shape: scalar string.
-function DvIdentifierField({ node, path, control }: LeafProps) {
+function DvIdentifierField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -809,6 +892,7 @@ function DvIdentifierField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -839,7 +923,7 @@ function DvIdentifierField({ node, path, control }: LeafProps) {
 // DV_MULTIMEDIA → file input stub. §7 table row 9.
 // Full MIME sniffing / ClamAV / EXIF stripping is server-side (§7.x).
 // This yields a descriptor object; the server fn handles the actual upload.
-function DvMultimediaField({ node, path, control }: LeafProps) {
+function DvMultimediaField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -850,6 +934,11 @@ function DvMultimediaField({ node, path, control }: LeafProps) {
       name={path}
       render={({ field, fieldState }) => {
         const err = errorMessage(fieldState.error)
+        if (readOnly) {
+          const descriptor = isCompositeRecord(field.value) ? field.value : undefined
+          const display = typeof descriptor?.['name'] === 'string' ? descriptor['name'] : ''
+          return <ReadOnlyField label={label} value={display} />
+        }
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -884,7 +973,7 @@ function DvMultimediaField({ node, path, control }: LeafProps) {
 // Fallback for unknown / unimplemented rmTypes. Renders a plain text input so
 // the form remains functional. Per the §7 rule: do NOT silently invent a
 // mapping for a new rmType on a production clinical surface — open an ADR.
-function UnknownLeafField({ node, path, control }: LeafProps) {
+function UnknownLeafField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
   const inputId = `field-${path}`
@@ -896,6 +985,7 @@ function UnknownLeafField({ node, path, control }: LeafProps) {
       render={({ field, fieldState }) => {
         const strVal = typeof field.value === 'string' ? field.value : ''
         const err = errorMessage(fieldState.error)
+        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
         return (
           <div className="flex flex-col gap-1">
             <Label htmlFor={inputId}>
@@ -929,40 +1019,41 @@ function renderLeaf(
   node: WebTemplateNode,
   path: string,
   control: Control<Record<string, unknown>>,
+  readOnly?: boolean,
 ) {
   switch (node.rmType) {
     case 'DV_TEXT':
-      return <DvTextField key={path} node={node} path={path} control={control} />
+      return <DvTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_CODED_TEXT':
-      return <DvCodedTextField key={path} node={node} path={path} control={control} />
+      return <DvCodedTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_QUANTITY':
-      return <DvQuantityField key={path} node={node} path={path} control={control} />
+      return <DvQuantityField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_COUNT':
-      return <DvCountField key={path} node={node} path={path} control={control} />
+      return <DvCountField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_BOOLEAN':
-      return <DvBooleanField key={path} node={node} path={path} control={control} />
+      return <DvBooleanField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_DATE':
-      return <DvDateField key={path} node={node} path={path} control={control} />
+      return <DvDateField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_DATE_TIME':
-      return <DvDateTimeField key={path} node={node} path={path} control={control} />
+      return <DvDateTimeField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_TIME':
-      return <DvTimeField key={path} node={node} path={path} control={control} />
+      return <DvTimeField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_ORDINAL':
-      return <DvOrdinalField key={path} node={node} path={path} control={control} />
+      return <DvOrdinalField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_PROPORTION':
-      return <DvProportionField key={path} node={node} path={path} control={control} />
+      return <DvProportionField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_DURATION':
-      return <DvDurationField key={path} node={node} path={path} control={control} />
+      return <DvDurationField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_IDENTIFIER':
-      return <DvIdentifierField key={path} node={node} path={path} control={control} />
+      return <DvIdentifierField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_MULTIMEDIA':
-      return <DvMultimediaField key={path} node={node} path={path} control={control} />
+      return <DvMultimediaField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     case 'DV_URI':
     case 'DV_EHR_URI':
       // URI renders as plain text; form-state shape is scalar string.
-      return <DvTextField key={path} node={node} path={path} control={control} />
+      return <DvTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     default:
-      return <UnknownLeafField key={path} node={node} path={path} control={control} />
+      return <UnknownLeafField key={path} node={node} path={path} control={control} readOnly={readOnly} />
   }
 }
 
@@ -976,6 +1067,7 @@ interface ArrayRendererInternalProps {
   path: string
   control: Control<Record<string, unknown>>
   depth: number
+  readOnly?: boolean
 }
 
 // FieldValues-typed form context used ONLY inside ArrayRendererInternal so
@@ -987,6 +1079,7 @@ function ArrayRendererInternal({
   path,
   control,
   depth,
+  readOnly,
 }: ArrayRendererInternalProps) {
   // useFormContext<FieldValues> avoids the useFieldArray name-type issue:
   // FieldValues = Record<string, any>, which useFieldArray's FieldArrayPath
@@ -1029,32 +1122,37 @@ function ArrayRendererInternal({
               path={`${path}.${index}`}
               control={control}
               depth={depth + 1}
+              readOnly={readOnly}
             />
-            <div className="mt-2 flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={atMin}
-                onClick={() => remove(index)}
-                aria-label={m.compose_array_remove({ index: String(index + 1) })}
-              >
-                {m.compose_field_remove()}
-              </Button>
-            </div>
+            {!readOnly && (
+              <div className="mt-2 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={atMin}
+                  onClick={() => remove(index)}
+                  aria-label={m.compose_array_remove({ index: String(index + 1) })}
+                >
+                  {m.compose_field_remove()}
+                </Button>
+              </div>
+            )}
           </div>
         ))}
 
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={atMax}
-          onClick={() => append(newItem)}
-          aria-label={m.compose_array_add()}
-        >
-          {m.compose_field_add()}
-        </Button>
+        {!readOnly && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={atMax}
+            onClick={() => append(newItem)}
+            aria-label={m.compose_array_add()}
+          >
+            {m.compose_field_add()}
+          </Button>
+        )}
       </CardContent>
     </Card>
   )
@@ -1069,6 +1167,11 @@ export interface FieldRendererProps {
   control: Control<Record<string, unknown>>
   /** Nesting depth; root = 0. Used for Card styling. */
   depth?: number
+  /**
+   * When true, all leaf inputs are rendered as static read-only text and
+   * Add/Remove buttons are hidden. Used by CompositionViewer (§7 form pipeline).
+   */
+  readOnly?: boolean
 }
 
 /**
@@ -1081,12 +1184,16 @@ export interface FieldRendererProps {
  *
  * The form-state shape produced matches exactly what generateFormSchema builds
  * and what formStateToFlat consumes. Do not break this contract.
+ *
+ * When readOnly=true, leaf values render as static text; array Add/Remove
+ * controls are hidden.  This mode is used by CompositionViewer.
  */
 export function FieldRenderer({
   node,
   path,
   control,
   depth = 0,
+  readOnly,
 }: FieldRendererProps) {
   // Consume the form context to ensure RHF state is active.
   useFormContext()
@@ -1099,6 +1206,7 @@ export function FieldRenderer({
         path={path}
         control={control}
         depth={depth}
+        readOnly={readOnly}
       />
     )
   }
@@ -1122,6 +1230,7 @@ export function FieldRenderer({
                 path={childPath}
                 control={control}
                 depth={depth + 1}
+                readOnly={readOnly}
               />
             )
           })}
@@ -1130,5 +1239,5 @@ export function FieldRenderer({
     )
   }
 
-  return renderLeaf(node, path, control)
+  return renderLeaf(node, path, control, readOnly)
 }

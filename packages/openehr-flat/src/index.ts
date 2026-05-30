@@ -11,4 +11,5 @@
 
 export * from "./flat-path.ts";
 export * from "./convert.ts";
+export * from "./structured.ts";
 export { SPEC_COMPONENT, SPEC_VERSION } from "./spec.ts";
