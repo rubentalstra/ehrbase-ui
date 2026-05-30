@@ -126,8 +126,12 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 **PR-2 — `openehr-rm` (RM 1.1.0):**
 
-- [ ] Generate RM 1.1.0 Zod types; hand-stitch abstract classes (`LOCATABLE`, `DATA_VALUE`, `EVENT<T>`, …)
-- [ ] ADR-0016 catalogue round-trip harness — every v1.0 archetype round-trips (release-blocking gate)
+- [x] Custom ITS-JSON→Zod generator (`scripts/openehr-zodgen.mjs`) — `json-schema-to-zod` can't resolve refs/recursion (ADR-0032 addendum 2)
+- [x] Generate RM 1.1.0 Zod types (102 classes; getter-based recursion, `z.union` polymorphism, hoisted unions)
+- [x] Hand-stitch abstract-supertype unions (`DATA_VALUE`, `ITEM`, `ENTRY`, `CONTENT_ITEM`, `EVENT`, `PARTY_PROXY`, …) in the facade
+- [x] Representative + full-canonical-COMPOSITION round-trip tests pass (typecheck + test + lint + regen:check green)
+- [ ] **(fed by EHRbase fixtures)** Full ADR-0016 catalogue round-trip — every v1.0 archetype round-trips against canonical examples pulled from the dev EHRbase; release-blocking gate
+- [ ] Follow-up: migrate `openehr-base` to the custom generator + drop `json-schema-to-zod`
 
 **PR-3 — data/format layer:** `openehr-its-rest` (EHRbase 2.31.0 OpenAPI via orval), `openehr-web-template` (parser + Zod generator), `openehr-flat` (FLAT↔canonical converter), `openehr-am` (minimal ADL 1.4 / OPT subset)
 

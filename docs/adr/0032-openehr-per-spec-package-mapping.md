@@ -131,3 +131,41 @@ unexpected RM version; (7) package SemVer decoupled from spec version (a spec ma
 CLAUDE.md "Versions" and `docs/REFERENCES.md` are updated in the same PR as this addendum (Inviolable
 rule 5 — pins, code, and docs move together). The empirical RM/BASE/ADL versions are re-confirmed off the
 running dev EHRbase 2.31.0 stack at the start of the foundation milestone.
+
+---
+
+## Addendum 2 — 2026-05-30: custom ITS-JSON→Zod generator (supersedes `json-schema-to-zod` for ref-heavy packages)
+
+Building `openehr-rm` (PR-2) exposed that **`json-schema-to-zod` does not resolve `$ref`s** — it emits
+`z.any()` for every reference (verified: its own README directs you to pre-resolve with `json-refs` first,
+and `--depth` makes recursion fall back to `z.any()`). That is acceptable for the ref-free BASE leaf
+classes but produces near-useless output for the deeply-referenced, recursive, polymorphic RM
+(102 classes, `CLUSTER`→`ITEM`→`CLUSTER`, `ELEMENT.value: DATA_VALUE`, cross-refs into BASE).
+
+**Decision:** for the ref-heavy packages we use a purpose-built generator, `scripts/openehr-zodgen.mjs`,
+that compiles the (very regular) ITS-JSON draft-07 dialect directly to Zod:
+
+- one `export const X = z.strictObject({…})` + `export type X = z.infer<typeof X>` per class;
+- every field that references another class is emitted as a **Zod-4 getter** (`get f() { return … }`) —
+  `z.lazy` is removed in Zod 4 and getters are the canonical recursion pattern. (`z.object(...).strict()`
+  is avoided: the `.strict()` method eagerly reads `.shape`, firing the getters at definition time and
+  hitting forward-reference TDZ — `z.strictObject` keeps them lazy.)
+- openEHR polymorphism (`allOf` + `if`/`then` per `_type`) → **`z.union([...])`** of the member class
+  refs (not `discriminatedUnion`: `_type` is optional with a default branch, and `.strict()` members
+  disambiguate). Distinct unions are **hoisted to stable named consts** (Zod-4 recursion needs stable
+  schema identity, not a freshly-built union per getter access).
+- both **absolute** cross-file refs and **local** self-refs (`#/definitions/NAME`, used by the recursive
+  branches such as `CLUSTER.items`) are resolved — missing the local form silently drops recursive union
+  members.
+- cross-package refs (e.g. RM → BASE) import the dependency package (`spec.json` `"imports"`).
+
+The regeneration discipline (`spec.json` manifest, vendored `schema/`, `pnpm regen` / `regen:check`
+drift gate, version-namespaced output) is unchanged from Addendum 1.
+
+**Scope.** `openehr-rm` (and the later ref-heavy packages) use `openehr-zodgen.mjs`. `openehr-base`
+(PR-1) currently still uses `json-schema-to-zod` + a hand-stitched facade for its handful of polymorphic
+refs; migrating it to the custom generator (which would handle `OBJECT_REF`/`LOCATABLE_REF`/`PARTY_REF`
+natively and drop the `json-schema-to-zod` dependency) is a low-risk follow-up tracked on the checklist.
+
+**Verification.** Generated RM type-checks (all 102 mutually-recursive `z.infer` types resolve via
+getters); representative + full-canonical-COMPOSITION round-trips pass; `regen:check` is a CI drift gate.
