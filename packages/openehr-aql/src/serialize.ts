@@ -16,7 +16,12 @@ function isParam(v: AqlValue): v is { param: string } {
 
 function serializeValue(value: AqlValue): string {
   if (isParam(value)) return `$${value.param}`;
-  if (typeof value === "string") return `'${value.replace(/'/g, "\\'")}'`;
+  // Escape backslashes FIRST, then single quotes — otherwise the backslashes
+  // added by quote-escaping would be doubled. Prevents AQL string injection.
+  // (Parameterised values via `$param` remain the preferred path for untrusted input.)
+  if (typeof value === "string") {
+    return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+  }
   return String(value);
 }
 

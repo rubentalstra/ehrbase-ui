@@ -84,6 +84,18 @@ describe("serializeAql", () => {
   });
 });
 
+describe("string escaping (CodeQL: complete escaping)", () => {
+  it("escapes both backslashes and single quotes in literals", () => {
+    const q: AqlQuery = {
+      select: { columns: [{ path: "c/uid/value" }] },
+      from: { rmType: "COMPOSITION", alias: "c" },
+      where: compare("c/name/value", "=", "a\\b'c"),
+    };
+    // backslash → \\  and  ' → \'  (backslash escaped first)
+    expect(serializeAql(q)).toContain("c/name/value = 'a\\\\b\\'c'");
+  });
+});
+
 describe("collectParams", () => {
   it("returns the distinct structured $parameters", () => {
     expect(collectParams(vitalsQuery)).toEqual(["ehrId"]);

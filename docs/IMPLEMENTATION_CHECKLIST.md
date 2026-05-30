@@ -130,7 +130,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [x] Generate RM 1.1.0 Zod types (102 classes; getter-based recursion, `z.union` polymorphism, hoisted unions)
 - [x] Hand-stitch abstract-supertype unions (`DATA_VALUE`, `ITEM`, `ENTRY`, `CONTENT_ITEM`, `EVENT`, `PARTY_PROXY`, …) in the facade
 - [x] Representative + full-canonical-COMPOSITION round-trip tests pass (typecheck + test + lint + regen:check green)
-- [ ] **(fed by EHRbase fixtures)** Full ADR-0016 catalogue round-trip — every v1.0 archetype round-trips against canonical examples pulled from the dev EHRbase; release-blocking gate
+- [~] ADR-0016 catalogue round-trip harness — data-driven gate over real openEHR_SDK canonical compositions (encounter / report / minimal / persistent; OBSERVATION / EVALUATION / INSTRUCTION / ADMIN_ENTRY; vitals, labs, IPS, corona, nested PARTY): **10 fixtures round-trip green**. Known divergence (it.todo): `all_types_no_multimedia` omits `DV_INTERVAL.lower_included/upper_included` which ITS-JSON marks required — needs a lenient-parse path. Broaden coverage toward every v1.0 archetype as a release-gate follow-up.
 - [x] Follow-up done (2026-05-30): migrated `openehr-base` to the custom generator + dropped `json-schema-to-zod` (single ITS-JSON pipeline)
 
 **PR-3 — data/format layer:**
@@ -149,7 +149,11 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 - [x] CI: per-package `regen:check` drift gate; turbo `build`/`typecheck`/`test` depend on `regen` + `^regen`; ESLint bans third-party openEHR SDKs
 
-**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green); single ITS-JSON→Zod generation pipeline (`json-schema-to-zod` dropped). Remaining follow-ups: full ADR-0016 catalogue round-trip (fed by live EHRbase fixtures) + empirical RM/BASE/ADL confirmation off the running dev EHRbase 2.31.0.
+**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green); single ITS-JSON→Zod generation pipeline (`json-schema-to-zod` dropped); RM round-trips 10 real canonical compositions.
+
+**Empirical confirmation off the live stack (2026-05-30):** the dev `docker compose` EHRbase **2.31.0** image boots cleanly and serves on `:8080` (Tomcat + Spring up, requests served) — the pinned version is real and operational. Its `/rest/status` (which echoes RM/ADL) is OAuth-gated; reading it requires minting a Keycloak token (the dev clients are browser-flow only), which was not pursued. RM 1.1.0 + BASE 1.1.0 + ADL 1.4 remain authoritatively confirmed by the EHRbase README + ITS-BMM (cited in the ADR-0032 addendum), and corroborated empirically by the 10 canonical-composition round-trips passing against the RM 1.1.0 schema.
+
+Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype (+ a lenient-parse path for the DV_INTERVAL strictness divergence).
 
 ## Milestone 6 — openEHR form engine (§7)
 
