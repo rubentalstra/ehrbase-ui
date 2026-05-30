@@ -73,13 +73,14 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Testing
 
-| Package                | Verified | Pinned     | Source                                                 |
-| ---------------------- | -------- | ---------- | ------------------------------------------------------ |
-| `vitest`               | 4.1.7    | **4.1.7**  | https://registry.npmjs.org/vitest/latest               |
-| `vitest-axe`           | 0.1.0    | **0.1.0**  | https://registry.npmjs.org/vitest-axe/latest           |
-| `axe-core`             | 4.11.4   | **4.11.4** | https://registry.npmjs.org/axe-core/latest             |
-| `@axe-core/playwright` | 4.11.3   | **4.11.3** | https://registry.npmjs.org/@axe-core/playwright/latest |
-| `@playwright/test`     | 1.60.0   | **1.60.0** | https://registry.npmjs.org/@playwright/test/latest     |
+| Package                | Verified | Pinned     | Source                                                                                                                                          |
+| ---------------------- | -------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vitest`               | 4.1.7    | **4.1.7**  | https://registry.npmjs.org/vitest/latest                                                                                                        |
+| `vitest-axe`           | 0.1.0    | **0.1.0**  | https://registry.npmjs.org/vitest-axe/latest                                                                                                    |
+| `axe-core`             | 4.11.4   | **4.11.4** | https://registry.npmjs.org/axe-core/latest                                                                                                      |
+| `@axe-core/playwright` | 4.11.3   | **4.11.3** | https://registry.npmjs.org/@axe-core/playwright/latest                                                                                          |
+| `@playwright/test`     | 1.60.0   | **1.60.0** | https://registry.npmjs.org/@playwright/test/latest                                                                                              |
+| `@electric-sql/pglite` | 0.4.6    | **0.4.6**  | https://registry.npmjs.org/@electric-sql/pglite/latest — in-process Postgres (WASM) for the M7 demographic contract suite (real SQL, no Docker) |
 
 ### Component library / docs
 
@@ -95,13 +96,14 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Backend (proxied) & infrastructure
 
-| Service    | Verified                                               | Pinned                                  | Source                                      |
-| ---------- | ------------------------------------------------------ | --------------------------------------- | ------------------------------------------- |
-| EHRbase    | 2.31.0 (28 Apr 2026, Java 25)                          | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases |
-| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)            | **≥ 26.6.2**                            | https://www.keycloak.org/downloads          |
-| Valkey     | 9.1.0 (three use-after-free CVE fixes)                 | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags |
-| PostgreSQL | 18.4 (14 May 2026)                                     | **18.4**                                | https://www.postgresql.org/docs/release/    |
-| SeaweedFS  | 4.29 (26 May 2026) — dev cold-store default (ADR-0027) | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs      |
+| Service    | Verified                                                                                         | Pinned                                  | Source                                         |
+| ---------- | ------------------------------------------------------------------------------------------------ | --------------------------------------- | ---------------------------------------------- |
+| EHRbase    | 2.31.0 (28 Apr 2026, Java 25)                                                                    | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases    |
+| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)                                                      | **≥ 26.6.2**                            | https://www.keycloak.org/downloads             |
+| Valkey     | 9.1.0 (three use-after-free CVE fixes)                                                           | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags    |
+| PostgreSQL | 18.4 (14 May 2026)                                                                               | **18.4**                                | https://www.postgresql.org/docs/release/       |
+| SeaweedFS  | 4.29 (26 May 2026) — dev cold-store default (ADR-0027)                                           | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs         |
+| HAPI FHIR  | 8.8.0-1 (R4 dev server for the FHIR demographic adapter — `fhir` compose profile, ADR-0031/0033) | **hapiproject/hapi:v8.8.0-1**           | https://hub.docker.com/r/hapiproject/hapi/tags |
 
 ### Observability stack (M5 — ADR-0009, web-verified 2026-05-29)
 
@@ -342,23 +344,23 @@ Component releases are pinned per the architecture-doc "Version-drift discipline
 the newest published spec. RM 1.1.0 (Sep 2020) predates BASE 1.2.0 (Apr 2021), so RM 1.1.0 is built on BASE
 1.1.0; pinning BASE 1.2.0 was incoherent. Only `openehr-cds` (never on the wire) tracks newest stable.
 
-| Component                                                                              | Release (pinned)     | URL                                                                                     |
-| -------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------- |
-| BASE Model (architecture overview + foundational classes)                              | 1.1.0 ⬅ matches RM 1.1.0 / EHRbase | https://specifications.openehr.org/releases/BASE/Release-1.1.0            |
-| Reference Model (RM) — EHR IM + Demographic IM + Common + Data Types + Data Structures | 1.1.0                | https://specifications.openehr.org/releases/RM/Release-1.1.0                            |
-| Archetype Model (AM) — package targets **ADL 1.4 / OPT 1.4** (EHRbase emits ADL 1.4)   | ADL 1.4 (2.3.0 = latest AM spec) | https://specifications.openehr.org/releases/AM/Release-2.3.0               |
-| Query (AQL)                                                                            | 1.1.0                | https://specifications.openehr.org/releases/QUERY/Release-1.1.0                         |
-| Process (PROC — Task Planning, WORK_PLAN / TASK_PLAN / PLAN_ITEM)                      | 1.7.0                | https://specifications.openehr.org/releases/PROC/Release-1.7.0                          |
-| Clinical Decision Support (CDS / GDL2)                                                 | 2.0.1                | https://specifications.openehr.org/releases/CDS/Release-2.0.1                           |
-| Terminology (TERM)                                                                     | 3.0.0                | https://specifications.openehr.org/releases/TERM/Release-3.0.0                          |
-| ITS-REST (REST API specification — the surface EHRbase exposes)                        | 1.0.3 (19 Dec 2022)  | https://specifications.openehr.org/releases/ITS-REST/Release-1.0.3                      |
-| ITS-XML (XML serialisation of the RM)                                                  | 2.0.0                | https://specifications.openehr.org/releases/ITS-XML/Release-2.0.0                       |
-| ITS-JSON (JSON serialisation)                                                          | development          | https://specifications.openehr.org/releases/ITS-JSON/development                        |
-| openEHR base architecture overview (the EHR/Demographic separation source)             | —                    | https://specifications.openehr.org/releases/BASE/development/architecture_overview.html |
-| Clinical Knowledge Manager (archetype + template catalogue)                            | live                 | https://ckm.openehr.org/ckm/                                                            |
-| openEHR Foundation                                                                     | —                    | https://openehr.org                                                                     |
-| EHRbase (open-source CDR; implements EHR IM only — see ADR-0023)                       | 2.31.0 (28 Apr 2026) | https://github.com/ehrbase/ehrbase                                                      |
-| EHRbase docs                                                                           | —                    | https://docs.ehrbase.org                                                                |
+| Component                                                                              | Release (pinned)                   | URL                                                                                     |
+| -------------------------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------- |
+| BASE Model (architecture overview + foundational classes)                              | 1.1.0 ⬅ matches RM 1.1.0 / EHRbase | https://specifications.openehr.org/releases/BASE/Release-1.1.0                          |
+| Reference Model (RM) — EHR IM + Demographic IM + Common + Data Types + Data Structures | 1.1.0                              | https://specifications.openehr.org/releases/RM/Release-1.1.0                            |
+| Archetype Model (AM) — package targets **ADL 1.4 / OPT 1.4** (EHRbase emits ADL 1.4)   | ADL 1.4 (2.3.0 = latest AM spec)   | https://specifications.openehr.org/releases/AM/Release-2.3.0                            |
+| Query (AQL)                                                                            | 1.1.0                              | https://specifications.openehr.org/releases/QUERY/Release-1.1.0                         |
+| Process (PROC — Task Planning, WORK_PLAN / TASK_PLAN / PLAN_ITEM)                      | 1.7.0                              | https://specifications.openehr.org/releases/PROC/Release-1.7.0                          |
+| Clinical Decision Support (CDS / GDL2)                                                 | 2.0.1                              | https://specifications.openehr.org/releases/CDS/Release-2.0.1                           |
+| Terminology (TERM)                                                                     | 3.0.0                              | https://specifications.openehr.org/releases/TERM/Release-3.0.0                          |
+| ITS-REST (REST API specification — the surface EHRbase exposes)                        | 1.0.3 (19 Dec 2022)                | https://specifications.openehr.org/releases/ITS-REST/Release-1.0.3                      |
+| ITS-XML (XML serialisation of the RM)                                                  | 2.0.0                              | https://specifications.openehr.org/releases/ITS-XML/Release-2.0.0                       |
+| ITS-JSON (JSON serialisation)                                                          | development                        | https://specifications.openehr.org/releases/ITS-JSON/development                        |
+| openEHR base architecture overview (the EHR/Demographic separation source)             | —                                  | https://specifications.openehr.org/releases/BASE/development/architecture_overview.html |
+| Clinical Knowledge Manager (archetype + template catalogue)                            | live                               | https://ckm.openehr.org/ckm/                                                            |
+| openEHR Foundation                                                                     | —                                  | https://openehr.org                                                                     |
+| EHRbase (open-source CDR; implements EHR IM only — see ADR-0023)                       | 2.31.0 (28 Apr 2026)               | https://github.com/ehrbase/ehrbase                                                      |
+| EHRbase docs                                                                           | —                                  | https://docs.ehrbase.org                                                                |
 
 ### Terminology infrastructure
 

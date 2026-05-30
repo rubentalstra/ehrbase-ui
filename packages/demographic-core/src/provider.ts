@@ -22,6 +22,9 @@ export const PartyRefSchema = z.object({
   namespace: z.string().min(1),
   /** The provider's stable party id. */
   id: z.string().min(1),
+  // Deliberately narrowed to PERSON for M7 (patient identity). openEHR PARTY_REF
+  // also admits ORGANISATION / GROUP / AGENT / ROLE; a future adapter that needs
+  // those widens this literal — it is NOT a universal constraint.
   type: z.literal("PERSON"),
 });
 export type PartyRef = z.infer<typeof PartyRefSchema>;
@@ -171,6 +174,14 @@ export interface DemographicProvider {
   getParty(id: string, opts: { version?: number }, ctx: ProviderContext): Promise<Party | null>;
   searchParty(query: PartySearchQuery, ctx: ProviderContext): Promise<PartySearchResult>;
   deactivateParty(id: string, justification: string, ctx: ProviderContext): Promise<void>;
+  /**
+   * Merge `from` into `into`: `from` is deactivated and tombstoned to `into` (a
+   * lookup by `from`'s identifier then returns nothing — correct deduplication).
+   * It is intentionally NOT an identifier union: identifiers are NOT auto-moved
+   * to `into` (that could violate the one-active-party-per-identifier guard and
+   * is a clinical-policy decision). To carry a surviving identifier across, the
+   * caller issues an explicit `addIdentifier(into, …)` after the merge.
+   */
   mergeParty(into: string, from: string, ctx: ProviderContext): Promise<void>;
   addIdentifier(partyId: string, namespace: string, value: string, ctx: ProviderContext): Promise<void>;
   endIdentifier(partyId: string, identifierId: string, ctx: ProviderContext): Promise<void>;

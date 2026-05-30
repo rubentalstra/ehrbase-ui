@@ -177,17 +177,20 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 
 > **NEW.** EHRbase only implements the EHR side. Demographic provider is pluggable — built-in Postgres adapter (default) + FHIR R4 adapter both ship in M7. ADR-0031 supersedes ADR-0023 in shape. Per Inviolable rule 13, the full demographic admin UI ships in M7 (previously split with M15).
 
-- [ ] `DemographicProvider` interface in `packages/demographic-core` — ADR-0031
-- [ ] Built-in adapter: Postgres `demographic` schema + roles (`demographic_owner`, `demographic_writer`) on `platform-db` — ADR-0013 pattern, in `packages/db-platform`
-- [ ] PARTY hierarchy implementation: PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, ROLE, basic PARTY_RELATIONSHIP — types from `@ehrbase-ui/openehr-rm` (ADR-0032)
-- [ ] VERSIONED_PARTY semantics — every update writes a new row; prior versions readable
-- [ ] REST surface `/api/demographic/*` in `apps/web/src/routes/api/demographic/`
-- [ ] FHIR R4 adapter: `packages/demographic-adapter-fhir` — version-aware (R4 only for v1.0; R5/R6 pure-additive per ADR-0033)
-- [ ] Capability flags (`capabilities.readonly` etc.) drive admin UI gating
-- [ ] Identifier-namespace registry: NL (BSN, 11-proef), BE (NISS, mod-97), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL, 11-digit), MRN
-- [ ] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024)
-- [ ] EHRbase `EHR_STATUS.subject` populated as `PARTY_IDENTIFIED` with `external_ref` pointing through the provider
-- [ ] Audit: `READ` / `CREATE` / `UPDATE` / `MERGE_PARTY` on `PARTY` resource type; `source.adapterName` recorded
+> **Server foundation landed 2026-05-30 (branch `feat/demographic-provider`).** Both adapters + the REST surface + the dual-adapter contract suite ship together (Inviolable rule 13). Storage = hybrid current/history JSONB snapshot (matches openEHR VERSIONED_OBJECT, EHRbase, and the FHIR-shaped canonical Party — ADR-0031 research). Remaining M7 work is the **admin UI** + EHR_STATUS.subject wiring at patient-create (M8).
+
+- [x] `DemographicProvider` interface in `packages/demographic-core` — ADR-0031
+- [x] Built-in adapter: Postgres `demographic` schema + roles (`demographic_owner`, `demographic_writer`) on `platform-db` — ADR-0013 pattern. Schema owned by `packages/demographic-core/builtin`; migrations + client + roles in `apps/web/src/server/db` (ADR-0035, not `db-platform`)
+- [x] PARTY hierarchy implementation: PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, ROLE, basic PARTY_RELATIONSHIP — canonical FHIR-shaped `Party` projection (ADR-0031) + relationship table
+- [x] VERSIONED_PARTY semantics — immutable whole-party snapshot per version (current + history); prior versions readable by id+version; `listVersions`
+- [x] REST surface `/api/demographic/*` in `apps/web/src/routes/api/demographic/` — role-gated, provider-audited
+- [x] FHIR R4 adapter: `packages/demographic-adapter-fhir` — version-aware (R4/R4B; R5/R6 throw at construction per ADR-0033); merge via Patient.link + relationships via RelatedPerson (ADR-0033 addendum)
+- [x] Capability flags (`capabilities.readonly` etc.) drive admin UI gating
+- [x] Identifier-namespace registry: NL (BSN, 11-proef), BE (NISS, mod-97), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL, 11-digit), MRN
+- [x] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024)
+- [ ] EHRbase `EHR_STATUS.subject` populated as `PARTY_IDENTIFIED` with `external_ref` pointing through the provider — _(provider emits the rule-12 `PartyRef`; EHR_STATUS wiring lands with patient-create in M8)_
+- [x] Audit: `READ` / `CREATE` / `UPDATE` / `QUERY` / `DELETE` / `ADMIN_CHANGE` (merge) on `PARTY` resource type; `source.adapterName` recorded (T2d migration)
+- [x] Dual-adapter contract suite (`@ehrbase-ui/demographic-core/contract`) — built-in against PGlite, FHIR against an in-memory R4 double; pinned HAPI `fhir` docker profile for live integration
 - [ ] **Full demographic admin UI** at `/_authed/admin/patients/*` — create + edit + identifiers + relationships + deactivate + merge + version-history (capability-gated against the active provider)
 - [ ] Storybook + E2E: built-in adapter golden-path; FHIR adapter read-only path
 

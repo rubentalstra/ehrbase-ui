@@ -49,6 +49,7 @@ export type AuditResourceType =
   | 'FOLDER'
   | 'CONTRIBUTION'
   | 'SYSTEM'
+  | 'PARTY'
 
 export type AuditPurpose =
   | 'TREATMENT'
@@ -91,6 +92,7 @@ export interface AuditEventRow {
   sourceUserAgent: string
   sourceSessionId: string | null
   sourceCorrelationId: string | null
+  sourceAdapterName: string | null
   action: AuditAction
   targetEhrId: string | null
   targetSubjectIdHash: string | null

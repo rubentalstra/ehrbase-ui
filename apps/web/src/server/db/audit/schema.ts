@@ -52,6 +52,8 @@ export const auditResourceTypeEnum = pgEnum('audit_resource_type', [
   'FOLDER',
   'CONTRIBUTION',
   'SYSTEM',
+  // M7 demographic provider (ADR-0031): every PARTY op audits with this type.
+  'PARTY',
 ])
 
 export const auditPurposeEnum = pgEnum('audit_purpose', [
@@ -110,6 +112,12 @@ export const auditEvents = pgTable(
     sourceUserAgent: text('source_user_agent').notNull(),
     sourceSessionId: text('source_session_id').notNull(),
     sourceCorrelationId: uuid('source_correlation_id').notNull(),
+    // M7 (ADR-0031): the demographic provider name (e.g. 'builtin', 'fhir-r4')
+    // that served a PARTY op — forensic adapter attribution (ADR-0024 dual-layer).
+    // Nullable: only demographic-provider audits set it. EXCLUDED from the
+    // integrity hash (hash-chain.ts) so adding the column does not invalidate the
+    // pre-existing chain; the append-only trigger still protects it from mutation.
+    sourceAdapterName: text('source_adapter_name'),
 
     // WHAT (action)
     action: auditActionEnum('action').notNull(),

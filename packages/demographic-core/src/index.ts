@@ -7,4 +7,6 @@
 // (kept out of this barrel so node:crypto + the secret never reach a client bundle).
 
 export * from "./provider.ts";
+export * from "./audit.ts";
+export * from "./errors.ts";
 export * from "./identifier/index.ts";

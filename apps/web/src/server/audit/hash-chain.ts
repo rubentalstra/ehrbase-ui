@@ -19,7 +19,11 @@ export const CHAIN_HEAD_KEY = 'audit:lastHash'
 // serialization is stable regardless of property insertion order. The row is
 // flat (only primitives + the actorRoles string array), so the
 // sorted-key-array form of JSON.stringify is fully deterministic.
-const HASH_EXCLUDED_KEYS = new Set(['s3ArchivedAt'])
+// `s3ArchivedAt` — post-insert retention bookkeeping (M4). `sourceAdapterName` —
+// added in M7 (ADR-0031); excluding it keeps every pre-M7 row's recomputed hash
+// identical (the column is null on old rows), so the chain stays valid across the
+// migration. The append-only trigger (ADR-0013) still protects both from mutation.
+const HASH_EXCLUDED_KEYS = new Set(['s3ArchivedAt', 'sourceAdapterName'])
 export function canonicalize(row: Record<string, unknown>): string {
   const keys = Object.keys(row)
     .filter((k) => !HASH_EXCLUDED_KEYS.has(k))
