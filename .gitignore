@@ -24,6 +24,9 @@ apps/web/src/paraglide/
 # orval generated output (regenerated on demand) — lives in the openehr
 # REST client package per ADR-0030 / ADR-0032.
 packages/openehr-its-rest/src/generated/
+# Sanitized OAS copies (spec defaults stripped) consumed by orval — transient
+# build artefact; the pristine vendored specs live in openapi/*.yaml.
+packages/openehr-its-rest/openapi/.sanitized/
 
 # TanStack Router generated route tree
 apps/web/src/routeTree.gen.ts

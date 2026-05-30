@@ -9,7 +9,7 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "regen", "^regen"],
       "inputs": [
         "src/**",
         "package.json",
@@ -22,7 +22,7 @@
       "outputs": ["dist/**", ".output/**", ".nitro/**", "src/paraglide/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "regen", "^regen"],
       "inputs": ["src/**", "package.json", "tsconfig.json", "tsconfig.*.json"],
       "outputs": [".tsbuildinfo"]
     },
@@ -37,7 +37,7 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "regen", "^regen"],
       "inputs": ["src/**", "package.json", "tsconfig.json", "vitest.config.ts"],
       "outputs": ["coverage/**"]
     },
