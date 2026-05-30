@@ -119,10 +119,10 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 **PR-1 — `openehr-base` (BASE 1.1.0) + shared regen tooling:**
 
-- [ ] Shared regen pipeline: fetch ITS-JSON schemas, rewrite absolute `$ref`s → local, bundle, `json-schema-to-zod`; reads per-package `spec.json`
-- [ ] Future-version primitives established on `openehr-base` (manifest, version-namespaced output, facade, `SPEC_VERSION`)
-- [ ] ESLint `no-restricted-imports` rule banning `ehrtslib` / `medblocks-ui` / `@bpac/openehr-models` / `@mmt_d/mmt-openehr-types` — ADR-0032
-- [ ] `openehr-base` facade + foundational helpers (`Interval<T>`, `Iso8601_*`, identifiers, polymorphic `LOCATABLE_REF.id` stitch) + Vitest round-trip; `typecheck`/`test` scripts green via turbo
+- [x] Shared regen pipeline: fetch ITS-JSON schemas, rewrite absolute `$ref`s → local, `json-schema-to-zod`; reads per-package `spec.json`
+- [x] Future-version primitives established on `openehr-base` (manifest, version-namespaced output, facade, `SPEC_VERSION`)
+- [x] ESLint `no-restricted-imports` rule banning `ehrtslib` / `medblocks-ui` / `@bpac/openehr-models` / `@mmt_d/mmt-openehr-types` — ADR-0032
+- [x] `openehr-base` facade + foundational helpers (`Interval<T>`, `Iso8601_*`, identifiers, polymorphic `LOCATABLE_REF.id` stitch) + Vitest round-trip; `typecheck`/`test` scripts green via turbo
 
 **PR-2 — `openehr-rm` (RM 1.1.0):**
 
@@ -133,7 +133,12 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [ ] **(fed by EHRbase fixtures)** Full ADR-0016 catalogue round-trip — every v1.0 archetype round-trips against canonical examples pulled from the dev EHRbase; release-blocking gate
 - [ ] Follow-up: migrate `openehr-base` to the custom generator + drop `json-schema-to-zod`
 
-**PR-3 — data/format layer:** `openehr-its-rest` (EHRbase 2.31.0 OpenAPI via orval), `openehr-web-template` (parser + Zod generator), `openehr-flat` (FLAT↔canonical converter), `openehr-am` (minimal ADL 1.4 / OPT subset)
+**PR-3 — data/format layer:**
+
+- [x] `openehr-its-rest` — orval Zod schemas (ehr/query/definition) from the openEHR OAS; self-contained generation moved into the package; spec-default sanitize step
+- [x] `openehr-web-template` — web template parser + `generateFormSchema` (rmType + inputs + cardinality → Zod), verified against the openEHR_SDK `test_all_types` fixture
+- [x] `openehr-flat` — FLAT path grammar + web-template-aware `formStateToFlat`/`flatToFormState` (round-tripped; grammar checked against the openEHR_SDK Vitalsigns fixture)
+- [x] `openehr-am` — minimal ADL 1.4 archetype-id + node-code identifier layer
 
 **PR-4 — query/clinical layer:** `openehr-aql` (AST + builder + serializer), `openehr-term` (openEHR code sets), `openehr-proc` (Task Planning model), `openehr-cds` (GDL2-aligned rule-authoring model)
 
