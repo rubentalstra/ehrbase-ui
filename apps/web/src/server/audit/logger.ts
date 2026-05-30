@@ -62,6 +62,7 @@ export async function logAudit(input: LogAuditInput): Promise<void> {
           parsedInput.source?.correlationId ??
           safeHeader('x-correlation-id') ??
           randomUUID(),
+        sourceAdapterName: parsedInput.source?.adapterName ?? null,
         action: parsedInput.action,
         targetEhrId: parsedInput.target?.ehrId ?? null,
         targetSubjectIdHash: parsedInput.target?.subjectIdHash ?? null,

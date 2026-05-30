@@ -19,6 +19,7 @@ import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
 import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
 import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
+import { Route as ApiDemographicSplatRouteImport } from './routes/api/demographic/$'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
@@ -73,6 +74,11 @@ const ApiEhrbaseSplatRoute = ApiEhrbaseSplatRouteImport.update({
   path: '/api/ehrbase/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDemographicSplatRoute = ApiDemographicSplatRouteImport.update({
+  id: '/api/demographic/$',
+  path: '/api/demographic/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthBreakGlassRoute = ApiAuthBreakGlassRouteImport.update({
   id: '/api/auth/break-glass',
   path: '/api/auth/break-glass',
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/me/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -137,6 +145,7 @@ export interface FileRoutesById {
   '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
+  '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
   '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
+    | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/me/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
+    | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_authed/me_/access-log'
     | '/api/auth/$'
     | '/api/auth/break-glass'
+    | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
     | '/api/admin/audit/tasks/$'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   ApiReadyRoute: typeof ApiReadyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAuthBreakGlassRoute: typeof ApiAuthBreakGlassRoute
+  ApiDemographicSplatRoute: typeof ApiDemographicSplatRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
   ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
   ApiAdminAuditTasksSplatRoute: typeof ApiAdminAuditTasksSplatRoute
@@ -277,6 +290,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEhrbaseSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/demographic/$': {
+      id: '/api/demographic/$'
+      path: '/api/demographic/$'
+      fullPath: '/api/demographic/$'
+      preLoaderRoute: typeof ApiDemographicSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/break-glass': {
       id: '/api/auth/break-glass'
       path: '/api/auth/break-glass'
@@ -332,6 +352,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiReadyRoute: ApiReadyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAuthBreakGlassRoute: ApiAuthBreakGlassRoute,
+  ApiDemographicSplatRoute: ApiDemographicSplatRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
   ApiLogClientErrorRoute: ApiLogClientErrorRoute,
   ApiAdminAuditTasksSplatRoute: ApiAdminAuditTasksSplatRoute,

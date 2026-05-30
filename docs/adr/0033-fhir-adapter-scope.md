@@ -57,6 +57,18 @@ The same demographic-adapter-FHIR codebase needs to remain forward-compatible: R
 
 **Trade-off vs FHIR-version-agnostic ("StructureMap at runtime").** Rejected. StructureMap is heavyweight and itself versioned; running cross-version transforms inside the demographic hot path is excessive complexity for negligible v1.0 benefit.
 
+## Addendum 2026-05-30 — merge + relationships fully implemented (not lossy / out-of-scope)
+
+The original "Mapping scope" above scoped relationships as a lossy edge (next-of-kin only, dropped otherwise) and did not commit to merge. Per Inviolable rule 13 (complete features end-to-end — no "not supported in v1.0" stubs), the FHIR adapter shipped in M7 implements **both, in full, with no lossy edge**:
+
+- **Merge** → FHIR-native `Patient.link`: the source is deactivated and linked `replaced-by` → target; the target is linked `replaces` → source. Full bidirectional lineage preserved. `capabilities.supportsMerge` tracks `allowWrites`.
+- **Relationships** → the `RelatedPerson` resource: `patient` = source, the relationship type round-trips **losslessly** via a project code system (`…/fhir/relationship-type`) for **every** `RelationshipType` (not just next-of-kin), `period` = time-validity, and the target party reference is carried in a typed extension (`…/fhir/related-patient`).
+- **Deactivation justification** → persisted on the FHIR record via a `…/fhir/deactivation-reason` extension (parity with the built-in's `change_description` column).
+
+All three are exercised by the shared dual-adapter contract suite (`@ehrbase-ui/demographic-core/contract`). The earlier "lossy / next-of-kin-only / merge-deferred" wording is superseded.
+
+The adapter remains **read-only by default** (`allowWrites:false` → `capabilities.readonly:true`); enabling writes turns on the full mutation surface, all capability-gated.
+
 ## Verification
 
 - `pnpm test --filter @ehrbase-ui/demographic-adapter-fhir` — R4 mapper round-trips IPS sample Patient bundles

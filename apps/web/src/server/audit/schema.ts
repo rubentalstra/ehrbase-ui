@@ -88,6 +88,8 @@ export const LogAuditInputSchema = z.object({
       userAgent: z.string().optional(),
       sessionId: z.string().optional(),
       correlationId: z.string().optional(),
+      // M7 (ADR-0031): demographic provider name for PARTY ops ('builtin' | 'fhir-r4').
+      adapterName: z.string().optional(),
     })
     .optional(),
 })
