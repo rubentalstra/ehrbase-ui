@@ -2,21 +2,29 @@
   "name": "@ehrbase-ui/openehr-rm",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR Reference Model 1.1.0 — EHR IM + Demographic IM + Common + Data Types + Data Structures. Generated from openEHR/specifications-ITS-JSON per ADR-0032.",
+  "description": "openEHR Reference Model 1.1.0 (matches EHRbase 2.31.0) — EHR IM + Demographic IM + Common + Data Types + Data Structures. Generated from openEHR/specifications-ITS-JSON via the custom ITS-JSON→Zod generator (ADR-0032 addendum); abstract-supertype unions hand-stitched in the facade.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./ehr": "./src/ehr/index.ts",
-    "./demographic": "./src/demographic/index.ts",
-    "./data-types": "./src/data-types/index.ts"
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "regen": "node ../../scripts/openehr-zodgen.mjs",
+    "regen:check": "node ../../scripts/openehr-zodgen.mjs --check",
+    "regen:fetch": "node ../../scripts/openehr-fetch-schema.mjs --latest",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@ehrbase-ui/openehr-base": "workspace:*"
+    "@ehrbase-ui/openehr-base": "workspace:*",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }

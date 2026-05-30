@@ -2,19 +2,18 @@
 //
 // EHR IM (COMPOSITION / OBSERVATION / EVALUATION / INSTRUCTION / ACTION /
 // SECTION) + Demographic IM (PARTY / PERSON / PARTY_IDENTITY / CONTACT /
-// ADDRESS / ROLE / PARTY_RELATIONSHIP) + Common + Data Types (DV_TEXT,
-// DV_QUANTITY, DV_CODED_TEXT, …) + Data Structures.
+// ADDRESS / ROLE / PARTY_RELATIONSHIP) + Common + Data Types + Data Structures.
 //
-// Source of truth: https://specifications.openehr.org/releases/RM/Release-1.1.0
-// Specifications
-// Specification	Description
-// STABLE EHR	The information model of the openEHR EHR.
-// STABLE Demographic	The openEHR demographics information model.
-// STABLE Common	Information model containing common concepts, including the archetype-enabling `LOCATABLE` class, party references, audits and attestations, change control, and authored resources.
-// STABLE Data Structures	Information model of data structures, including a powerful model of time-series data.
-// STABLE Data Types	Information model of data types, including quantities, date/times, plain and coded text, time specification, multimedia and URIs.
-// STABLE Support	Support model defining identifiers, assumed types, and terminology interface specification used in the rest of the IMs.
-// STABLE Integration	Information model for representing legacy data is a free-form Entry type for implementing integration solutions.
-// STABLE EHR Extract	The information model of the EHR Extract, which is a serialisation of content from an EHR.
-// Type-generation strategy: ADR-0032. Populated by M6 + M7. Empty in v1.0 foundation.
-export {}
+// PIN: RM 1.1.0 — exactly what EHRbase 2.31.0 implements (ADR-0032 addendum).
+// Generated from openEHR/specifications-ITS-JSON (components/RM/Release-1.1.0)
+// via the custom ITS-JSON→Zod generator (`pnpm regen`): one Zod schema + z.infer
+// type per concrete class, recursion handled with Zod-4 getters. The abstract
+// supertypes (DATA_VALUE, ITEM, ENTRY, …) are hand-stitched unions in ./facade.
+//
+// Cross-package: BASE identifiers/refs come from @ehrbase-ui/openehr-base.
+//
+// Import schemas + inferred types from here — never from ./generated/*.
+
+export * from "./generated/current.ts";
+export * from "./facade/abstract.ts";
+export { SPEC_COMPONENT, SPEC_VERSION } from "./spec.ts";

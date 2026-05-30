@@ -105,6 +105,56 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [x] Tempo (`3.0.0`) + Loki (`3.7.2`) + Prometheus (`v3.12.0`) + Grafana (`grafana-oss:13.0.1` + Keycloak SSO) dev stack
 - [x] PHI-redaction layer verification (unit tests for layers 1 + 2; collector layers 3 + 4 in `apps/web/docker/otel/collector-config.yaml`)
 
+## Milestone 5.5 — openEHR Spec Foundation (`packages/openehr-*`)
+
+> **NEW (2026-05-30).** Builds out all 10 `packages/openehr-*` packages fully — the type/format/grammar data layer every clinical milestone (M6–M19) consumes. Pinned to **EHRbase 2.31.0 reality** (RM 1.1.0 + BASE 1.1.0 + ADL 1.4), not the newest spec — see the ADR-0032 addendum (2026-05-30). Delivered as 4 dependency-tiered PRs. Plan: `~/.claude/plans/okay-now-i-want-generic-sedgewick.md`.
+>
+> **Future-version ready:** every package ships a `spec.json` manifest, version-namespaced `src/generated/<v>/` + `current.ts`, a stable hand-written facade over generated types, `SPEC_VERSION` export, Zod-codec wire boundary, and a runtime RM-version guard — so a future spec bump is additive, never a rewrite.
+
+**Pin realignment (governance — Inviolable rule 5):**
+
+- [x] ADR-0032 addendum: pin-to-EHRbase policy + corrected pins (BASE 1.2.0→1.1.0, AM 2.3.0→ADL 1.4)
+- [x] CLAUDE.md "Versions" + `docs/REFERENCES.md` updated to match
+- [ ] Empirical RM/BASE/ADL confirmation off the running dev EHRbase 2.31.0 stack
+
+**PR-1 — `openehr-base` (BASE 1.1.0) + shared regen tooling:**
+
+- [x] Shared regen pipeline: fetch ITS-JSON schemas, custom ITS-JSON→Zod generator (`scripts/openehr-zodgen.mjs`); reads per-package `spec.json`
+- [x] Future-version primitives established on `openehr-base` (manifest, version-namespaced output, facade, `SPEC_VERSION`)
+- [x] ESLint `no-restricted-imports` rule banning `ehrtslib` / `medblocks-ui` / `@bpac/openehr-models` / `@mmt_d/mmt-openehr-types` — ADR-0032
+- [x] `openehr-base` facade + foundational helpers (`Interval<T>`, `Iso8601_*`, identifiers, polymorphic `LOCATABLE_REF.id` stitch) + Vitest round-trip; `typecheck`/`test` scripts green via turbo
+
+**PR-2 — `openehr-rm` (RM 1.1.0):**
+
+- [x] Custom ITS-JSON→Zod generator (`scripts/openehr-zodgen.mjs`) — `json-schema-to-zod` can't resolve refs/recursion (ADR-0032 addendum 2)
+- [x] Generate RM 1.1.0 Zod types (102 classes; getter-based recursion, `z.union` polymorphism, hoisted unions)
+- [x] Hand-stitch abstract-supertype unions (`DATA_VALUE`, `ITEM`, `ENTRY`, `CONTENT_ITEM`, `EVENT`, `PARTY_PROXY`, …) in the facade
+- [x] Representative + full-canonical-COMPOSITION round-trip tests pass (typecheck + test + lint + regen:check green)
+- [~] ADR-0016 catalogue round-trip harness — data-driven gate over real openEHR_SDK canonical compositions (encounter / report / minimal / persistent; OBSERVATION / EVALUATION / INSTRUCTION / ADMIN_ENTRY; vitals, labs, IPS, corona, nested PARTY): **10 fixtures round-trip green**. Known divergence (it.todo): `all_types_no_multimedia` omits `DV_INTERVAL.lower_included/upper_included` which ITS-JSON marks required — needs a lenient-parse path. Broaden coverage toward every v1.0 archetype as a release-gate follow-up.
+- [x] Follow-up done (2026-05-30): migrated `openehr-base` to the custom generator + dropped `json-schema-to-zod` (single ITS-JSON pipeline)
+
+**PR-3 — data/format layer:**
+
+- [x] `openehr-its-rest` — orval Zod schemas (ehr/query/definition) from the openEHR OAS; self-contained generation moved into the package; spec-default sanitize step
+- [x] `openehr-web-template` — web template parser + `generateFormSchema` (rmType + inputs + cardinality → Zod), verified against the openEHR_SDK `test_all_types` fixture
+- [x] `openehr-flat` — FLAT path grammar + web-template-aware `formStateToFlat`/`flatToFormState` (round-tripped; grammar checked against the openEHR_SDK Vitalsigns fixture)
+- [x] `openehr-am` — minimal ADL 1.4 archetype-id + node-code identifier layer
+
+**PR-4 — query/clinical layer:**
+
+- [x] `openehr-aql` — typed AST + combinator builders + `serializeAql`/`collectParams` (grammar/editor deferred to M16)
+- [x] `openehr-term` — openEHR internal terminology (codesets + code→rubric groups) generated from the authoritative terminology XML via fast-xml-parser
+- [x] `openehr-proc` — Task Planning core model (WORK_PLAN/TASK_PLAN/TASK_GROUP/PLAN_ITEM, recursive) from the Task Planning BMM
+- [x] `openehr-cds` — GDL2-aligned `CdsRule` authoring model (bindings + condition tree + severity actions)
+
+- [x] CI: per-package `regen:check` drift gate; turbo `build`/`typecheck`/`test` depend on `regen` + `^regen`; ESLint bans third-party openEHR SDKs
+
+**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green); single ITS-JSON→Zod generation pipeline (`json-schema-to-zod` dropped); RM round-trips 10 real canonical compositions.
+
+**Empirical confirmation off the live stack (2026-05-30):** the dev `docker compose` EHRbase **2.31.0** image boots cleanly and serves on `:8080`. `/rest/status` was read empirically (via `scripts/dev/ehrbase-version-probe.sh` — a temporary probe client minting a dev token inside the docker network; cleaned up after): `ehrbase_version 2.31.0` (matches the pin exactly), `openehr_sdk_version 2.31.0`, `archie_version 3.13.0` (the openEHR RM/AOM/ADL implementation). EHRbase 2.31.0's declared conformance — RM 1.1.0 + ADL 1.4 (README + ITS-BMM, cited in the ADR-0032 addendum) — matches our pins (RM 1.1.0 / BASE 1.1.0 / ADL 1.4) and is corroborated by the 10 canonical-composition round-trips passing against the RM 1.1.0 schema.
+
+Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype (+ a lenient-parse path for the DV_INTERVAL strictness divergence).
+
 ## Milestone 6 — openEHR form engine (§7)
 
 > The form-rendering substrate every clinical write surface (M10–M15) depends on. Lands across `packages/openehr-{base,rm,its-rest,flat,web-template}` + `packages/ui/src/components/openehr/*` + app-internal `apps/web/src/lib/openehr/*`.

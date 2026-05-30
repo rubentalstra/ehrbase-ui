@@ -2,15 +2,22 @@
   "name": "@ehrbase-ui/openehr-aql",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR AQL 1.1.0 query builder + parser + CodeMirror grammar. Populated by M16 AQL editor.",
+  "description": "openEHR AQL 1.1.0 — typed query AST, combinator builders, and serializer (AST → AQL string) + parameter collector. Backs the stored-query catalogue; grammar/parser + CodeMirror editor land in M16.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }

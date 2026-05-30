@@ -34,6 +34,7 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 - Storybook **10.4.1** (diverges from arch doc §17 which names 9.x — see ADR-0010)
 - orval **8.12.3**, @opentelemetry/sdk-node **0.218.0**
 - Keycloak **≥26.6.2** (CVE-2026-37981 floor), Valkey **≥9.1.0** (3 CVE floor), PostgreSQL **18.4**, EHRbase **2.31.0**
+- **openEHR spec pins (pin-to-EHRbase policy — ADR-0032 addendum 2026-05-30):** wire-coupled packages match what EHRbase 2.31.0 implements, **not** the newest spec → **RM 1.1.0**, **BASE 1.1.0** (not 1.2.0 — RM 1.1.0 predates BASE 1.2.0), **AM = ADL 1.4 / OPT 1.4** (not AOM2 2.3.0). AQL **1.1.0**, PROC **1.7.0**, TERM **3.0.0**, ITS-REST **1.0.3** / EHRbase 2.31.0 OpenAPI. Only **`openehr-cds` (CDS 2.0.1 / GDL2)** tracks newest — it never crosses the wire. Full table + rationale in `docs/REFERENCES.md` and the ADR-0032 addendum.
 
 ## Where decisions live
 

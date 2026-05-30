@@ -2,19 +2,26 @@
   "name": "@ehrbase-ui/openehr-web-template",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR Web Template (Marand / EHRbase variant) parser + Zod schema generator. Consumed by M6 FieldRenderer + ArrayFieldRenderer.",
+  "description": "openEHR Web Template (EHRbase / Marand variant) parser + form-schema generator. Parses + Zod-validates the EHRbase web template JSON and generates a Zod form-state schema from it. Consumed by the M6 FieldRenderer + ArrayFieldRenderer (§7).",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@ehrbase-ui/openehr-rm": "workspace:*",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }

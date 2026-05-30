@@ -337,11 +337,16 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 
 Component releases are pinned per the architecture-doc "Version-drift discipline" — re-verify at every revision of `architecture.md`, never by recollection.
 
-| Component                                                                              | Release              | URL                                                                                     |
+**Pin-to-EHRbase policy (ADR-0032 addendum, 2026-05-30):** wire-coupled openEHR packages pin to what
+**EHRbase 2.31.0 actually implements** — RM 1.1.0 + BASE 1.1.0 + ADL 1.4 (per the EHRbase README) — not to
+the newest published spec. RM 1.1.0 (Sep 2020) predates BASE 1.2.0 (Apr 2021), so RM 1.1.0 is built on BASE
+1.1.0; pinning BASE 1.2.0 was incoherent. Only `openehr-cds` (never on the wire) tracks newest stable.
+
+| Component                                                                              | Release (pinned)     | URL                                                                                     |
 | -------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------- |
-| BASE Model (architecture overview + foundational classes)                              | 1.2.0                | https://specifications.openehr.org/releases/BASE/Release-1.2.0                          |
+| BASE Model (architecture overview + foundational classes)                              | 1.1.0 ⬅ matches RM 1.1.0 / EHRbase | https://specifications.openehr.org/releases/BASE/Release-1.1.0            |
 | Reference Model (RM) — EHR IM + Demographic IM + Common + Data Types + Data Structures | 1.1.0                | https://specifications.openehr.org/releases/RM/Release-1.1.0                            |
-| Archetype Model (AM / ADL2 / AOM2 / OPT)                                               | 2.3.0                | https://specifications.openehr.org/releases/AM/Release-2.3.0                            |
+| Archetype Model (AM) — package targets **ADL 1.4 / OPT 1.4** (EHRbase emits ADL 1.4)   | ADL 1.4 (2.3.0 = latest AM spec) | https://specifications.openehr.org/releases/AM/Release-2.3.0               |
 | Query (AQL)                                                                            | 1.1.0                | https://specifications.openehr.org/releases/QUERY/Release-1.1.0                         |
 | Process (PROC — Task Planning, WORK_PLAN / TASK_PLAN / PLAN_ITEM)                      | 1.7.0                | https://specifications.openehr.org/releases/PROC/Release-1.7.0                          |
 | Clinical Decision Support (CDS / GDL2)                                                 | 2.0.1                | https://specifications.openehr.org/releases/CDS/Release-2.0.1                           |

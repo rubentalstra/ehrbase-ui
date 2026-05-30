@@ -2,15 +2,22 @@
   "name": "@ehrbase-ui/openehr-am",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR Archetype Model 2.3.0 — ADL2 / AOM2 / OPT. Hand-typed narrow scope per ADR-0032; only the OPT subset M6 parses for web-template hydration.",
+  "description": "openEHR Archetype Model — ADL 1.4 / OPT 1.4 (matches EHRbase 2.31.0; not AOM2 2.3.0, per ADR-0032 addendum). Minimal: the ADL 1.4 archetype-id + node-code (at/ac) identifier layer backing the ADR-0016 catalogue and clinical-UI citations. Form consumption lives in @ehrbase-ui/openehr-web-template.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }

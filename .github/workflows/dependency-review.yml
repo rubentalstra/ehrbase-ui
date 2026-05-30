@@ -40,3 +40,18 @@ jobs:
             MIT, MIT-0, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD, ISC,
             BlueOak-1.0.0, CC0-1.0, CC-BY-4.0, Unlicense, Python-2.0, OFL-1.1,
             Zlib, MPL-2.0
+          # Skip the license check for our OWN first-party workspace packages
+          # (all Apache-2.0, never published to npm). As `workspace:*` deps the
+          # action can't resolve a registry license and would warn "unknown" —
+          # but these are first-party code, not third-party supply-chain deps to
+          # license-review. Keep in sync when adding a packages/* package.
+          allow-dependencies-licenses: >-
+            pkg:npm/@ehrbase-ui/config-eslint, pkg:npm/@ehrbase-ui/config-tsconfig,
+            pkg:npm/@ehrbase-ui/demographic-adapter-fhir, pkg:npm/@ehrbase-ui/demographic-core,
+            pkg:npm/@ehrbase-ui/i18n, pkg:npm/@ehrbase-ui/openehr-am, pkg:npm/@ehrbase-ui/openehr-aql,
+            pkg:npm/@ehrbase-ui/openehr-base, pkg:npm/@ehrbase-ui/openehr-cds,
+            pkg:npm/@ehrbase-ui/openehr-flat, pkg:npm/@ehrbase-ui/openehr-its-rest,
+            pkg:npm/@ehrbase-ui/openehr-proc, pkg:npm/@ehrbase-ui/openehr-rm,
+            pkg:npm/@ehrbase-ui/openehr-term, pkg:npm/@ehrbase-ui/openehr-web-template,
+            pkg:npm/@ehrbase-ui/term-adapter-snowstorm, pkg:npm/@ehrbase-ui/term-core,
+            pkg:npm/@ehrbase-ui/valkey
