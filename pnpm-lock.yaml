@@ -76,9 +76,18 @@ importers:
       '@ehrbase-ui/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@ehrbase-ui/openehr-flat':
+        specifier: workspace:*
+        version: link:../../packages/openehr-flat
       '@ehrbase-ui/openehr-its-rest':
         specifier: workspace:*
         version: link:../../packages/openehr-its-rest
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../../packages/openehr-rm
+      '@ehrbase-ui/openehr-web-template':
+        specifier: workspace:*
+        version: link:../../packages/openehr-web-template
       '@ehrbase-ui/valkey':
         specifier: workspace:*
         version: link:../../packages/valkey
