@@ -31,6 +31,17 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   })
 }
 
+// jsdom has no ResizeObserver; Radix UI (Select, Popover, etc.) need it.
+// Stub with a no-op so components that use @radix-ui/react-use-size mount
+// without throwing in unit tests.
+if (typeof window !== 'undefined' && !window.ResizeObserver) {
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
+
 expect.extend(matchers)
 
 afterEach(() => {

@@ -156,5 +156,29 @@
   "workbench_aql_row_count": "{count} rows",
   "workbench_aql_empty": "The query returned no rows.",
   "workbench_aql_no_results_yet": "Run a query to see results.",
-  "workbench_aql_col_fallback": "Column {index}"
+  "workbench_aql_col_fallback": "Column {index}",
+
+  "workbench_tab_compose": "Compose",
+
+  "compose_title": "Compose",
+  "compose_subtitle": "Create a new composition from an operational template.",
+  "compose_pick_template_label": "Template ID",
+  "compose_pick_template_placeholder": "e.g. Vital Signs.v1",
+  "compose_load_template": "Load template",
+  "compose_ehr_id_label": "EHR ID",
+  "compose_ehr_id_placeholder": "00000000-0000-0000-0000-000000000000",
+  "compose_submit": "Submit composition",
+  "compose_submitting": "Submitting…",
+  "compose_success": "Composition created. Version UID: {versionUid}",
+  "compose_error": "Could not submit the composition. Please try again.",
+  "compose_template_load_failed": "Could not load that template. Check the ID and try again.",
+  "compose_required_marker": "*",
+  "compose_required_label": "required",
+  "compose_field_add": "Add",
+  "compose_field_remove": "Remove",
+  "compose_array_add": "Add item",
+  "compose_array_remove": "Remove item {index}",
+  "compose_multimedia_hint": "Choose a file",
+  "compose_no_template": "Load a template above to render the composition form.",
+  "compose_loading_template": "Loading template…"
 }
