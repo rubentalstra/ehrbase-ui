@@ -102,6 +102,16 @@ async function proxy({
   if (accept) headers.set('accept', accept)
   const prefer = request.headers.get('prefer')
   if (prefer) headers.set('prefer', prefer)
+  // Optimistic concurrency (§7, openEHR ITS-REST 1.0.3): forward If-Match
+  // ("<version_uid>", double-quoted) so a stale update is rejected with 412.
+  const ifMatch = request.headers.get('if-match')
+  if (ifMatch) headers.set('if-match', ifMatch)
+  // The forwarded user token is also what EHRbase derives the openEHR
+  // CONTRIBUTION committer from (auth-context). EHRbase 2.31 accepts but
+  // IGNORES the openEHR-AUDIT_DETAILS headers on the composition endpoint
+  // (verified against the 2.31.0 source), so we do NOT set them here; the
+  // committer is the authenticated principal and the NEN-7513 access trail is
+  // the logAudit() call below — the two ADR-0024 layers (addendum 2026-05-30).
   headers.set('authorization', `Bearer ${accessToken}`)
   headers.set('x-correlation-id', correlationId)
 
@@ -131,6 +141,17 @@ async function proxy({
   }
   if (upstream.status >= 500) {
     return json(502, { code: 'UPSTREAM_ERROR' }, correlationId)
+  }
+  // Optimistic-concurrency conflict (§7) — surface distinctly so the client can
+  // refetch the latest version and reconcile; echo the current version_uid
+  // (etag). Not a generic rejection.
+  if (upstream.status === 412) {
+    const current = upstream.headers.get('etag')
+    return json(
+      412,
+      current ? { code: 'CONFLICT', etag: current } : { code: 'CONFLICT' },
+      correlationId,
+    )
   }
   if (!upstream.ok) {
     // Other 4xx — return the status but a generic code (the upstream body may

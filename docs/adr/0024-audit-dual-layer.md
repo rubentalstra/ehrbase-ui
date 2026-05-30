@@ -63,3 +63,30 @@ EHRbase combines these into the `CONTRIBUTION.audit` block on the composition.
 **Negative.** Two audit stores to manage operationally (audit DB + EHRbase contributions). Backup + retention + integrity must cover both. Mitigation: EHRbase contributions live with the rest of EHRbase Postgres (same backup story as the clinical data); the NEN-7513 audit DB has its own backup + integrity job (M4). Two backups, two retention timers, but they're consistent with the data they audit.
 
 If the EHRbase write produces a CONTRIBUTION but the subsequent `logAudit()` fails (e.g. audit DB transient outage), we have a CONTRIBUTION without a matching access-trail row. The proxy retries `logAudit` 3× with backoff before logging to stderr as a fallback — same pattern as M2. The integrity verifier (§14.5) flags missing access-trail rows during the nightly job.
+
+---
+
+## Addendum — 2026-05-30: how the CONTRIBUTION layer is actually realized on EHRbase 2.31.0
+
+The body above says the BFF sets `openEHR-COMMITTER-*` / `openEHR-AUDIT-*` headers and "EHRbase does the rest." Verified against the **EHRbase 2.31.0 source**, that mechanism does not hold:
+
+- `OpenehrCompositionController` (POST + PUT, FLAT and canonical) declares `openEHR-VERSION` and
+  `openEHR-AUDIT_DETAILS` as `@RequestHeader` for spec-signature conformance but **never references them** in
+  the handler body — EHRbase 2.31 **accepts and silently drops** them on the composition endpoint.
+- Instead, `ContributionRepository.createDefaultContribution/createDefaultAudit` **"sets the committer from
+  the auth context"** and derives `change_type` from the operation. So a plain `POST …/composition?format=FLAT`
+  **does** produce a `CONTRIBUTION.audit_details` with `committer` = the authenticated principal +
+  `change_type` — the data-lineage layer is populated, sourced from auth, not from headers.
+- The correct openEHR header grammar (had they been honored) is structured/dotted:
+  `openEHR-AUDIT_DETAILS.committer: name="…", external_ref.id="…", external_ref.namespace="…", external_ref.type="PERSON"`,
+  `…change_type: code_string="<openEHR term code>"`, `openEHR-VERSION.lifecycle_state: code_string="…"` — NOT
+  `openEHR-COMMITTER-NAME` (the original body's names were wrong).
+
+**Decision (realization correction; intent of rule 11 unchanged):** the BFF forwards the authenticated user's
+Keycloak token (which it already does) and does **not** set the (ignored) audit_details headers. EHRbase derives
+the CONTRIBUTION committer from that principal; the NEN-7513 `logAudit()` access trail is unchanged — both
+layers still land for every write. **Richer audit_details** — committer as a demographic-PARTY `external_ref`
+(M7 namespace), custom `description`, explicit `lifecycle_state` (e.g. notes draft vs signed) — require the
+native `POST /ehr/{id}/contribution` endpoint with `audit_details` in the **body** (canonical versions), and are
+deferred to the M7 demographic phase (when a real PARTY ref exists). Inviolable rule 11's intent (every write
+records committer + access trail) is preserved; only the mechanism is corrected.
