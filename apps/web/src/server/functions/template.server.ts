@@ -12,7 +12,7 @@ import { valkey } from "@ehrbase-ui/valkey";
 
 import { logAudit } from "@/server/audit/runtime";
 import { checkRateLimit, classifyRequest, tooManyRequests } from "@/server/bff";
-import { getEhrbaseContext } from "@/server/bff/ehrbase-context.server";
+import { getEhrbaseContext, type EhrbaseContext } from "@/server/bff/ehrbase-context.server";
 
 import type { TemplateRequest } from "./template.functions";
 
@@ -42,7 +42,15 @@ export async function fetchWebTemplate({ templateId }: TemplateRequest): Promise
   const { getRequest } = await import("@tanstack/react-start/server");
   const ctx = await getEhrbaseContext(getRequest().headers);
   if (!ctx) throw fail(401, "UNAUTHENTICATED");
+  return loadWebTemplate(ctx, templateId);
+}
 
+/**
+ * Cached web-template load for an already-resolved context — reused by the
+ * composition CRUD path so a write/read resolves the session once. Same
+ * rate-limit-before-cache + audit + 404/403 conflation as fetchWebTemplate.
+ */
+export async function loadWebTemplate(ctx: EhrbaseContext, templateId: string): Promise<WebTemplate> {
   // Rate-limit BEFORE the cache lookup so cache traffic is also bounded, matching
   // the BFF proxy's single choke-point behaviour (§5.9). Keyed by session.
   const cls = classifyRequest("GET", STATIC_TEMPLATE_PATH);
@@ -77,7 +85,6 @@ export async function fetchWebTemplate({ templateId }: TemplateRequest): Promise
   return template;
 
   async function audit(outcome: "SUCCESS" | "FAILURE", detail?: string): Promise<void> {
-    if (!ctx) return;
     await logAudit({
       actor: {
         userId: ctx.user.id,

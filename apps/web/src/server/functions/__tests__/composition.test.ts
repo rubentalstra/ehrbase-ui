@@ -1,0 +1,170 @@
+// Orchestration tests for composition.server (Tranche 1c): correct EHRbase call
+// shape (method/path/format/content-type), real FLAT conversion (formStateToFlat
+// / flatToFormState run for real, not mocked — per the plan), version_uid
+// extraction (ETag preferred, Location fallback), and If-Match on update/delete.
+// The audited EHRbase call (callEhrbase) + the cached template load + the session
+// resolve are mocked — they have their own tests.
+
+import { WebTemplate } from "@ehrbase-ui/openehr-web-template";
+import { formStateToFlat } from "@ehrbase-ui/openehr-flat";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+
+vi.mock("@tanstack/react-start/server", () => ({
+  getRequest: () => ({ headers: new Headers() }),
+}));
+vi.mock("@/server/bff/ehrbase-context.server", () => ({ getEhrbaseContext: vi.fn() }));
+vi.mock("@/server/bff/call-ehrbase.server", () => ({ callEhrbase: vi.fn() }));
+vi.mock("../template.server.ts", () => ({ loadWebTemplate: vi.fn() }));
+
+import { callEhrbase } from "@/server/bff/call-ehrbase.server";
+import { getEhrbaseContext } from "@/server/bff/ehrbase-context.server";
+
+import {
+  createComposition,
+  fetchComposition,
+  removeComposition,
+  reviseComposition,
+} from "../composition.server.ts";
+import { loadWebTemplate } from "../template.server.ts";
+
+const template = WebTemplate.parse({
+  templateId: "vitals.v1",
+  defaultLanguage: "en",
+  languages: ["en"],
+  tree: {
+    id: "vitals",
+    rmType: "COMPOSITION",
+    min: 1,
+    max: 1,
+    children: [
+      {
+        id: "weight",
+        rmType: "DV_QUANTITY",
+        min: 0,
+        max: 1,
+        inputs: [
+          { suffix: "magnitude", type: "DECIMAL" },
+          { suffix: "unit", type: "CODED_TEXT" },
+        ],
+      },
+      { id: "note", rmType: "DV_TEXT", min: 0, max: 1, inputs: [{ type: "TEXT" }] },
+    ],
+  },
+});
+
+const EHR_ID = "11111111-1111-1111-1111-111111111111";
+const FLAT_CT = "application/openehr.wt.flat+json";
+const formState = { weight: { magnitude: 70.5, unit: "kg" }, note: "stable" };
+
+const ctx = {
+  user: { id: "u1", email: "e@x", name: "N", roles: [] },
+  accessToken: "tok",
+  baseUrl: "http://ehrbase/x",
+  sid: "sess",
+};
+
+beforeEach(() => {
+  vi.mocked(getEhrbaseContext).mockResolvedValue(ctx);
+  vi.mocked(loadWebTemplate).mockResolvedValue(template);
+  vi.mocked(callEhrbase).mockReset();
+});
+
+describe("createComposition", () => {
+  it("POSTs a FLAT body and returns the version_uid from the ETag", async () => {
+    vi.mocked(callEhrbase).mockResolvedValue({
+      status: 201,
+      etag: '"abc::local.ehrbase.org::1"',
+      location: null,
+      json: null,
+    });
+
+    const res = await createComposition({ ehrId: EHR_ID, templateId: "vitals.v1", formState });
+
+    expect(res.versionUid).toBe("abc::local.ehrbase.org::1");
+    const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
+    expect(opts?.method).toBe("POST");
+    expect(opts?.path).toBe(`ehr/${EHR_ID}/composition`);
+    expect(opts?.search).toBe("?format=FLAT");
+    expect(opts?.contentType).toBe(FLAT_CT);
+    expect(opts?.classifyPath).toBe("composition");
+    const body = z.record(z.string(), z.unknown()).parse(JSON.parse(opts?.body ?? "{}"));
+    expect(body["vitals/weight|magnitude"]).toBe(70.5);
+    expect(body["vitals/note|value"]).toBe("stable");
+  });
+
+  it("falls back to the Location segment when no ETag is present", async () => {
+    vi.mocked(callEhrbase).mockResolvedValue({
+      status: 201,
+      etag: null,
+      location: "http://ehrbase/x/ehr/e/composition/loc-uid::sys::1",
+      json: null,
+    });
+    const res = await createComposition({ ehrId: EHR_ID, templateId: "vitals.v1", formState });
+    expect(res.versionUid).toBe("loc-uid::sys::1");
+  });
+});
+
+describe("fetchComposition", () => {
+  it("reads FLAT and round-trips it back to form-state (as a JSON string)", async () => {
+    const flat = formStateToFlat(template, formState);
+    vi.mocked(callEhrbase).mockResolvedValue({
+      status: 200,
+      etag: '"v2::sys::2"',
+      location: null,
+      json: flat,
+    });
+
+    const res = await fetchComposition({
+      ehrId: EHR_ID,
+      templateId: "vitals.v1",
+      compositionUid: "v2",
+    });
+
+    expect(res.versionUid).toBe("v2::sys::2");
+    expect(JSON.parse(res.formState)).toEqual(formState);
+    expect(vi.mocked(callEhrbase).mock.calls[0]?.[1].method).toBe("GET");
+  });
+});
+
+describe("reviseComposition", () => {
+  it("PUTs with a double-quoted If-Match version_uid", async () => {
+    vi.mocked(callEhrbase).mockResolvedValue({
+      status: 200,
+      etag: '"obj::sys::3"',
+      location: null,
+      json: null,
+    });
+
+    const res = await reviseComposition({
+      ehrId: EHR_ID,
+      templateId: "vitals.v1",
+      compositionUid: "obj",
+      versionUid: "obj::sys::2",
+      formState,
+    });
+
+    expect(res.versionUid).toBe("obj::sys::3");
+    const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
+    expect(opts?.method).toBe("PUT");
+    expect(opts?.path).toBe(`ehr/${EHR_ID}/composition/obj`);
+    expect(opts?.ifMatch).toBe('"obj::sys::2"');
+  });
+});
+
+describe("removeComposition", () => {
+  it("DELETEs with If-Match and reports deleted", async () => {
+    vi.mocked(callEhrbase).mockResolvedValue({ status: 204, etag: null, location: null, json: null });
+
+    const res = await removeComposition({
+      ehrId: EHR_ID,
+      compositionUid: "obj",
+      versionUid: "obj::sys::3",
+    });
+
+    expect(res.deleted).toBe(true);
+    const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
+    expect(opts?.method).toBe("DELETE");
+    expect(opts?.ifMatch).toBe('"obj::sys::3"');
+  });
+});
