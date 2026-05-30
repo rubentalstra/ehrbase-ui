@@ -2,18 +2,27 @@
   "name": "@ehrbase-ui/openehr-proc",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR PROC 1.7.0 — Task Planning (WORK_PLAN / TASK_PLAN / PLAN_ITEM). Consumed by M13 orders + M14 care plan.",
+  "description": "openEHR PROC 1.7.0 Task Planning core model — WORK_PLAN / TASK_PLAN / TASK_GROUP / PLAN_ITEM (recursive) as Zod schemas, field set from the Task Planning BMM. Consumed by M13 orders + M14 care plan.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@ehrbase-ui/openehr-rm": "workspace:*"
+    "@ehrbase-ui/openehr-base": "workspace:*",
+    "@ehrbase-ui/openehr-rm": "workspace:*",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }
