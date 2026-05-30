@@ -15,7 +15,7 @@
     "node": ">=24.0.0",
     "pnpm": ">=11.0.0"
   },
-  "packageManager": "pnpm@11.4.0",
+  "packageManager": "pnpm@11.5.0",
   "scripts": {
     "dev": "turbo run dev --filter @ehrbase-ui/web",
     "build": "turbo run build",

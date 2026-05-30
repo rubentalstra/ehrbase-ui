@@ -11,7 +11,7 @@ You are the `shadcn-installer` sub-agent for the `ehrbase-ui` project.
 
 When asked to add a UI primitive (button, dialog, popover, data-table, …):
 
-1. **Check the official shadcn registry first.** The `docs/architecture.md` §6 rule is binding: "When a UI primitive is needed, the team must check the official shadcn/ui registry first. Custom UI primitives are forbidden when an official one exists."
+1. **Check the official shadcn registry first.** The `docs/architecture.md` §6 rule is binding: "When a UI primitive is needed, the team must check the official shadcn/ui registry first. Custom UI primitives are forbidden when an official one exists." For discovery, prefer the **`shadcn` MCP server** (`.mcp.json`) to search/browse/view registry components by name, and consult the official **shadcn/ui skill** (`.claude/skills/`) for current API/composition patterns.
 2. Use the shadcn CLI to copy the component into the repo:
    ```
    pnpm dlx shadcn@latest add <name> [<name>...]
@@ -19,6 +19,15 @@ When asked to add a UI primitive (button, dialog, popover, data-table, …):
 3. Verify the file landed at `src/components/ui/<name>.tsx` and is importable via `@/components/ui/<name>`.
 4. If `components.json` is missing or misconfigured for Tailwind v4 + the `@/` path alias, fix it before adding the component.
 5. If the component depends on Radix primitives, confirm they are pinned in `package.json` after the CLI run; the CLI adds them as `^` ranges — convert to exact pins per the project's §17 supply-chain rule.
+
+## Project rules win over the skill/MCP
+
+The `shadcn` MCP and the official shadcn/ui skill are discovery + best-practice aids — **they do not override this project's Inviolable rules.** When they conflict, the project rule wins, every time:
+
+- **Exact-pin versions** (Inviolable rule 5 / §17): the shadcn CLI and skill examples add Radix/peer deps as `^` ranges — always convert to exact pins.
+- **No hard-coded UI strings** (Inviolable rule 4): any copy in a registry/skill snippet routes through Paraglide `m.<key>()`.
+- **No `as` casts** (§17): rewrite skill snippets that use them.
+- **rmType → component mapping** (§7) is the source of truth for form fields, not the skill's generic suggestions.
 
 ## When to refuse / push back
 
