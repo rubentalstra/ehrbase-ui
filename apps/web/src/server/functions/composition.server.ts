@@ -168,7 +168,10 @@ export async function reviseComposition(
     search: flatSearch(input.templateId),
     contentType: FLAT_MEDIA_TYPE,
     accept: FLAT_MEDIA_TYPE,
-    ifMatch: `"${input.versionUid}"`,
+    // EHRbase 2.31 FLAT quirk (verified live): the composition PUT/DELETE parses
+    // If-Match as a bare value and rejects the spec-mandated surrounding quotes
+    // with 400 "UUID string too large" — so send the version_uid UNQUOTED.
+    ifMatch: input.versionUid,
     body,
   });
   return { versionUid: versionUidFrom(res) };
@@ -182,7 +185,8 @@ export async function removeComposition(
     method: "DELETE",
     path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
     classifyPath: CLASSIFY_PATH,
-    ifMatch: `"${input.versionUid}"`,
+    // Unquoted — see reviseComposition (EHRbase 2.31 FLAT If-Match quirk).
+    ifMatch: input.versionUid,
   });
   return { deleted: true };
 }

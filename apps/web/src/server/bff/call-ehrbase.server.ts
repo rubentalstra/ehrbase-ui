@@ -30,7 +30,12 @@ export interface CallEhrbaseOptions {
   body?: string;
   contentType?: string;
   accept?: string;
-  /** Optimistic concurrency: `"<version_uid>"` (double-quoted). */
+  /**
+   * Optimistic concurrency: forwarded verbatim as the If-Match header. The
+   * openEHR ITS-REST spec mandates a double-quoted version_uid, but EHRbase
+   * 2.31's FLAT composition endpoint rejects the quotes (400 "UUID string too
+   * large") and wants the bare version_uid — see composition.server.
+   */
   ifMatch?: string;
 }
 

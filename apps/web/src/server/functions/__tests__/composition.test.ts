@@ -149,7 +149,8 @@ describe("reviseComposition", () => {
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("PUT");
     expect(opts?.path).toBe(`ehr/${EHR_ID}/composition/obj`);
-    expect(opts?.ifMatch).toBe('"obj::sys::2"');
+    // EHRbase 2.31 FLAT quirk: If-Match is the bare version_uid (no quotes).
+    expect(opts?.ifMatch).toBe("obj::sys::2");
   });
 });
 
@@ -166,6 +167,6 @@ describe("removeComposition", () => {
     expect(res.deleted).toBe(true);
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("DELETE");
-    expect(opts?.ifMatch).toBe('"obj::sys::3"');
+    expect(opts?.ifMatch).toBe("obj::sys::3");
   });
 });

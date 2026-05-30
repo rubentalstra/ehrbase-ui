@@ -75,11 +75,24 @@ docker run --rm --network "$NET" -v "$FIXTURE:/tmp/comp.json:ro" curlimages/curl
   # 4) read it back
   echo "[4] FLAT read  → $(curl -s -o /dev/null -w "%{http_code}" "$B/ehr/$EHR/composition/$VUID?format=FLAT" -H "$AUTH" -H "Accept: '"$FLAT_CT"'")"
 
-  # 5) stale If-Match → expect 412
-  STALE=$(echo "$VUID" | sed "s/::[0-9]*$/::99/")
+  # 5) optimistic concurrency. version_uid object id = first :: segment.
   OBJ=$(echo "$VUID" | sed "s/::.*//")
-  echo "[5] stale If-Match (\"$STALE\") → $(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT&templateId=$TID_ENC" \
-    -H "$AUTH" -H "Content-Type: '"$FLAT_CT"'" -H "If-Match: \"$STALE\"" --data-binary @/tmp/comp.json)  (want 412)"
+  echo "[5] OBJ=[$OBJ]  (len $(printf %s "$OBJ" | wc -c)) — expect a 36-char UUID"
+  # 5a) valid update with the CURRENT full version_uid (v1) in If-Match.
+  curl -s -D /tmp/h2 -o /tmp/b2 -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT&templateId=$TID_ENC" \
+    -H "$AUTH" -H "Content-Type: '"$FLAT_CT"'" -H "If-Match: \"$VUID\"" --data-binary @/tmp/comp.json
+  echo "[5a] update (If-Match full version_uid) → $(grep -i "^HTTP" /tmp/h2 | tail -1 | tr -d "\r")  $(head -c 160 /tmp/b2)"
+  V2=$(grep -i "^etag:" /tmp/h2 | tr -d "\r\"" | sed "s/.*etag: *//I")
+  echo "     new version_uid = $V2"
+  # 5a-alt) same update, full version_uid but WITHOUT surrounding quotes
+  # (hypothesis: EHRbase FLAT-PUT does not strip the spec-mandated quotes).
+  curl -s -D /tmp/h3 -o /tmp/b3 -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT&templateId=$TID_ENC" \
+    -H "$AUTH" -H "Content-Type: '"$FLAT_CT"'" -H "If-Match: $VUID" --data-binary @/tmp/comp.json
+  echo "[5a-alt] update (If-Match unquoted version_uid) → $(grep -i "^HTTP" /tmp/h3 | tail -1 | tr -d "\r")  $(head -c 120 /tmp/b3)  etag:$(grep -i "^etag:" /tmp/h3 | tr -d "\r" | sed "s/.*: //")"
+  [ -z "$V2" ] && V2=$(grep -i "^etag:" /tmp/h3 | tr -d "\r\"" | sed "s/.*etag: *//I")
+  # 5b) re-use the now-SUPERSEDED v1 (unquoted, valid format, stale) → 412.
+  echo "[5b] stale update (unquoted If-Match v1 again) → $(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT&templateId=$TID_ENC" \
+    -H "$AUTH" -H "Content-Type: '"$FLAT_CT"'" -H "If-Match: $VUID" --data-binary @/tmp/comp.json)  (want 412)"
 
   # 6) committer (ADR-0024) — canonical version GET → commit_audit.committer.name
   echo "[6] committer (from token):"
