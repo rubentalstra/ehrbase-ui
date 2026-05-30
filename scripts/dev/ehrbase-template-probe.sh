@@ -32,11 +32,17 @@ docker run --rm --network "$NET" curlimages/curl:8.11.1 sh -c '
   TOKEN=$(curl -s -d grant_type=password -d client_id='"$CLIENT"' -d username=dev-clinician -d "password=DevClinician123!" \
     http://keycloak:8080/realms/'"$REALM"'/protocol/openid-connect/token | sed -n "s/.*\"access_token\":\"\([^\"]*\)\".*/\1/p")
   [ -z "$TOKEN" ] && { echo "[probe] FAILED to get token"; exit 1; }
-  curl -s -o /tmp/opt.xml "'"$OPT_URL"'"
-  echo "[probe] POST OPT → $(curl -s -o /dev/null -w "%{http_code}" -X POST "'"$EHRBASE"'/definition/template/adl1.4" \
-    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" --data-binary @/tmp/opt.xml)"
-  echo "[probe] LIST templates (ground truth for the real template_id):"
+  # Upload the OPT only if absent (avoids a benign 409 already-exists log line).
   curl -s "'"$EHRBASE"'/definition/template/adl1.4" -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" > /tmp/list
+  if grep -q "Vital signs.v2" /tmp/list; then
+    echo "[probe] template present → no upload needed"
+  else
+    curl -s -o /tmp/opt.xml "'"$OPT_URL"'"
+    echo "[probe] POST OPT → $(curl -s -o /dev/null -w "%{http_code}" -X POST "'"$EHRBASE"'/definition/template/adl1.4" \
+      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" --data-binary @/tmp/opt.xml)"
+    curl -s "'"$EHRBASE"'/definition/template/adl1.4" -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" > /tmp/list
+  fi
+  echo "[probe] LIST templates (ground truth for the real template_id):"
   echo "    template_ids: $(grep -oE "\"template_id\" *: *\"[^\"]*\"" /tmp/list | sed "s/.*: *//")"
   RID=$(grep -oE "\"template_id\" *: *\"[^\"]*\"" /tmp/list | sed "s/.*: *\"//;s/\"//" | grep -i vital | head -1)
   RID_ENC=$(echo "$RID" | sed "s/ /%20/g")
