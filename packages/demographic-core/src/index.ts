@@ -1,9 +1,10 @@
-// @ehrbase-ui/demographic-core — DemographicProvider interface + built-in Postgres adapter
-// Per ADR-0031 (supersedes ADR-0023 in shape). Empty in v1.0 foundation; populated by M7.
+// @ehrbase-ui/demographic-core — pluggable demographic provider (ADR-0031,
+// supersedes ADR-0023 in shape). The DemographicProvider interface + canonical
+// types every adapter speaks, the national-ID registry, and the built-in
+// Postgres adapter (./builtin).
 //
-// Exports planned (M7):
-//   - DemographicProvider interface
-//   - BuiltinDemographicProvider (Postgres VERSIONED_PARTY)
-//   - Identifier-namespace registry (NL BSN, BE NISS, FR NIR, DE KVNR, IT CF, ES TIS, PT NUTS, AT bPK, PL PESEL, MRN)
-//   - pseudonymize() helper (HMAC-SHA256 with shared AUDIT_PSEUDONYM_SECRET — §14.4)
-export {}
+// Server-only pseudonymize is exposed at "@ehrbase-ui/demographic-core/pseudonymize"
+// (kept out of this barrel so node:crypto + the secret never reach a client bundle).
+
+export * from "./provider.ts";
+export * from "./identifier/index.ts";
