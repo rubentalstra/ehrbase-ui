@@ -540,6 +540,9 @@ importers:
       '@ehrbase-ui/openehr-base':
         specifier: workspace:*
         version: link:../openehr-base
+      '@ehrbase-ui/openehr-term':
+        specifier: workspace:*
+        version: link:../openehr-term
       zod:
         specifier: 4.4.3
         version: 4.4.3
