@@ -22,13 +22,21 @@ export interface FhirClientConfig {
 
 const FHIR_JSON = "application/fhir+json";
 
+// Strip trailing slashes without a regex — a linear scan avoids the
+// polynomial-ReDoS hazard CodeQL flags for `/\/+$/` on slash-heavy input.
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
+  return value.slice(0, end);
+}
+
 export class FhirHttpClient {
   readonly #baseUrl: string;
   readonly #token?: string;
   readonly #fetch: FetchLike;
 
   constructor(config: FhirClientConfig) {
-    this.#baseUrl = config.baseUrl.replace(/\/+$/u, "");
+    this.#baseUrl = stripTrailingSlashes(config.baseUrl);
     this.#token = config.token;
     this.#fetch = config.fetch ?? ((input, init) => fetch(input, init));
   }
