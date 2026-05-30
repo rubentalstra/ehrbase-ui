@@ -2,7 +2,7 @@
   "name": "@ehrbase-ui/openehr-am",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR Archetype Model 2.3.0 — ADL2 / AOM2 / OPT. Hand-typed narrow scope per ADR-0032; only the OPT subset M6 parses for web-template hydration.",
+  "description": "openEHR Archetype Model — targets ADL 1.4 / OPT 1.4 to match EHRbase 2.31.0 (per ADR-0032 addendum), NOT AOM2 2.3.0. Hand-typed narrow scope: only the OPT subset needed for web-template hydration; raw form consumption lives in @ehrbase-ui/openehr-web-template.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",

@@ -2,15 +2,28 @@
   "name": "@ehrbase-ui/openehr-base",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR BASE 1.2.0 — LOCATABLE_REF + identifiers + foundational classes. Types generated from openEHR/specifications-ITS-JSON per ADR-0032. Empty until M6 populates.",
+  "description": "openEHR BASE 1.1.0 (matches RM 1.1.0 + EHRbase 2.31.0 per ADR-0032 addendum) — identifiers, object references, foundational + resource types. Generated from openEHR/specifications-ITS-JSON via json-schema-to-zod; polymorphic refs hand-stitched in the facade.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./spec": "./src/spec.ts"
+  },
+  "scripts": {
+    "regen": "node ../../scripts/openehr-codegen.mjs",
+    "regen:check": "node ../../scripts/openehr-codegen.mjs --check",
+    "regen:fetch": "node ../../scripts/openehr-fetch-schema.mjs --latest",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@ehrbase-ui/config-tsconfig": "workspace:*"
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
   }
 }

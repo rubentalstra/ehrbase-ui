@@ -1,5 +1,6 @@
 {
-  "extends": "@ehrbase-ui/config-tsconfig/node.json",
+  "//": "Extends base (not node) — this package is consumed by both client and server bundles, so it must not depend on node types.",
+  "extends": "@ehrbase-ui/config-tsconfig/base.json",
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,7 @@
+{
+  "component": "BASE",
+  "specVersion": "1.1.0",
+  "schemaSource": "ITS-JSON",
+  "schemaRef": "components/BASE/Release-1.1.0",
+  "schemaCommit": "531a8f129fc590945a589fc96fcbc805b6075344"
+}

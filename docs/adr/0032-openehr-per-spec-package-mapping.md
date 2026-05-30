@@ -68,3 +68,66 @@ Per-spec mapping + version pins (re-verify at every architecture-doc revision pe
 - `@ehrbase-ui/openehr-rm` and `@ehrbase-ui/openehr-flat` round-trip every CKM v1.0-catalogue archetype (ADR-0016) in unit tests
 - `openehr-archetype-reviewer` sub-agent verifies the hand-typed packages match their upstream spec on every PR that touches them
 - No imports of `ehrtslib`, `medblocks-ui`, `@bpac/openehr-models`, or `@mmt_d/mmt-openehr-types` in any `package.json` (ESLint rule via `no-restricted-imports`)
+
+---
+
+## Addendum — 2026-05-30: pin-to-EHRbase realignment + future-version readiness
+
+The original decision table pinned each package to the **newest published** openEHR spec. Building the
+packages exposed that this causes **version skew against the CDR** for anything that crosses the wire. This
+addendum refines the version policy and the regeneration discipline; it does not rewrite the body above.
+
+### Verified anchor
+
+EHRbase 2.31.0's own README: _"It implements the latest version of the openEHR Reference Model (RM 1.1.0)
+and version 1.4 of the Archetype Definition Language (ADL)."_ RM 1.1.0 (Sep 2020) **predates** BASE 1.2.0
+(Apr 2021) — so RM 1.1.0 is built on **BASE 1.1.0**, not 1.2.0. Verified against the ITS-JSON schema tree
+(only `BASE/Release-1.1.0` exists) and the openEHR release-date record (web-fetched 2026-05-30).
+
+### Policy: pin wire-coupled packages to EHRbase 2.31.0, not the newest spec
+
+| Package            | Original pin    | **Realigned pin**                      | Rationale                                                                                            |
+| ------------------ | --------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `openehr-base`     | BASE 1.2.0      | **BASE 1.1.0**                         | Matches RM 1.1.0 + EHRbase; fully generatable from ITS-JSON; removes the hand-fill delta             |
+| `openehr-rm`       | RM 1.1.0        | RM 1.1.0 _(unchanged)_                 | Exactly what EHRbase implements                                                                      |
+| `openehr-am`       | AM 2.3.0 / AOM2 | **ADL 1.4 / OPT 1.4**, minimal subset  | EHRbase emits ADL 1.4 operational templates, not AOM2; form consumption lives in `openehr-web-template` |
+| `openehr-its-rest` | ITS-REST 1.0.3  | EHRbase 2.31.0 OpenAPI _(intent same)_ | The concrete surface we call                                                                         |
+| `openehr-cds`      | CDS 2.0.1       | CDS 2.0.1 _(unchanged)_                | **Free to track newest** — our own rule-authoring shape, never on the EHRbase wire                   |
+
+All other packages unchanged. The principle: **version coherence with the CDR beats spec recency** for
+anything wire-coupled.
+
+### Regeneration discipline — refined
+
+The bare `.upstream-hash` file is replaced by a per-package **`spec.json` manifest** capturing both the
+schema source _and_ the target spec version:
+
+```json
+{
+  "component": "BASE",
+  "specVersion": "1.1.0",
+  "schemaSource": "ITS-JSON",
+  "schemaRef": "components/BASE/Release-1.1.0",
+  "schemaCommit": "<sha>"
+}
+```
+
+`pnpm regen` reads `spec.json`, fetches the ITS-JSON schemas (whose cross-file `$ref`s are absolute URLs —
+the script rewrites them to local refs and bundles before running `json-schema-to-zod`), and emits to a
+**version-namespaced** `src/generated/<specVersion>/`, with `src/generated/current.ts` re-exporting the
+active version. `pnpm regen --check` fails CI on drift. A future spec version is **additive** (new
+`generated/<v>/` folder + one-line `current` flip), never a rewrite.
+
+### Future-version readiness (the "best package" guarantees)
+
+Every package ships: (1) the `spec.json` manifest; (2) version-namespaced generated output; (3) a stable
+hand-written **facade** over generated types — consumers import semantic names from the package root, never
+`src/generated/*`, so a regen can never break the app; (4) an exported `SPEC_VERSION` constant; (5) Zod
+codecs at the wire boundary; (6) a runtime RM-version guard that warns (no PHI) if EHRbase serves an
+unexpected RM version; (7) package SemVer decoupled from spec version (a spec major → package major).
+
+### Governance
+
+CLAUDE.md "Versions" and `docs/REFERENCES.md` are updated in the same PR as this addendum (Inviolable
+rule 5 — pins, code, and docs move together). The empirical RM/BASE/ADL versions are re-confirmed off the
+running dev EHRbase 2.31.0 stack at the start of the foundation milestone.

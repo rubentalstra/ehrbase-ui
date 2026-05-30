@@ -65,6 +65,15 @@
     "paraglide:compile": {
       "inputs": ["messages/**", "project.inlang/**"],
       "outputs": ["src/paraglide/**"]
+    },
+    "regen": {
+      "cache": false,
+      "inputs": ["spec.json", "schema/**", "../../scripts/openehr-codegen.mjs"],
+      "outputs": ["src/generated/**"]
+    },
+    "regen:check": {
+      "cache": false,
+      "inputs": ["spec.json", "schema/**", "src/generated/**", "../../scripts/openehr-codegen.mjs"]
     }
   }
 }

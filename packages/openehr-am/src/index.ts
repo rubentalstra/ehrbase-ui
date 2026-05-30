@@ -1,5 +1,12 @@
-// @ehrbase-ui/openehr-am — openEHR AM 2.3.0 (ADL2 / AOM2 / OPT)
-// Source: https://specifications.openehr.org/releases/AM/Release-2.3.0
+// @ehrbase-ui/openehr-am — openEHR AM, targeting ADL 1.4 / OPT 1.4
+//
+// PIN: ADL 1.4 / OPT 1.4 to match EHRbase 2.31.0 (which emits ADL 1.4
+// operational templates), NOT AOM2 2.3.0 — see the ADR-0032 addendum
+// (2026-05-30). Scope is the minimal OPT subset needed for web-template
+// hydration; the actual form consumption format (the EHRbase web template)
+// is parsed by @ehrbase-ui/openehr-web-template, not here.
+//
+// Source: https://specifications.openehr.org/releases/AM/Release-2.3.0 (latest AM spec; see ADL 1.4 / OPT 1.4 rows below)
 // Specifications
 // Specification	Description	Notes
 // STABLE Archetype Technology	Overview of archetype technology, basic semantics, types of artefact, parsing, compiling etc.
