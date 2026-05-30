@@ -27,10 +27,24 @@ import type {
 } from "./composition.functions";
 import { loadWebTemplate } from "./template.server";
 
-// EHRbase FLAT (web-template simplified) media type (openEHR ITS-REST 1.0.3).
-const FLAT_CONTENT_TYPE = "application/openehr.wt.flat+json";
+// EHRbase 2.31 FLAT contract (verified live 2026-05-30, scripts/dev/
+// ehrbase-composition-probe.sh): the FLAT body is sent/received as
+// `application/json` with the `?format=FLAT` query param — EHRbase 2.31 REJECTS
+// `application/openehr.wt.flat+json` on the composition endpoint with 415. The
+// flat body does NOT carry the template id, so write/update MUST pass it as the
+// `&templateId=<template_id>` query param or EHRbase throws SdkException
+// "Template null not found" (HTTP 500).
+const FLAT_MEDIA_TYPE = "application/json";
 // Static classification path — never carries user ids (audit-trail integrity).
 const CLASSIFY_PATH = "composition";
+
+// Build the FLAT search string. Write/update need templateId; read does not
+// (EHRbase resolves the template from the stored composition).
+function flatSearch(templateId?: string): string {
+  return templateId
+    ? `?format=FLAT&templateId=${encodeURIComponent(templateId)}`
+    : "?format=FLAT";
+}
 
 // EHRbase returns the FLAT composition as a flat key/value map.
 const FlatResponseSchema = z.record(z.string(), z.unknown());
@@ -49,8 +63,10 @@ async function requireContext(): Promise<EhrbaseContext> {
   return ctx;
 }
 
-// version_uid = object_id::system_id::version_tree_id. EHRbase returns it in the
-// (double-quoted) ETag on write + read; Location is the fallback on create.
+// version_uid = object_id::system_id::version_tree_id. EHRbase returns the FULL
+// triple in the (double-quoted) ETag on write + read — that is the source of
+// truth for optimistic concurrency. NB the Location header carries only the bare
+// object_id (no ::system::ver), so it is a last-resort fallback only.
 function versionUidFrom(res: EhrbaseOk): string {
   if (res.etag) return res.etag.replace(/^"|"$/gu, "");
   const seg = res.location?.split("/").pop();
@@ -77,9 +93,9 @@ export async function createComposition(
     method: "POST",
     path: `ehr/${input.ehrId}/composition`,
     classifyPath: CLASSIFY_PATH,
-    search: "?format=FLAT",
-    contentType: FLAT_CONTENT_TYPE,
-    accept: FLAT_CONTENT_TYPE,
+    search: flatSearch(input.templateId),
+    contentType: FLAT_MEDIA_TYPE,
+    accept: FLAT_MEDIA_TYPE,
     body,
   });
   return { versionUid: versionUidFrom(res) };
@@ -95,8 +111,8 @@ export async function fetchComposition(
     method: "GET",
     path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
     classifyPath: CLASSIFY_PATH,
-    search: "?format=FLAT",
-    accept: FLAT_CONTENT_TYPE,
+    search: flatSearch(),
+    accept: FLAT_MEDIA_TYPE,
   });
 
   const flat: FlatComposition = FlatResponseSchema.parse(res.json);
@@ -117,9 +133,9 @@ export async function reviseComposition(
     method: "PUT",
     path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
     classifyPath: CLASSIFY_PATH,
-    search: "?format=FLAT",
-    contentType: FLAT_CONTENT_TYPE,
-    accept: FLAT_CONTENT_TYPE,
+    search: flatSearch(input.templateId),
+    contentType: FLAT_MEDIA_TYPE,
+    accept: FLAT_MEDIA_TYPE,
     ifMatch: `"${input.versionUid}"`,
     body,
   });

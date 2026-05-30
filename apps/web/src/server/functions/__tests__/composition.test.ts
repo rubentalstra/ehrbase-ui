@@ -54,7 +54,7 @@ const template = WebTemplate.parse({
 });
 
 const EHR_ID = "11111111-1111-1111-1111-111111111111";
-const FLAT_CT = "application/openehr.wt.flat+json";
+const FLAT_CT = "application/json";
 const formState = { weight: { magnitude: 70.5, unit: "kg" }, note: "stable" };
 
 const ctx = {
@@ -85,7 +85,8 @@ describe("createComposition", () => {
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("POST");
     expect(opts?.path).toBe(`ehr/${EHR_ID}/composition`);
-    expect(opts?.search).toBe("?format=FLAT");
+    // EHRbase 2.31: FLAT body as application/json + ?format=FLAT&templateId=<id>
+    expect(opts?.search).toBe("?format=FLAT&templateId=vitals.v1");
     expect(opts?.contentType).toBe(FLAT_CT);
     expect(opts?.classifyPath).toBe("composition");
     const body = z.record(z.string(), z.unknown()).parse(JSON.parse(opts?.body ?? "{}"));

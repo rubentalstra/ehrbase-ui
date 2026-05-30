@@ -19,7 +19,9 @@ REALM="ehrbase"
 EHRBASE="http://ehrbase:8080/ehrbase/rest/openehr/v1"
 OPT_URL="https://raw.githubusercontent.com/ehrbase/openEHR_SDK/develop/test-data/src/main/resources/operationaltemplate/EHRN%20Vital%20signs.v2.opt"
 FIXTURE="$PWD/packages/openehr-flat/src/__tests__/fixtures/vitalsigns.flat.json"
-FLAT_CT="application/openehr.wt.flat+json"
+# EHRbase 2.31 expects the FLAT body as application/json + ?format=FLAT (it
+# rejects application/openehr.wt.flat+json with 415 — verified live 2026-05-30).
+FLAT_CT="application/json"
 
 [ -f "$FIXTURE" ] || { echo "[probe] fixture not found: $FIXTURE"; exit 1; }
 
@@ -55,13 +57,20 @@ docker run --rm --network "$NET" -v "$FIXTURE:/tmp/comp.json:ro" curlimages/curl
   echo "[2] created EHR → $EHR"
   [ -z "$EHR" ] && { echo "[probe] no ehr_id"; exit 1; }
 
-  # 3) FLAT write → version_uid from ETag
-  curl -s -D /tmp/h -o /tmp/b -X POST "$B/ehr/$EHR/composition?format=FLAT" -H "$AUTH" \
-    -H "Content-Type: '"$FLAT_CT"'" -H "Accept: '"$FLAT_CT"'" --data-binary @/tmp/comp.json
-  echo "[3] FLAT write → $(grep -i "^HTTP" /tmp/h | tail -1 | tr -d "\r")"
-  VUID=$(grep -i "^etag:" /tmp/h | tr -d "\r\"" | sed "s/.*: *//")
+  # 3) FLAT write — EHRbase needs templateId as a QUERY PARAM (flat bodies do not
+  #    carry it). Endpoint: ?format=FLAT and templateId=ID, Content-Type app/json.
+  TID_ENC="EHRN%20Vital%20signs.v2"
+  echo "[3] FLAT write  ?format=FLAT&templateId=$TID_ENC :"
+  curl -s -D /tmp/h -o /tmp/b -X POST "$B/ehr/$EHR/composition?format=FLAT&templateId=$TID_ENC" -H "$AUTH" \
+    -H "Content-Type: '"$FLAT_CT"'" -H "Prefer: return=representation" --data-binary @/tmp/comp.json
+  echo "    $(grep -i "^HTTP" /tmp/h | tail -1 | tr -d "\r")"
+  echo "    raw ETag:     $(grep -i "^etag:" /tmp/h | tr -d "\r")"
+  echo "    raw Location: $(grep -i "^location:" /tmp/h | tr -d "\r")"
+  # version_uid = the full triple in the ETag (uuid::system::ver). Location only
+  # carries the bare object id, so ETag is the source of truth for concurrency.
+  VUID=$(grep -i "^etag:" /tmp/h | tr -d "\r\"" | sed "s/.*etag: *//I")
   echo "    version_uid = $VUID"
-  [ -z "$VUID" ] && { echo "[probe] no version_uid"; cat /tmp/b; exit 1; }
+  [ -z "$VUID" ] && { echo "[probe] no version_uid — see headers above; stopping here"; exit 0; }
 
   # 4) read it back
   echo "[4] FLAT read  → $(curl -s -o /dev/null -w "%{http_code}" "$B/ehr/$EHR/composition/$VUID?format=FLAT" -H "$AUTH" -H "Accept: '"$FLAT_CT"'")"
@@ -69,7 +78,7 @@ docker run --rm --network "$NET" -v "$FIXTURE:/tmp/comp.json:ro" curlimages/curl
   # 5) stale If-Match → expect 412
   STALE=$(echo "$VUID" | sed "s/::[0-9]*$/::99/")
   OBJ=$(echo "$VUID" | sed "s/::.*//")
-  echo "[5] stale If-Match (\"$STALE\") → $(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT" \
+  echo "[5] stale If-Match (\"$STALE\") → $(curl -s -o /dev/null -w "%{http_code}" -X PUT "$B/ehr/$EHR/composition/$OBJ?format=FLAT&templateId=$TID_ENC" \
     -H "$AUTH" -H "Content-Type: '"$FLAT_CT"'" -H "If-Match: \"$STALE\"" --data-binary @/tmp/comp.json)  (want 412)"
 
   # 6) committer (ADR-0024) — canonical version GET → commit_audit.committer.name

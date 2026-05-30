@@ -35,9 +35,18 @@ docker run --rm --network "$NET" curlimages/curl:8.11.1 sh -c '
   curl -s -o /tmp/opt.xml "'"$OPT_URL"'"
   echo "[probe] POST OPT → $(curl -s -o /dev/null -w "%{http_code}" -X POST "'"$EHRBASE"'/definition/template/adl1.4" \
     -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" --data-binary @/tmp/opt.xml)"
-  echo "[probe] GET web template (Accept: application/json):"
-  curl -s "'"$EHRBASE"'/definition/template/adl1.4/ehrn_vital_signs.v2" \
-    -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" \
-    | sed "s/,/,\n/g" | grep -E "\"templateId\"|\"rmType\"|\"semVer\"|\"defaultLanguage\"" | head -8
+  echo "[probe] LIST templates (ground truth for the real template_id):"
+  curl -s "'"$EHRBASE"'/definition/template/adl1.4" -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" > /tmp/list
+  echo "    template_ids: $(grep -oE "\"template_id\" *: *\"[^\"]*\"" /tmp/list | sed "s/.*: *//")"
+  RID=$(grep -oE "\"template_id\" *: *\"[^\"]*\"" /tmp/list | sed "s/.*: *\"//;s/\"//" | grep -i vital | head -1)
+  RID_ENC=$(echo "$RID" | sed "s/ /%20/g")
+  echo "[probe] using discovered id: [$RID]  (encoded: $RID_ENC)"
+  for ACC in "application/json" "application/openehr.wt+json"; do
+    echo "[probe] GET template  Accept: $ACC"
+    code=$(curl -s -D /tmp/h -o /tmp/b -w "%{http_code}" "'"$EHRBASE"'/definition/template/adl1.4/$RID_ENC" -H "Authorization: Bearer $TOKEN" -H "Accept: $ACC")
+    echo "    status=$code  content-type=$(grep -i "^content-type:" /tmp/h | tr -d "\r" | sed "s/.*: *//")"
+    echo "    top-level keys: $(head -c 4000 /tmp/b | grep -oE "\"(templateId|webTemplate|tree|rmType|version|defaultLanguage|languages)\"" | sort -u | tr "\n" " ")"
+    echo "    body head: $(head -c 200 /tmp/b)"
+  done
 '
-echo "[probe] If you see templateId + rmType=COMPOSITION above, EHRbase returns the web-template shape parseWebTemplate accepts."
+echo "[probe] We want the Accept that yields top-level templateId + tree + rmType — that is the web-template shape parseWebTemplate accepts."
