@@ -140,9 +140,16 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [x] `openehr-flat` — FLAT path grammar + web-template-aware `formStateToFlat`/`flatToFormState` (round-tripped; grammar checked against the openEHR_SDK Vitalsigns fixture)
 - [x] `openehr-am` — minimal ADL 1.4 archetype-id + node-code identifier layer
 
-**PR-4 — query/clinical layer:** `openehr-aql` (AST + builder + serializer), `openehr-term` (openEHR code sets), `openehr-proc` (Task Planning model), `openehr-cds` (GDL2-aligned rule-authoring model)
+**PR-4 — query/clinical layer:**
 
-- [ ] CI: `pnpm regen --check` green (drift gate); no third-party openEHR SDK on the dep graph
+- [x] `openehr-aql` — typed AST + combinator builders + `serializeAql`/`collectParams` (grammar/editor deferred to M16)
+- [x] `openehr-term` — openEHR internal terminology (codesets + code→rubric groups) generated from the authoritative terminology XML via fast-xml-parser
+- [x] `openehr-proc` — Task Planning core model (WORK_PLAN/TASK_PLAN/TASK_GROUP/PLAN_ITEM, recursive) from the Task Planning BMM
+- [x] `openehr-cds` — GDL2-aligned `CdsRule` authoring model (bindings + condition tree + severity actions)
+
+- [x] CI: per-package `regen:check` drift gate; turbo `build`/`typecheck`/`test` depend on `regen` + `^regen`; ESLint bans third-party openEHR SDKs
+
+**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green). Follow-ups remain: full ADR-0016 catalogue round-trip (fed by live EHRbase fixtures) + migrate `openehr-base` to the custom generator.
 
 ## Milestone 6 — openEHR form engine (§7)
 
