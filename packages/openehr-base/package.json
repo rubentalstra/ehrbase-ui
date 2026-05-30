@@ -2,7 +2,7 @@
   "name": "@ehrbase-ui/openehr-base",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR BASE 1.1.0 (matches RM 1.1.0 + EHRbase 2.31.0 per ADR-0032 addendum) — identifiers, object references, foundational + resource types. Generated from openEHR/specifications-ITS-JSON via json-schema-to-zod; polymorphic refs hand-stitched in the facade.",
+  "description": "openEHR BASE 1.1.0 (matches RM 1.1.0 + EHRbase 2.31.0 per ADR-0032 addendum) — identifiers, object references, foundational + resource types. Generated from openEHR/specifications-ITS-JSON via the custom ITS-JSON→Zod generator (polymorphic refs as z.union); facade adds the OBJECT_ID/UID_BASED_ID named unions + Interval<T>.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
@@ -12,8 +12,8 @@
     "./spec": "./src/spec.ts"
   },
   "scripts": {
-    "regen": "node ../../scripts/openehr-codegen.mjs",
-    "regen:check": "node ../../scripts/openehr-codegen.mjs --check",
+    "regen": "node ../../scripts/openehr-zodgen.mjs",
+    "regen:check": "node ../../scripts/openehr-zodgen.mjs --check",
     "regen:fetch": "node ../../scripts/openehr-fetch-schema.mjs --latest",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"

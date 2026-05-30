@@ -43,11 +43,13 @@ describe("generated leaf schemas", () => {
   });
 
   it("parses a TERMINOLOGY_CODE and enforces the spec-required fields", () => {
+    // `uri` is a $ref to the BASE URI type (an object) — the custom generator
+    // resolves it faithfully (json-schema-to-zod had flattened it to z.any()).
     expect(
       TERMINOLOGY_CODE.safeParse({
         terminology_id: "SNOMED-CT",
         code_string: "73211009",
-        uri: "http://snomed.info/id/73211009",
+        uri: { _type: "URI" },
       }).success,
     ).toBe(true);
     // `uri` is required by BASE 1.1.0 — the generated schema enforces it.

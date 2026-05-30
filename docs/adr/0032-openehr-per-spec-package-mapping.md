@@ -162,10 +162,12 @@ that compiles the (very regular) ITS-JSON draft-07 dialect directly to Zod:
 The regeneration discipline (`spec.json` manifest, vendored `schema/`, `pnpm regen` / `regen:check`
 drift gate, version-namespaced output) is unchanged from Addendum 1.
 
-**Scope.** `openehr-rm` (and the later ref-heavy packages) use `openehr-zodgen.mjs`. `openehr-base`
-(PR-1) currently still uses `json-schema-to-zod` + a hand-stitched facade for its handful of polymorphic
-refs; migrating it to the custom generator (which would handle `OBJECT_REF`/`LOCATABLE_REF`/`PARTY_REF`
-natively and drop the `json-schema-to-zod` dependency) is a low-risk follow-up tracked on the checklist.
+**Scope.** All ITS-JSON-generated packages (`openehr-base`, `openehr-rm`) use `openehr-zodgen.mjs`.
+`openehr-base` was migrated to it (2026-05-30, after PR-4): the generator emits `OBJECT_REF` /
+`LOCATABLE_REF` / `PARTY_REF` / `ACCESS_GROUP_REF` natively as `z.union`, so the hand-stitched facade
+reference objects were dropped (the facade now keeps only the named `OBJECT_ID` / `UID_BASED_ID`
+convenience unions + the generic `Interval<T>`). `json-schema-to-zod` and the interim
+`scripts/openehr-codegen.mjs` are removed — there is a single ITS-JSON generation pipeline.
 
 **Verification.** Generated RM type-checks (all 102 mutually-recursive `z.infer` types resolve via
 getters); representative + full-canonical-COMPOSITION round-trips pass; `regen:check` is a CI drift gate.

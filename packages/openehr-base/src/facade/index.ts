@@ -4,26 +4,15 @@
 // from src/generated/* — so a regen can never break callers (ADR-0032 addendum,
 // future-version-readiness principle 3).
 //
-// This re-exports every generated leaf schema, then SHADOWS the four polymorphic
-// reference schemas (OBJECT_REF / LOCATABLE_REF / PARTY_REF / ACCESS_GROUP_REF)
-// and the generic INTERVAL with hand-stitched versions. Per ES-module semantics,
-// the explicit named re-exports below take precedence over the `export *` names.
-
-// All 32 generated BASE schemas (identifiers, primitives, resource types). The
-// four placeholder *_REF schemas here are shadowed by the corrected versions
-// re-exported beneath.
+// All 32 generated BASE schemas (identifiers, primitives, resource types,
+// and the now-correct polymorphic references OBJECT_REF / LOCATABLE_REF /
+// PARTY_REF / ACCESS_GROUP_REF whose `id` the generator emits as a z.union).
 export * from "../generated/current.ts";
 
-// Corrected polymorphic references + the OBJECT_ID / UID_BASED_ID unions.
-export {
-  OBJECT_ID,
-  UID_BASED_ID,
-  OBJECT_REF,
-  LOCATABLE_REF,
-  PARTY_REF,
-  ACCESS_GROUP_REF,
-} from "./object-id.ts";
+// Named handles on the abstract object-id supertypes (the generator inlines
+// these as anonymous unions).
+export { OBJECT_ID, UID_BASED_ID } from "./object-id.ts";
 
-// Generic Interval<T> factory + type (the generated `INTERVAL` is left exported
-// as the raw placeholder; prefer `Interval(item)`).
+// Generic Interval<T> factory + type (the generated `INTERVAL` leaves lower/upper
+// untyped; prefer `Interval(item)`).
 export { Interval } from "./interval.ts";

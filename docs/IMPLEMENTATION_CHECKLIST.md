@@ -119,7 +119,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 **PR-1 — `openehr-base` (BASE 1.1.0) + shared regen tooling:**
 
-- [x] Shared regen pipeline: fetch ITS-JSON schemas, rewrite absolute `$ref`s → local, `json-schema-to-zod`; reads per-package `spec.json`
+- [x] Shared regen pipeline: fetch ITS-JSON schemas, custom ITS-JSON→Zod generator (`scripts/openehr-zodgen.mjs`); reads per-package `spec.json`
 - [x] Future-version primitives established on `openehr-base` (manifest, version-namespaced output, facade, `SPEC_VERSION`)
 - [x] ESLint `no-restricted-imports` rule banning `ehrtslib` / `medblocks-ui` / `@bpac/openehr-models` / `@mmt_d/mmt-openehr-types` — ADR-0032
 - [x] `openehr-base` facade + foundational helpers (`Interval<T>`, `Iso8601_*`, identifiers, polymorphic `LOCATABLE_REF.id` stitch) + Vitest round-trip; `typecheck`/`test` scripts green via turbo
@@ -131,7 +131,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [x] Hand-stitch abstract-supertype unions (`DATA_VALUE`, `ITEM`, `ENTRY`, `CONTENT_ITEM`, `EVENT`, `PARTY_PROXY`, …) in the facade
 - [x] Representative + full-canonical-COMPOSITION round-trip tests pass (typecheck + test + lint + regen:check green)
 - [ ] **(fed by EHRbase fixtures)** Full ADR-0016 catalogue round-trip — every v1.0 archetype round-trips against canonical examples pulled from the dev EHRbase; release-blocking gate
-- [ ] Follow-up: migrate `openehr-base` to the custom generator + drop `json-schema-to-zod`
+- [x] Follow-up done (2026-05-30): migrated `openehr-base` to the custom generator + dropped `json-schema-to-zod` (single ITS-JSON pipeline)
 
 **PR-3 — data/format layer:**
 
@@ -149,7 +149,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 
 - [x] CI: per-package `regen:check` drift gate; turbo `build`/`typecheck`/`test` depend on `regen` + `^regen`; ESLint bans third-party openEHR SDKs
 
-**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green). Follow-ups remain: full ADR-0016 catalogue round-trip (fed by live EHRbase fixtures) + migrate `openehr-base` to the custom generator.
+**Milestone 5.5 status: COMPLETE** — all 10 `openehr-*` packages built (24 turbo typecheck+test tasks green); single ITS-JSON→Zod generation pipeline (`json-schema-to-zod` dropped). Remaining follow-ups: full ADR-0016 catalogue round-trip (fed by live EHRbase fixtures) + empirical RM/BASE/ADL confirmation off the running dev EHRbase 2.31.0.
 
 ## Milestone 6 — openEHR form engine (§7)
 
