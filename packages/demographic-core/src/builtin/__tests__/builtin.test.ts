@@ -6,6 +6,8 @@
 // One PGlite instance for the whole suite, truncated between tests for isolation
 // (a fresh WASM instance per test leaks memory under the full workspace run).
 
+import { beforeAll } from "vitest";
+
 import { PGlite } from "@electric-sql/pglite";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -34,6 +36,14 @@ async function getDb(): Promise<DemographicDb> {
   }
   return db;
 }
+
+// Warm the PGlite WASM engine ONCE before the suite, with a generous timeout:
+// its cold start (~4-5s) can exceed the 5s default test timeout when this suite
+// contends with the rest of the workspace under a full-parallel `turbo run test`.
+// Paying it in a hook keeps the first contract test from flaking.
+beforeAll(async () => {
+  await getDb();
+}, 60_000);
 
 async function setup(): Promise<ContractHarness> {
   const database = await getDb();
