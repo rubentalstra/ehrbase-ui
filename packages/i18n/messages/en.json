@@ -13,9 +13,13 @@
   "me_emergency_heading": "Emergency access (break-glass)",
   "me_emergency_warning": "This grants access outside your normal care relationship, writes a special audit entry, and is reviewed by the audit team within 24 hours. Use only for genuine clinical emergencies.",
   "me_emergency_justification_label": "Justification (minimum 30 characters)",
+  "me_emergency_ehr_label": "Patient EHR identifier",
+  "me_emergency_ehr_help": "The EHR (UUID) of the patient this emergency access is for. Break-glass is granted per patient, not for your whole session.",
+  "me_emergency_ehr_invalid": "Enter a valid EHR identifier (UUID).",
   "me_emergency_submit": "Request emergency access",
   "me_emergency_granted": "Emergency access granted for 60 minutes.",
   "me_emergency_error": "Emergency access could not be granted.",
+  "me_emergency_not_eligible": "Only clinical staff can use break-glass access.",
   "me_emergency_forced_logout": "Emergency-access limit reached. You have been signed out and must re-authenticate.",
   "me_view_access_log": "View my access log",
 

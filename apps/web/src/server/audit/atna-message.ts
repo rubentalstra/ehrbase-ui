@@ -36,6 +36,23 @@ export const AtnaCodedValueSchema = z.object({
 })
 export type AtnaCodedValue = z.infer<typeof AtnaCodedValueSchema>
 
+/**
+ * HL7 v3 ActReason PurposeOfUse codes (subset). `TREAT` is the normal-treatment
+ * default; `BTG` ("break the glass") is the emergency-access override declared
+ * by a clinician; `ETREAT`/`ERTREAT` are its emergency-treatment relatives.
+ * Code system = the v3-ActReason OID. (HL7 PurposeOfUse value set.)
+ */
+export const PurposeOfUseSchema = z.enum(['TREAT', 'ETREAT', 'BTG', 'ERTREAT'])
+export type PurposeOfUse = z.infer<typeof PurposeOfUseSchema>
+
+export const PURPOSE_OF_USE_CODE_SYSTEM = '2.16.840.1.113883.1.11.20448'
+const PURPOSE_OF_USE_DISPLAY: Record<PurposeOfUse, string> = {
+  TREAT: 'treatment',
+  ETREAT: 'Emergency Treatment',
+  BTG: 'break the glass',
+  ERTREAT: 'emergency room treatment',
+}
+
 export const AtnaActiveParticipantSchema = z.object({
   userId: z.string(),
   altUserId: z.string().optional(),
@@ -43,8 +60,6 @@ export const AtnaActiveParticipantSchema = z.object({
   userIsRequestor: z.boolean(),
   roleIdCodes: z.array(AtnaCodedValueSchema).default([]),
   networkAccessPointId: z.string().optional(),
-  /** IHE XUA / BPPC PurposeOfUse, carried as a coded participant attribute. */
-  purposeOfUse: AtnaCodedValueSchema.optional(),
 })
 export type AtnaActiveParticipant = z.infer<typeof AtnaActiveParticipantSchema>
 
@@ -66,6 +81,12 @@ export const AtnaAuditMessageSchema = z.object({
     eventOutcomeIndicator: AtnaOutcomeSchema,
     eventId: AtnaCodedValueSchema,
     eventTypeCode: z.array(AtnaCodedValueSchema).default([]),
+    /**
+     * IHE ITI-20: PurposeOfUse is carried in EventIdentification (NOT on an
+     * ActiveParticipant). Coded from the v3-ActReason value set (BTG marks a
+     * break-the-glass emergency access).
+     */
+    purposeOfUse: AtnaCodedValueSchema.optional(),
   }),
   activeParticipants: z.array(AtnaActiveParticipantSchema).min(1),
   auditSourceIdentification: z.object({
@@ -95,8 +116,8 @@ export interface AuditAccessInput {
   action: AuditAction
   outcome: 'SUCCESS' | 'FAILURE'
   actor: { userId: string; username: string; roles: string[] }
-  /** e.g. TREATMENT / EMERGENCY / RESEARCH; defaults to TREATMENT. */
-  purposeOfUse?: string
+  /** HL7 v3-ActReason PurposeOfUse code; defaults to TREAT. `BTG` = break-glass. */
+  purposeOfUse?: PurposeOfUse
   resource: { type: string; id?: string; isPatient?: boolean }
   /** HMAC-SHA256 pseudonym of a national identifier in scope (never the raw value). */
   subjectIdHash?: string
@@ -120,7 +141,6 @@ const ACTION_CODE: Record<AuditAction, AtnaActionCode> = {
   ACCESS_DENIED: 'E',
 }
 
-const PURPOSE_CODE_SYSTEM = 'IHE:PurposeOfUse'
 const AUDIT_SOURCE_TYPE_APPLICATION: AtnaCodedValue = {
   code: '4',
   codeSystemName: 'DCM',
@@ -137,7 +157,12 @@ export function buildAtnaMessage(
   source: { auditSourceId: string; auditEnterpriseSiteId?: string },
 ): AtnaAuditMessage {
   const outcome: AtnaOutcome = input.outcome === 'SUCCESS' ? 0 : 8
-  const purpose = input.purposeOfUse ?? 'TREATMENT'
+  const purpose: PurposeOfUse = input.purposeOfUse ?? 'TREAT'
+  const purposeOfUse: AtnaCodedValue = {
+    code: purpose,
+    codeSystemName: PURPOSE_OF_USE_CODE_SYSTEM,
+    displayName: PURPOSE_OF_USE_DISPLAY[purpose],
+  }
 
   const requestor: AtnaActiveParticipant = {
     userId: input.actor.userId,
@@ -150,7 +175,6 @@ export function buildAtnaMessage(
     ...(input.networkAccessPointId
       ? { networkAccessPointId: input.networkAccessPointId }
       : {}),
-    purposeOfUse: { code: purpose, codeSystemName: PURPOSE_CODE_SYSTEM },
   }
 
   const participantObjects: AtnaParticipantObject[] = []
@@ -184,6 +208,7 @@ export function buildAtnaMessage(
       eventTypeCode: [
         { code: input.resource.type, codeSystemName: 'ehrbase-ui:resource' },
       ],
+      purposeOfUse,
     },
     activeParticipants: [requestor],
     auditSourceIdentification: {

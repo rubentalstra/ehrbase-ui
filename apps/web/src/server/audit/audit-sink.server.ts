@@ -36,7 +36,7 @@ export class PostgresAuditSink implements AuditSink {
         username: event.ctx.actor.username,
         roles: event.ctx.actor.roles,
       },
-      purposeOfUse: 'TREATMENT',
+      purposeOfUse: 'TREAT',
       resource: { type: 'PARTY', ...(event.partyId ? { id: event.partyId } : {}), isPatient: true },
       ...(event.subjectIdHash ? { subjectIdHash: event.subjectIdHash } : {}),
       sourceComponent: this.sourceComponent,

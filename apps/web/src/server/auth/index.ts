@@ -54,6 +54,8 @@ export {
   type BreakGlassRequest,
   type BreakGlassOutcome,
   grantEmergencyAccess,
-  getEmergencyGrant,
-  type EmergencyGrant,
+  getActiveBreakGlass,
+  hasActiveBreakGlass,
+  type ActiveBreakGlass,
+  BREAK_GLASS_ROLE,
 } from './break-glass.ts'

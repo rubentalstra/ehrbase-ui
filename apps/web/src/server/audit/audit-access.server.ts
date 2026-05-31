@@ -38,7 +38,7 @@ export async function auditAccess(input: AuditAccessInput): Promise<void> {
       actorUserId: input.actor.userId,
       actorUsername: input.actor.username,
       actorRoles: input.actor.roles,
-      purposeOfUse: input.purposeOfUse ?? 'TREATMENT',
+      purposeOfUse: input.purposeOfUse ?? 'TREAT',
       resourceType: input.resource.type,
       resourceId: input.resource.id ?? null,
       subjectIdHash: input.subjectIdHash ?? null,

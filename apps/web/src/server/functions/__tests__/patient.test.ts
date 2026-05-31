@@ -27,7 +27,6 @@ vi.mock('@tanstack/react-start/server', () => ({
 }))
 
 import { requireRole } from '@/server/auth/require-role'
-import { auditAccess } from '@/server/audit'
 import { ensureDemoSeed } from '@/server/demographic/demo-seed.server'
 import { getDemographicProvider } from '@/server/demographic/provider.factory.server'
 
@@ -114,11 +113,8 @@ describe('createPatientImpl', () => {
     expect(result.ehrLinked).toBe(false)
     expect(result.ehrId).toBeNull()
     expect(result.partyRef.id).toBe('p2')
-    // The failed provision is still audited (FAILURE outcome).
-    const failureAudited = vi
-      .mocked(auditAccess)
-      .mock.calls.some((c) => c[0]?.outcome === 'FAILURE' && c[0]?.resource.type === 'EHR')
-    expect(failureAudited).toBe(true)
+    // The EHR-provision access (success OR failure) is now audited inside
+    // callEhrbase (ADR-0045 — single audit point); createEhrImpl is mocked here.
   })
 
   it('maps a duplicate-identifier provider error to a 409 (no PHI in the response)', async () => {

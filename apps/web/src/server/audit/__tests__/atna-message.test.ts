@@ -41,17 +41,25 @@ describe('buildAtnaMessage', () => {
     ).toBe(8)
   })
 
-  it('records the requestor with role codes + purpose-of-use (default TREATMENT)', () => {
+  it('records the requestor with role codes (purpose-of-use is NOT on the participant)', () => {
     const ap = buildAtnaMessage(base(), SOURCE).activeParticipants[0]
     expect(ap?.userId).toBe('u1')
     expect(ap?.userIsRequestor).toBe(true)
     expect(ap?.roleIdCodes.map((r) => r.code)).toContain('physician')
-    expect(ap?.purposeOfUse?.code).toBe('TREATMENT')
+    // IHE ITI-20: PurposeOfUse lives in EventIdentification, not ActiveParticipant.
+    expect(ap).not.toHaveProperty('purposeOfUse')
   })
 
-  it('honours an explicit purpose-of-use', () => {
-    const msg = buildAtnaMessage(base({ purposeOfUse: 'EMERGENCY' }), SOURCE)
-    expect(msg.activeParticipants[0]?.purposeOfUse?.code).toBe('EMERGENCY')
+  it('carries PurposeOfUse in EventIdentification, default TREAT, v3-ActReason coded', () => {
+    const ei = buildAtnaMessage(base(), SOURCE).eventIdentification
+    expect(ei.purposeOfUse?.code).toBe('TREAT')
+    expect(ei.purposeOfUse?.codeSystemName).toBe('2.16.840.1.113883.1.11.20448')
+  })
+
+  it('honours an explicit purpose-of-use (BTG / break-the-glass)', () => {
+    const ei = buildAtnaMessage(base({ purposeOfUse: 'BTG' }), SOURCE).eventIdentification
+    expect(ei.purposeOfUse?.code).toBe('BTG')
+    expect(ei.purposeOfUse?.displayName).toBe('break the glass')
   })
 
   it('emits a patient participant object + a subject pseudonym, never a raw value', () => {

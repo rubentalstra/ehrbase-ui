@@ -77,3 +77,50 @@ export const auditEvent = pgTable(
 
 export type AuditEventRow = typeof auditEvent.$inferSelect
 export type AuditEventInsert = typeof auditEvent.$inferInsert
+
+// ─── break_glass_grant ───────────────────────────────────────────────────────
+// Durable record of a break-the-glass emergency-access declaration (ADR-0045).
+// Per-EHR scoped, time-limited. The IHE-ATNA access trail (`audit_event`) records
+// the BTG-purposed accesses; THIS table holds the durable EVIDENCE the
+// audit-reviewer needs — chiefly the clinician's justification, which must
+// survive longer than the short Valkey elevation TTL and be access-gated.
+//
+// PHI note (rule 2): the ATNA `message` free-text is kept PHI-free; the
+// `justification` here MAY contain clinical context, so it lives in this
+// access-gated column ONLY (audit-reviewer persona) and is NEVER copied into an
+// `audit_event.message` / detail / log line. APPEND-ONLY like `audit_event`
+// (audit_writer = INSERT + SELECT; BEFORE UPDATE OR DELETE trigger in the
+// migration). The audit-reviewer REVIEW decision (M22) is a separate insert,
+// not a mutation of this row.
+export const breakGlassGrant = pgTable(
+  'break_glass_grant',
+  {
+    /** App-supplied UUID (Web Crypto randomUUID; ADR-0037). */
+    grantId: uuid('grant_id').primaryKey(),
+    grantedAt: timestamp('granted_at', { withTimezone: true, mode: 'string' })
+      .notNull()
+      .default(sql`now()`),
+    /** When the elevation auto-expires (grantedAt + TTL). */
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+    actorUserId: text('actor_user_id').notNull(),
+    actorUsername: text('actor_username').notNull(),
+    actorRoles: jsonb('actor_roles').$type<string[]>().notNull(),
+    /** The EHR the emergency access is scoped to (per-EHR break-glass). */
+    ehrId: text('ehr_id').notNull(),
+    /** HMAC-SHA256 pseudonym of the subject's national id, when known. */
+    subjectIdHash: text('subject_id_hash'),
+    /** HL7 v3-ActReason purpose — always 'BTG' for a break-glass grant. */
+    purposeOfUse: text('purpose_of_use').notNull(),
+    /** Mandatory clinician justification (gated review evidence — see PHI note). */
+    justification: text('justification').notNull(),
+    correlationId: text('correlation_id'),
+  },
+  (t) => [
+    index('break_glass_grant_actor_idx').on(t.actorUserId),
+    index('break_glass_grant_ehr_idx').on(t.ehrId),
+    index('break_glass_grant_granted_idx').on(t.grantedAt),
+  ],
+)
+
+export type BreakGlassGrantRow = typeof breakGlassGrant.$inferSelect
+export type BreakGlassGrantInsert = typeof breakGlassGrant.$inferInsert

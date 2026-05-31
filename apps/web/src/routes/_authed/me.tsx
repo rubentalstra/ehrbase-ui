@@ -11,6 +11,7 @@ import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -22,15 +23,23 @@ export const Route = createFileRoute('/_authed/me')({
 // Mirrors MIN_JUSTIFICATION in break-glass.server.ts; kept local so this
 // client component never imports the server module. The server re-validates.
 const MIN_JUSTIFICATION = 30
+// Break-glass is per-EHR (ADR-0045): the clinician declares which patient's EHR
+// the emergency is for. The dedicated patient-page 403 entry (pre-filling the
+// EHR id) arrives with the clinical surfaces (M8); this is the manual entry.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
 
 const CsrfSchema = z.object({ csrfToken: z.string() })
 
-type BreakGlassState = 'idle' | 'submitting' | 'granted' | 'error'
+type BreakGlassState = 'idle' | 'submitting' | 'granted' | 'error' | 'not_eligible'
 
 function Me() {
   const { user } = Route.useRouteContext()
   const [justification, setJustification] = useState('')
+  const [ehrId, setEhrId] = useState('')
   const [state, setState] = useState<BreakGlassState>('idle')
+
+  const ehrValid = UUID_RE.test(ehrId.trim())
 
   async function requestEmergencyAccess() {
     setState('submitting')
@@ -49,11 +58,16 @@ function Me() {
         body: JSON.stringify({
           csrfToken: token.data.csrfToken,
           justification,
+          ehrId: ehrId.trim(),
         }),
       })
 
       if (res.status === 401) {
         window.location.href = '/login?redirect=%2Fme'
+        return
+      }
+      if (res.status === 403) {
+        setState('not_eligible')
         return
       }
       setState(res.ok ? 'granted' : 'error')
@@ -84,7 +98,8 @@ function Me() {
         </CardContent>
       </Card>
 
-      <Card>
+      {user.roles.includes('clinician') ? (
+        <Card>
         <CardHeader>
           <CardTitle>{m.me_emergency_heading()}</CardTitle>
         </CardHeader>
@@ -93,6 +108,23 @@ function Me() {
             <AlertTitle>{m.me_emergency_heading()}</AlertTitle>
             <AlertDescription>{m.me_emergency_warning()}</AlertDescription>
           </Alert>
+
+          <div className="space-y-2">
+            <Label htmlFor="bg-ehr">{m.me_emergency_ehr_label()}</Label>
+            <Input
+              id="bg-ehr"
+              value={ehrId}
+              onChange={(e) => setEhrId(e.target.value)}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              aria-describedby="bg-ehr-help"
+            />
+            <p id="bg-ehr-help" className="text-muted-foreground text-sm">
+              {m.me_emergency_ehr_help()}
+            </p>
+            {ehrId.trim().length > 0 && !ehrValid ? (
+              <p className="text-destructive text-sm">{m.me_emergency_ehr_invalid()}</p>
+            ) : null}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="bg-justification">
@@ -110,6 +142,7 @@ function Me() {
             type="button"
             variant="destructive"
             disabled={
+              !ehrValid ||
               justification.trim().length < MIN_JUSTIFICATION ||
               state === 'submitting'
             }
@@ -123,13 +156,19 @@ function Me() {
               <AlertDescription>{m.me_emergency_granted()}</AlertDescription>
             </Alert>
           ) : null}
+          {state === 'not_eligible' ? (
+            <Alert variant="destructive">
+              <AlertDescription>{m.me_emergency_not_eligible()}</AlertDescription>
+            </Alert>
+          ) : null}
           {state === 'error' ? (
             <Alert variant="destructive">
               <AlertDescription>{m.me_emergency_error()}</AlertDescription>
             </Alert>
           ) : null}
         </CardContent>
-      </Card>
+        </Card>
+      ) : null}
     </div>
   )
 }

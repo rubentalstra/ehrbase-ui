@@ -22,7 +22,6 @@ import {
 } from '@ehrbase-ui/demographic-core'
 import { z } from 'zod'
 
-import { auditAccess } from '@/server/audit'
 import { requireRole } from '@/server/auth/require-role'
 import { callEhrbase } from '@/server/bff/call-ehrbase.server'
 import { getEhrbaseContext } from '@/server/bff/ehrbase-context.server'
@@ -74,14 +73,6 @@ function providerCtx(role: RoleCtx, correlationId: string): ProviderContext {
   }
 }
 
-function auditActor(role: RoleCtx): { userId: string; username: string; roles: string[] } {
-  return {
-    userId: role.user.id,
-    username: role.user.email || role.user.id,
-    roles: role.user.roles,
-  }
-}
-
 // Map demographic-core typed errors → stable codes (no PHI; rule 2). Wraps only
 // provider.* calls; the EHRbase path throws its own typed Response via callEhrbase.
 async function viaProvider<T>(op: () => Promise<T>): Promise<T> {
@@ -128,14 +119,13 @@ export async function getProviderCapabilitiesImpl(): Promise<DemographicProvider
 }
 
 export async function getLinkedEhrImpl(input: PartyIdInput): Promise<LinkedEhrResult> {
-  const role = await requireRole(READ_ROLES, { phi: true })
-  const correlationId = crypto.randomUUID()
+  await requireRole(READ_ROLES, { phi: true })
   const subject = { namespace: getPartyRefNamespace(), id: input.id }
   const { getRequest } = await import('@tanstack/react-start/server')
   const ehrCtx = await getEhrbaseContext(getRequest().headers)
   if (!ehrCtx) throw fail(401, 'UNAUTHENTICATED')
 
-  let ehrId: string | null
+  // The access is audited inside callEhrbase (single audit point, ADR-0045).
   try {
     const res = await callEhrbase(ehrCtx, {
       method: 'GET',
@@ -143,27 +133,16 @@ export async function getLinkedEhrImpl(input: PartyIdInput): Promise<LinkedEhrRe
       classifyPath: 'ehr',
       search: `?subject_id=${encodeURIComponent(subject.id)}&subject_namespace=${encodeURIComponent(subject.namespace)}`,
       accept: JSON_MEDIA_TYPE,
+      auditDetail: 'linked-ehr-lookup',
     })
     const parsed = CanonicalEhrSchema.safeParse(res.json)
-    ehrId = parsed.success ? parsed.data.ehr_id.value : null
+    return { ehrId: parsed.success ? parsed.data.ehr_id.value : null }
   } catch (e) {
     // callEhrbase conflates 403/404 → a 404 Response when no EHR exists for the
     // subject. Any other failure propagates.
-    if (e instanceof Response && e.status === 404) ehrId = null
-    else throw e
+    if (e instanceof Response && e.status === 404) return { ehrId: null }
+    throw e
   }
-
-  await auditAccess({
-    action: 'READ',
-    outcome: 'SUCCESS',
-    actor: auditActor(role),
-    resource: { type: 'EHR', ...(ehrId ? { id: ehrId } : {}) },
-    sourceComponent: 'bff',
-    correlationId,
-    eventTime: new Date().toISOString(),
-    detail: 'linked-ehr-lookup',
-  })
-  return { ehrId }
 }
 
 // ─── Writes ────────────────────────────────────────────────────────────────────
@@ -176,34 +155,15 @@ export async function createPatientImpl(input: CreatePartyInput): Promise<Create
   const partyRef = await viaProvider(() => getDemographicProvider().createParty(input, ctx))
 
   // 2. Auto-provision the linked EHR (EHR_STATUS.subject → this PartyRef; rule 12).
-  //    On failure the party still exists (no orphan) and the detail offers a
-  //    "Provision EHR" retry (provisionEhr).
+  //    The EHR-create access is audited inside callEhrbase (ADR-0045). On failure
+  //    the party still exists (no orphan) and the detail offers a "Provision EHR"
+  //    retry (provisionEhr).
   try {
     const { ehrId } = await createEhrImpl({
       subject: { namespace: partyRef.namespace, id: partyRef.id },
     })
-    await auditAccess({
-      action: 'CREATE',
-      outcome: 'SUCCESS',
-      actor: auditActor(role),
-      resource: { type: 'EHR', id: ehrId },
-      sourceComponent: 'bff',
-      correlationId,
-      eventTime: new Date().toISOString(),
-      detail: 'provision-ehr',
-    })
     return { partyRef, ehrId, ehrLinked: true }
   } catch {
-    await auditAccess({
-      action: 'CREATE',
-      outcome: 'FAILURE',
-      actor: auditActor(role),
-      resource: { type: 'EHR' },
-      sourceComponent: 'bff',
-      correlationId,
-      eventTime: new Date().toISOString(),
-      detail: 'provision-ehr-failed',
-    })
     return { partyRef, ehrId: null, ehrLinked: false }
   }
 }
@@ -265,19 +225,9 @@ export async function endPatientRelationshipImpl(
 }
 
 export async function provisionEhrImpl(input: PartyIdInput): Promise<ProvisionEhrResult> {
-  const role = await requireRole(WRITE_ROLES, { phi: true })
-  const correlationId = crypto.randomUUID()
+  await requireRole(WRITE_ROLES, { phi: true })
   const subject = { namespace: getPartyRefNamespace(), id: input.id }
+  // The EHR-create access is audited inside callEhrbase (single point, ADR-0045).
   const { ehrId } = await createEhrImpl({ subject })
-  await auditAccess({
-    action: 'CREATE',
-    outcome: 'SUCCESS',
-    actor: auditActor(role),
-    resource: { type: 'EHR', id: ehrId },
-    sourceComponent: 'bff',
-    correlationId,
-    eventTime: new Date().toISOString(),
-    detail: 'provision-ehr',
-  })
   return { ehrId }
 }

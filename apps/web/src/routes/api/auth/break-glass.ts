@@ -84,7 +84,6 @@ export const Route = createFileRoute('/api/auth/break-glass')({
         const outcome = await grantEmergencyAccess(auth, {
           justification: parsed.data.justification,
           ehrId: parsed.data.ehrId,
-          deniedRoles: parsed.data.deniedRoles,
         })
 
         if (outcome.status === 'forced_logout') {
@@ -93,6 +92,11 @@ export const Route = createFileRoute('/api/auth/break-glass')({
           // on the next request. Surface the forced-reauth signal so the UI
           // can navigate to /login.
           return json(401, { code: 'FORCED_REAUTH' })
+        }
+        if (outcome.status === 'denied') {
+          // Non-clinician personas cannot break the glass (audited as
+          // ACCESS_DENIED inside grantEmergencyAccess).
+          return json(403, { code: 'NOT_ELIGIBLE' })
         }
         return json(200, {
           code: 'GRANTED',
