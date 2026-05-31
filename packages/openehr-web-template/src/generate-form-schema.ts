@@ -193,6 +193,25 @@ function dvProportionSchema(node: WebTemplateNode): z.ZodTypeAny {
   return z.object({ numerator: z.number(), denominator: z.number() });
 }
 
+/**
+ * DV_CODED_TEXT — same suffix-driven composite/scalar shape as the generic path,
+ * but for an EXTERNAL binding (a `code` suffix whose terminology is not `local`/
+ * `openehr` and which has no closed in-template list) the live combobox writes a
+ * `{ code, value, terminology }` object (so the FLAT converter can emit `|code`,
+ * `|value`, `|terminology`). This override ADDS an optional `terminology` key to
+ * the composite so that object survives form-state validation — purely additive,
+ * the closed-list `{ code: enum }` case is unchanged (terminology is optional).
+ */
+function dvCodedTextSchema(node: WebTemplateNode): z.ZodTypeAny {
+  const base = leafSchema(node);
+  // Only composite leaves (keyed by suffix) carry a `terminology` companion key;
+  // a scalar (single suffix-less input) coded text stays a bare string.
+  if (base instanceof z.ZodObject) {
+    return base.extend({ terminology: z.string().optional() });
+  }
+  return base;
+}
+
 // ── Generic leaf schema (suffix-driven composite or scalar) ──────────────────
 
 /** Build the value schema for a leaf node (a node carrying `inputs`). */
@@ -264,11 +283,12 @@ function rmTypeLeafSchema(node: WebTemplateNode): z.ZodTypeAny {
       return dvIdentifierSchema(node);
     case "DV_PROPORTION":
       return dvProportionSchema(node);
+    case "DV_CODED_TEXT":
+      return dvCodedTextSchema(node);
 
     // ── Generic inputs-based path (incl. context / structural types
     //    PARTY_PROXY, PARTY_IDENTIFIED, STRING that carry inputs) ────────────
     case "DV_TEXT":
-    case "DV_CODED_TEXT":
     case "DV_QUANTITY":
     case "DV_COUNT":
     case "DV_BOOLEAN":

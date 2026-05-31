@@ -313,6 +313,42 @@ services:
       start_period: 90s
     networks: [ehrbase-net]
 
+  # Terminology server — the dev backend for the external terminology adapters
+  # (TERMINOLOGY_PROVIDER=generic-fhir | snowstorm; ADR-0034, ADR-0022). Behind
+  # the `terminology` profile so the default `docker compose up` stays
+  # unconfigured (TERMINOLOGY_PROVIDER=none); start it with
+  # `docker compose --profile terminology up`. Tag-pinned (no :latest — rule 5).
+  #
+  # This HAPI image exposes the FHIR R4 Terminology Service ($expand / $lookup /
+  # $validate-code) — point the GENERIC-FHIR adapter at it:
+  #   TERMINOLOGY_PROVIDER=generic-fhir
+  #   TERMINOLOGY_FHIR_BASE=http://localhost:8094/fhir
+  # The SNOWSTORM adapter (the v1.0 default) needs the full Snowstorm + the
+  # IHTSDO/snowstorm image + an Elasticsearch sidecar (heavy; not bundled here):
+  #   snowstorm: image snomedinternational/snowstorm:10.11.2 (Apache-2.0)
+  #   + docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+  # then TERMINOLOGY_PROVIDER=snowstorm TERMINOLOGY_FHIR_BASE=http://localhost:8095/fhir.
+  # Unit + contract tests use the in-memory FHIR terminology double — no Docker.
+  terminology-fhir:
+    image: hapiproject/hapi:v8.8.0-1
+    profiles: ['terminology']
+    environment:
+      hapi.fhir.fhir_version: R4
+      hapi.fhir.default_encoding: json
+      spring.datasource.url: jdbc:h2:mem:hapitx;DB_CLOSE_DELAY=-1
+    ports: ['8094:8080']
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q -O /dev/null http://localhost:8080/fhir/metadata || exit 1',
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    networks: [ehrbase-net]
+
 volumes:
   ehrbase_pg:
   platform_pg:

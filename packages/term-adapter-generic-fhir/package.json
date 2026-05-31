@@ -1,8 +1,8 @@
 {
-  "name": "@ehrbase-ui/term-adapter-snowstorm",
+  "name": "@ehrbase-ui/term-adapter-generic-fhir",
   "version": "0.0.0",
   "private": true,
-  "description": "Snowstorm-specific adapter for TerminologyProvider — the v1.0 default per ADR-0022 + ADR-0034. Adds _displayLanguage routing + the SNOMED-ECL capability on top of the FHIR R4 baseline.",
+  "description": "Generic FHIR R4 Terminology Service adapter (HAPI tx / Ontoserver basic / national terminology servers) for TerminologyProvider — per ADR-0034. Version-aware: R4/R4B only in v1.0 (R5/R6 throw at construction).",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",

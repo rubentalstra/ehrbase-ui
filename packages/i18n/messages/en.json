@@ -207,5 +207,14 @@
   "viewer_load_failed": "Could not load this composition.",
   "viewer_close": "Close",
 
-  "compose_unsupported_type": "Unsupported type: {rmType}"
+  "compose_unsupported_type": "Unsupported type: {rmType}",
+
+  "compose_term_search_placeholder": "Search {terminology}…",
+  "compose_term_search_select": "Select a code",
+  "compose_term_no_results": "No matches found.",
+  "compose_term_type_to_search": "Type to search the terminology.",
+  "compose_term_searching": "Searching…",
+  "compose_term_error": "Could not reach the terminology server.",
+  "compose_term_not_configured": "Terminology server not configured — enter a code manually.",
+  "compose_term_selected": "Selected: {display}"
 }

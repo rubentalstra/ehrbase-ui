@@ -94,6 +94,15 @@ importers:
       '@ehrbase-ui/openehr-web-template':
         specifier: workspace:*
         version: link:../../packages/openehr-web-template
+      '@ehrbase-ui/term-adapter-generic-fhir':
+        specifier: workspace:*
+        version: link:../../packages/term-adapter-generic-fhir
+      '@ehrbase-ui/term-adapter-snowstorm':
+        specifier: workspace:*
+        version: link:../../packages/term-adapter-snowstorm
+      '@ehrbase-ui/term-core':
+        specifier: workspace:*
+        version: link:../../packages/term-core
       '@ehrbase-ui/valkey':
         specifier: workspace:*
         version: link:../../packages/valkey
@@ -591,6 +600,25 @@ importers:
         specifier: 4.1.7
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
+  packages/term-adapter-generic-fhir:
+    dependencies:
+      '@ehrbase-ui/term-core':
+        specifier: workspace:*
+        version: link:../term-core
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+
   packages/term-adapter-snowstorm:
     dependencies:
       '@ehrbase-ui/term-core':
@@ -600,16 +628,37 @@ importers:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/term-core:
     dependencies:
       '@ehrbase-ui/openehr-term':
         specifier: workspace:*
         version: link:../openehr-term
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/valkey:
     dependencies:

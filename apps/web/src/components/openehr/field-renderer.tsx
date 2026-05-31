@@ -13,7 +13,7 @@
 // zodResolver in ComposeForm). No hand-written validation rules live here
 // (Inviolable rule 1 for the form pipeline).
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   type Control,
   type FieldValues,
@@ -22,8 +22,9 @@ import {
   useFieldArray,
   useFormContext,
 } from 'react-hook-form'
+import { useQuery } from '@tanstack/react-query'
 
-import type { WebTemplateNode } from '@ehrbase-ui/openehr-web-template'
+import type { WebTemplateInput, WebTemplateNode } from '@ehrbase-ui/openehr-web-template'
 import { m } from '@ehrbase-ui/i18n/messages'
 
 import { Input } from '@/components/ui/input'
@@ -40,9 +41,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { expandValueSet } from '@/server/functions/terminology.functions'
 
 // ── Container rmTypes ─────────────────────────────────────────────────────────
 // These nodes recurse into children; they are never leaf inputs themselves.
@@ -97,6 +106,69 @@ function isLongText(node: WebTemplateNode): boolean {
 function errorMessage(error: FieldError | undefined): string | undefined {
   if (!error) return undefined
   return error.message ?? 'Invalid value'
+}
+
+// ── External terminology binding (F2 — ADR-0034) ──────────────────────────────
+// A DV_CODED_TEXT input's `terminology` is the binding source. `local` (the
+// template's own value-list) and `openehr` (the internal openEHR codesets) are
+// CLOSED, in-template lists → render the static Select. Anything else is an
+// EXTERNAL binding (SNOMED CT / LOINC / national codes) with no fixed in-template
+// option list → render the live combobox backed by the terminology server.
+const LOCAL_TERMINOLOGIES = new Set(['local', 'openehr'])
+
+// Map the web-template terminology name to a FHIR CodeSystem URL so $expand has
+// a `system` to expand when the template doesn't carry a ValueSet URL. Unknown
+// names pass through verbatim (a server may accept the bare name as its system).
+const TERMINOLOGY_SYSTEM_URI: Record<string, string> = {
+  'SNOMED-CT': 'http://snomed.info/sct',
+  'SNOMED CT': 'http://snomed.info/sct',
+  SNOMED: 'http://snomed.info/sct',
+  LOINC: 'http://loinc.org',
+  'ICD-10': 'http://hl7.org/fhir/sid/icd-10',
+  'ICD10': 'http://hl7.org/fhir/sid/icd-10',
+  ATC: 'http://www.whocc.no/atc',
+}
+
+interface ExternalBinding {
+  /** The terminology name as written in the template (for the picker label). */
+  terminology: string
+  /** A ValueSet canonical URL, when the template carries one. */
+  valueSetUrl?: string
+  /** The CodeSystem URL to expand when no ValueSet URL is bound. */
+  system?: string
+}
+
+// Decide static-Select vs live-combobox for a DV_CODED_TEXT code input.
+// Returns the external binding when the field should use the live combobox, else
+// null (→ keep the existing static Select / datalist behaviour, no F1 regression).
+function externalBindingOf(codeInput: WebTemplateInput | undefined): ExternalBinding | null {
+  if (!codeInput) return null
+  const term = codeInput.terminology
+  if (!term || LOCAL_TERMINOLOGIES.has(term)) return null
+  // A closed in-template list wins even for an external terminology name: the
+  // template author fixed the options, so honour them (static Select).
+  const hasClosedList = (codeInput.list?.length ?? 0) > 0 && !codeInput.listOpen
+  if (hasClosedList) return null
+  // A bound ValueSet URL (some templates carry one in `terminology` as a URL, or
+  // via a constraint) is preferred; otherwise expand the whole code system.
+  const isUrl = term.startsWith('http://') || term.startsWith('https://')
+  const system = TERMINOLOGY_SYSTEM_URI[term] ?? (isUrl ? undefined : term)
+  return {
+    terminology: term,
+    valueSetUrl: isUrl ? term : undefined,
+    system,
+  }
+}
+
+// Debounce a changing value (the autocomplete query) so each keystroke does not
+// fire a server round trip. 250ms is the common autocomplete debounce.
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const handle = setTimeout(() => setDebounced(value), delayMs)
+    return () => clearTimeout(handle)
+  }, [value, delayMs])
+  return debounced
 }
 
 // Helper: type guard for composite form-state leaf records (DV_QUANTITY etc.).
@@ -193,6 +265,163 @@ function DvTextField({ node, path, control, readOnly }: LeafProps) {
   )
 }
 
+// ── DV_CODED_TEXT external-binding combobox (F2 — ADR-0034) ───────────────────
+// A live, debounced terminology picker (Popover + Command) for a code input
+// bound to an external terminology. Writes the FULL composite form-state object
+// `{ code, value, terminology }` at `path` so the FLAT converter emits `|code`,
+// `|value`, and `|terminology` (the closed-list Select path writes only `|code`;
+// the external path must carry display + terminology too).
+//
+// Form-state shape: `{ code: string, value: string, terminology: string }` —
+// matches dvCodedTextSchema() in generate-form-schema.ts (the optional
+// `terminology` companion key).
+
+interface TermComboboxProps extends LeafProps {
+  binding: ExternalBinding
+}
+
+function isTermSelection(x: unknown): x is { code?: unknown; value?: unknown } {
+  return typeof x === 'object' && x !== null && !Array.isArray(x)
+}
+
+function TermComboboxField({ node, path, control, binding, readOnly }: TermComboboxProps) {
+  const required = (node.min ?? 0) >= 1
+  const label = nodeName(node)
+  const triggerId = `field-${path}.code`
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 250)
+
+  // Query the terminology server on the debounced filter. Disabled until the
+  // popover is open so a hidden field never fires a request.
+  const expansion = useQuery({
+    queryKey: [
+      'terminology',
+      'expand',
+      binding.valueSetUrl ?? null,
+      binding.system ?? null,
+      debouncedQuery,
+    ],
+    queryFn: () =>
+      expandValueSet({
+        data: {
+          url: binding.valueSetUrl,
+          system: binding.system,
+          filter: debouncedQuery.length > 0 ? debouncedQuery : undefined,
+          count: 20,
+          offset: 0,
+        },
+      }),
+    enabled: open,
+    staleTime: 60_000,
+  })
+
+  const notConfigured = expansion.data?.configured === false
+  const options = expansion.data?.options ?? []
+
+  return (
+    <Controller
+      control={control}
+      name={path}
+      render={({ field, fieldState }) => {
+        const selection = isTermSelection(field.value) ? field.value : undefined
+        const selectedCode = typeof selection?.code === 'string' ? selection.code : ''
+        const selectedDisplay = typeof selection?.value === 'string' ? selection.value : ''
+        const err = errorMessage(fieldState.error)
+
+        if (readOnly) {
+          return <ReadOnlyField label={label} value={selectedDisplay || selectedCode} />
+        }
+
+        const buttonLabel = selectedDisplay
+          ? m.compose_term_selected({ display: selectedDisplay })
+          : m.compose_term_search_select()
+
+        const onSelectOption = (code: string, display: string) => {
+          field.onChange({ code, value: display, terminology: binding.terminology })
+          setOpen(false)
+          setQuery('')
+        }
+
+        return (
+          <div className="flex flex-col gap-1">
+            <Label htmlFor={triggerId}>
+              {label}
+              {required && <RequiredMark />}
+            </Label>
+            <div aria-describedby={err ? `${triggerId}-err` : undefined}>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                  {/* aria-invalid is conveyed by the wrapping div's
+                      aria-describedby + the destructive border; buttons don't
+                      support aria-invalid (role-supports-aria-props). */}
+                  <Button
+                    id={triggerId}
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !selectedDisplay && 'text-muted-foreground',
+                      fieldState.invalid && 'border-destructive',
+                    )}
+                  >
+                    {buttonLabel}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  {/* shouldFilter={false}: results are server-filtered, not client-filtered. */}
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      value={query}
+                      onValueChange={setQuery}
+                      placeholder={m.compose_term_search_placeholder({ terminology: binding.terminology })}
+                    />
+                    <CommandList>
+                      {notConfigured ? (
+                        <CommandEmpty>{m.compose_term_not_configured()}</CommandEmpty>
+                      ) : expansion.isError ? (
+                        <CommandEmpty>{m.compose_term_error()}</CommandEmpty>
+                      ) : expansion.isFetching ? (
+                        <CommandEmpty>{m.compose_term_searching()}</CommandEmpty>
+                      ) : options.length === 0 ? (
+                        <CommandEmpty>
+                          {debouncedQuery.length > 0
+                            ? m.compose_term_no_results()
+                            : m.compose_term_type_to_search()}
+                        </CommandEmpty>
+                      ) : (
+                        options.map((opt) => (
+                          <CommandItem
+                            key={`${opt.system}|${opt.code}`}
+                            value={opt.code}
+                            onSelect={() => onSelectOption(opt.code, opt.display)}
+                          >
+                            {opt.display}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {selectedCode && (
+              <p className="text-muted-foreground text-xs">
+                {binding.terminology}: {selectedCode}
+              </p>
+            )}
+            {err && (
+              <p id={`${triggerId}-err`} role="alert" className="text-destructive text-xs">
+                {err}
+              </p>
+            )}
+          </div>
+        )
+      }}
+    />
+  )
+}
+
 // DV_CODED_TEXT → Select (≤7 options) / Combobox (>7 or open list). §7 table row 2.
 // Form-state shape: `{ code: string }` when a code suffix exists; scalar string
 // for single suffix-less input — matching leafSchema() in generate-form-schema.ts.
@@ -207,6 +436,23 @@ function DvCodedTextField({ node, path, control, readOnly }: LeafProps) {
   const hasCodeSuffix = !!inputs.find((i) => i.suffix === 'code')
   const fieldPath = hasCodeSuffix ? `${path}.code` : path
   const inputId = `field-${fieldPath}`
+
+  // EXTERNAL binding (F2 — ADR-0034): a code input bound to an external
+  // terminology (SNOMED CT / LOINC / national codes) with no closed in-template
+  // list → live combobox backed by the terminology server. Closed local/openEHR
+  // lists keep the static Select below (no F1 regression).
+  const externalBinding = externalBindingOf(codeInput)
+  if (externalBinding && hasCodeSuffix) {
+    return (
+      <TermComboboxField
+        node={node}
+        path={path}
+        control={control}
+        binding={externalBinding}
+        readOnly={readOnly}
+      />
+    )
+  }
 
   return (
     <Controller
