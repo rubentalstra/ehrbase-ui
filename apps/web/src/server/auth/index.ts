@@ -6,7 +6,7 @@
 //     buildAuth, setAuthInstance, getAuthInstance,
 //     requireRole, type RoleContext,
 //     grantEmergencyAccess, BreakGlassRequestSchema,
-//     ensureKeycloakSsoProviderRegistered,
+//     resolveUserAppRoles,
 //   } from '@/server/auth'
 //
 // Browser-side consumers import from the `/client` subpath:
@@ -16,6 +16,7 @@
 export {
   buildAuth,
   type BuildAuthOptions,
+  KEYCLOAK_PROVIDER_ID,
   decodeJwtPayload,
   extractKeycloakRoles,
 } from './factory.ts'
@@ -37,10 +38,10 @@ export {
   SessionUserShapeSchema,
 } from './jwt.ts'
 export {
-  provisionFromKeycloak,
-  type ProvisionInput,
-} from './provision.ts'
-export { ensureKeycloakSsoProviderRegistered } from './sso-bootstrap.ts'
+  APP_REALM_ROLES,
+  appRealmRolesFromTokens,
+  resolveUserAppRoles,
+} from './realm-roles.server.ts'
 export {
   requireRole,
   type RoleContext,

@@ -16,6 +16,7 @@ import { auth as betterAuth } from '@/lib/auth/auth.server'
 import {
   BreakGlassRequestSchema,
   grantEmergencyAccess,
+  resolveUserAppRoles,
 } from '@/server/auth'
 import type { RoleContext } from '@/server/auth'
 import {
@@ -25,10 +26,6 @@ import {
 } from '@/server/bff'
 
 const PostBodySchema = BreakGlassRequestSchema.extend({ csrfToken: z.string() })
-
-const UserShapeSchema = z
-  .object({ keycloakRoles: z.array(z.string()).default([]) })
-  .partial()
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
@@ -46,14 +43,16 @@ async function resolveRoleContext(
 ): Promise<RoleContext | null> {
   const session = await betterAuth.api.getSession({ headers: request.headers })
   if (!session) return null
-  const shape = UserShapeSchema.safeParse(session.user)
+  // Roles come from the linked Keycloak access_token (ADR-0044) — the same
+  // authoritative source as require-role.ts, not a denormalised column.
+  const roles = await resolveUserAppRoles(session.user.id)
   return {
     sid: session.session.token,
     user: {
       id: session.user.id,
       email: session.user.email ?? '',
       name: session.user.name ?? '',
-      roles: shape.success ? (shape.data.keycloakRoles ?? []) : [],
+      roles,
     },
   }
 }
