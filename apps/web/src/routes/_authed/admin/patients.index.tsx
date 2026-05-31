@@ -1,18 +1,17 @@
-// Admin › Patients (CLINICAL-UI.md §4 admin/patients; ADR-0031 Demographic IM).
-// Search + create demographic patient records; each created patient gets a linked
-// openEHR EHR auto-provisioned (EHR_STATUS.subject → PartyRef, rule 12). Admin-only
-// (route layout gate + server requireRole(['admin'])). All copy via Paraglide;
-// shadcn primitives + the shared DataTable only (rules 4, 6, 6a).
+// Admin › Patients — list + search (CLINICAL-UI.md §4 admin/patients; ADR-0031).
+// INDEX route for /admin/patients. It is a SIBLING of the $partyId detail under
+// the /admin layout (route.tsx Outlet), so opening a patient swaps the detail in
+// — a list-as-parent-layout (no Outlet) would keep the list rendered (the "Open
+// does nothing" bug). Create is a dedicated page (/admin/patients/new). Admin-only
+// (route gate + server requireRole(['admin'])). Demo data seeds on first load.
 
-import { type CreatePartyInput, type Party } from '@ehrbase-ui/demographic-core'
+import { type Party } from '@ehrbase-ui/demographic-core'
 import { m } from '@ehrbase-ui/i18n/messages'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { type ColumnDef } from '@tanstack/react-table'
 import { useMemo, useState } from 'react'
-import { toast } from 'sonner'
 
-import { PatientForm } from '@/components/admin/patient-form'
 import {
   identifierSummary,
   patientDisplayName,
@@ -26,46 +25,34 @@ import { DataTable } from '@/components/ui/data-table'
 import { DataTableColumnHeader } from '@/components/ui/data-table-column-header'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  createPatient,
   getProviderCapabilities,
   searchPatients,
   type PatientSearchResult,
 } from '@/server/functions/patient.functions'
 
-export const Route = createFileRoute('/_authed/admin/patients')({
+export const Route = createFileRoute('/_authed/admin/patients/')({
   component: PatientsAdmin,
   errorComponent: FeatureErrorBoundary,
 })
-
-const CAPS_KEY = ['admin', 'demographic', 'capabilities'] as const
 
 interface SearchState {
   family: string
   given: string
   birthDate: string
-  identifierValue: string
 }
 
-const EMPTY_SEARCH: SearchState = { family: '', given: '', birthDate: '', identifierValue: '' }
+const EMPTY_SEARCH: SearchState = { family: '', given: '', birthDate: '' }
 
 function PatientsAdmin() {
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
   const [draft, setDraft] = useState<SearchState>(EMPTY_SEARCH)
   const [active, setActive] = useState<SearchState>(EMPTY_SEARCH)
-  const [createOpen, setCreateOpen] = useState(false)
 
-  const caps = useQuery({ queryKey: CAPS_KEY, queryFn: () => getProviderCapabilities() })
-
+  const caps = useQuery({
+    queryKey: ['admin', 'demographic', 'capabilities'],
+    queryFn: () => getProviderCapabilities(),
+  })
   const list = useQuery({
     queryKey: ['admin', 'patients', active],
     queryFn: () =>
@@ -79,23 +66,6 @@ function PatientsAdmin() {
         },
       }),
   })
-
-  const create = useMutation({
-    mutationFn: (input: CreatePartyInput) => createPatient({ data: input }),
-    onSuccess: async (result) => {
-      toast[result.ehrLinked ? 'success' : 'warning'](
-        result.ehrLinked ? m.admin_patients_created() : m.admin_patients_created_no_ehr(),
-      )
-      setCreateOpen(false)
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'patients'] })
-      await navigate({
-        to: '/admin/patients/$partyId',
-        params: { partyId: result.partyRef.id },
-      })
-    },
-    onError: () => toast.error(m.admin_patients_create_failed()),
-  })
-
   const readonly = caps.data?.readonly ?? false
 
   return (
@@ -105,9 +75,11 @@ function PatientsAdmin() {
           <h1 className="text-2xl font-bold">{m.admin_patients_title()}</h1>
           <p className="text-muted-foreground text-sm">{m.admin_patients_subtitle()}</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={readonly}>
-          {m.admin_patients_create()}
-        </Button>
+        {readonly ? null : (
+          <Button asChild>
+            <Link to="/admin/patients/new">{m.admin_patients_create()}</Link>
+          </Button>
+        )}
       </div>
 
       {readonly ? (
@@ -178,21 +150,6 @@ function PatientsAdmin() {
           <PatientList query={list} />
         </CardContent>
       </Card>
-
-      <Sheet open={createOpen} onOpenChange={setCreateOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{m.admin_patients_create_heading()}</SheetTitle>
-            <SheetDescription>{m.admin_patients_subtitle()}</SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-8">
-            <PatientForm
-              pending={create.isPending}
-              onSubmit={(input) => create.mutate(input)}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }

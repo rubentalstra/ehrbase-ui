@@ -44,12 +44,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -73,7 +67,7 @@ export const Route = createFileRoute('/_authed/admin/patients/$partyId')({
 function PatientDetail() {
   const { partyId } = Route.useParams()
   const queryClient = useQueryClient()
-  const [editOpen, setEditOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   const patientKey = ['admin', 'patient', partyId] as const
   const patient = useQuery({
@@ -96,7 +90,7 @@ function PatientDetail() {
       updatePatient({ data: { id: partyId, input } }),
     onSuccess: async () => {
       toast.success(m.admin_patients_updated())
-      setEditOpen(false)
+      setEditing(false)
       await invalidate()
     },
     onError: () => toast.error(m.admin_patients_update_failed()),
@@ -137,58 +131,65 @@ function PatientDetail() {
               <Badge variant="destructive">{m.admin_patients_status_inactive()}</Badge>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setEditOpen(true)} disabled={readonly}>
-              {m.admin_patients_detail_edit()}
-            </Button>
-            <MergeDialog
-              partyId={partyId}
-              disabled={readonly || !(caps.data?.supportsMerge ?? false)}
-              onMerged={invalidate}
-            />
-            <DeactivateDialog
-              partyId={partyId}
-              disabled={readonly || !p.active}
-              onDeactivated={invalidate}
-            />
-          </div>
+          {editing ? null : (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditing(true)} disabled={readonly}>
+                {m.admin_patients_detail_edit()}
+              </Button>
+              <MergeDialog
+                partyId={partyId}
+                disabled={readonly || !(caps.data?.supportsMerge ?? false)}
+                onMerged={invalidate}
+              />
+              <DeactivateDialog
+                partyId={partyId}
+                disabled={readonly || !p.active}
+                onDeactivated={invalidate}
+              />
+            </div>
+          )}
         </div>
       </div>
 
-      <LinkedEhrCard partyId={partyId} readonly={readonly} />
-
-      <Tabs defaultValue="demographics">
-        <TabsList>
-          <TabsTrigger value="demographics">{m.admin_patients_detail_demographics()}</TabsTrigger>
-          <TabsTrigger value="identifiers">{m.admin_patients_detail_identifiers()}</TabsTrigger>
-          <TabsTrigger value="versions">{m.admin_patients_detail_versions()}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="demographics">
-          <DemographicsCard patient={p} />
-        </TabsContent>
-        <TabsContent value="identifiers">
-          <IdentifiersCard partyId={partyId} patient={p} readonly={readonly} onChanged={invalidate} />
-        </TabsContent>
-        <TabsContent value="versions">
-          <VersionsCard partyId={partyId} />
-        </TabsContent>
-      </Tabs>
-
-      <Sheet open={editOpen} onOpenChange={setEditOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-          <SheetHeader>
-            <SheetTitle>{m.admin_patients_edit_heading()}</SheetTitle>
-          </SheetHeader>
-          <div className="px-4 pb-8">
+      {editing ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle>{m.admin_patients_edit_heading()}</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+              {m.admin_patients_form_cancel()}
+            </Button>
+          </CardHeader>
+          <CardContent>
             <PatientForm
               patient={p}
               pending={update.isPending}
               onSubmit={(input) => update.mutate(input)}
             />
-          </div>
-        </SheetContent>
-      </Sheet>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <LinkedEhrCard partyId={partyId} readonly={readonly} />
+
+          <Tabs defaultValue="demographics">
+            <TabsList>
+              <TabsTrigger value="demographics">{m.admin_patients_detail_demographics()}</TabsTrigger>
+              <TabsTrigger value="identifiers">{m.admin_patients_detail_identifiers()}</TabsTrigger>
+              <TabsTrigger value="versions">{m.admin_patients_detail_versions()}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="demographics">
+              <DemographicsCard patient={p} />
+            </TabsContent>
+            <TabsContent value="identifiers">
+              <IdentifiersCard partyId={partyId} patient={p} readonly={readonly} onChanged={invalidate} />
+            </TabsContent>
+            <TabsContent value="versions">
+              <VersionsCard partyId={partyId} />
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   )
 }

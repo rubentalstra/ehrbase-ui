@@ -29,6 +29,7 @@ import {
 
 import { IdentifierField } from './identifier-field.tsx'
 import { IDENTIFIER_NAMESPACE_KEYS } from './identifier-namespaces.ts'
+import { TagsInput } from './tags-input.tsx'
 
 const NAME_USES = ['official', 'usual', 'maiden', 'nickname'] as const
 const GENDERS = ['male', 'female', 'other', 'unknown'] as const
@@ -62,7 +63,7 @@ const FormValuesSchema = z
         z.object({
           use: z.enum(NAME_USES),
           family: z.string().trim(),
-          given: z.string().trim(),
+          given: z.array(z.string()),
         }),
       )
       .min(1),
@@ -102,7 +103,7 @@ const FIRST_NS = IDENTIFIER_NAMESPACE_KEYS[0] ?? 'mrn'
 
 function emptyForm(): FormValues {
   return {
-    names: [{ use: 'official', family: '', given: '' }],
+    names: [{ use: 'official', family: '', given: [] }],
     identifiers: [{ namespace: FIRST_NS, value: '' }],
     birthDate: '',
     addresses: [],
@@ -116,9 +117,9 @@ function toFormValues(p: Party): FormValues {
       ? p.names.map((n) => ({
           use: n.use ?? 'official',
           family: n.family ?? '',
-          given: (n.given ?? []).join(', '),
+          given: n.given ?? [],
         }))
-      : [{ use: 'official', family: '', given: '' }],
+      : [{ use: 'official', family: '', given: [] }],
     identifiers: p.identifiers.length
       ? p.identifiers.map((id) => ({ namespace: id.namespace, value: id.value }))
       : [{ namespace: FIRST_NS, value: '' }],
@@ -139,12 +140,7 @@ function toCreateInput(v: FormValues): CreatePartyInput {
     names: v.names.map((n) => ({
       use: n.use,
       ...(n.family ? { family: n.family } : {}),
-      given: n.given
-        ? n.given
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [],
+      given: n.given.map((s) => s.trim()).filter(Boolean),
       prefix: [],
       suffix: [],
     })),
@@ -220,8 +216,23 @@ export function PatientForm({ patient, onSubmit, pending }: PatientFormProps) {
             </div>
             <div className="space-y-1">
               <Label htmlFor={`name-${i}-given`}>{m.admin_patients_form_given()}</Label>
-              <div className="flex gap-2">
-                <Input id={`name-${i}-given`} {...register(`names.${i}.given`)} />
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <Controller
+                    control={control}
+                    name={`names.${i}.given`}
+                    render={({ field: f }) => (
+                      <TagsInput
+                        id={`name-${i}-given`}
+                        value={f.value}
+                        onChange={f.onChange}
+                        placeholder={m.admin_patients_form_given_placeholder()}
+                        ariaLabel={m.admin_patients_form_given()}
+                        removeLabel={(name) => m.admin_patients_form_tag_remove({ name })}
+                      />
+                    )}
+                  />
+                </div>
                 {names.fields.length > 1 ? (
                   <Button
                     type="button"
@@ -241,7 +252,7 @@ export function PatientForm({ patient, onSubmit, pending }: PatientFormProps) {
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => names.append({ use: 'official', family: '', given: '' })}
+          onClick={() => names.append({ use: 'official', family: '', given: [] })}
         >
           {m.admin_patients_form_name_add()}
         </Button>
