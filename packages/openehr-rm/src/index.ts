@@ -51,4 +51,9 @@ export {
   parseDvIntervalLenient,
 } from "./facade/interval.ts";
 
+// RM class-name registry (F5): a stable identifier-level handle on the concrete
+// RM 1.1.0 class names, for callers that validate identifiers (e.g. the AQL
+// validator) without importing every Zod schema. See ./rm-classes.ts.
+export { isRmClass, RM_CLASS_NAMES } from "./rm-classes.ts";
+
 export { SPEC_COMPONENT, SPEC_VERSION } from "./spec.ts";

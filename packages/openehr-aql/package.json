@@ -2,7 +2,7 @@
   "name": "@ehrbase-ui/openehr-aql",
   "version": "0.0.0",
   "private": true,
-  "description": "openEHR AQL 1.1.0 — typed query AST, combinator builders, and serializer (AST → AQL string) + parameter collector. Backs the stored-query catalogue; grammar/parser + CodeMirror editor land in M16.",
+  "description": "openEHR AQL 1.1.0 — complete, symmetric library: typed query AST, combinator builders, serializer (AST → AQL string) + parameter collector, hand-written recursive-descent parser (AQL string → AST), and identifier-level validation (RM class / archetype id / node code / $param) against @ehrbase-ui/openehr-rm + openehr-am.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
@@ -14,6 +14,10 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@ehrbase-ui/openehr-am": "workspace:*",
+    "@ehrbase-ui/openehr-rm": "workspace:*"
   },
   "devDependencies": {
     "@ehrbase-ui/config-tsconfig": "workspace:*",
