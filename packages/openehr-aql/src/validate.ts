@@ -73,7 +73,7 @@ const ID_TOKEN_RE = /[A-Za-z0-9._-]+/g;
 // so a malformed one (`[at00X1]`) is caught rather than silently skipped. The
 // exact at/ac grammar is then enforced by isAtCode / isAcCode. Bounded by the
 // literal `[` / `]`, so it cannot exhibit the multi-start backtracking above.
-const NODE_CODE_RE = /\[(at|ac)[A-Za-z0-9.]*\]/g;
+const NODE_CODE_RE = /\[(at|ac)[A-Za-z0-9.]*]/g;
 
 /** Validate an AQL query (AST or source string) at the identifier level. */
 export function validateAql(input: AqlQuery | string, options: ValidateOptions = {}): AqlDiagnostic[] {
