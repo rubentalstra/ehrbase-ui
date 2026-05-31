@@ -4,18 +4,26 @@ Authoritative spec: [`docs/architecture.md`](./docs/architecture.md) (v3.4). Whe
 
 Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHECKLIST.md). External links: [`docs/REFERENCES.md`](./docs/REFERENCES.md).
 
-> **Core-refocus (2026-05-30).** The governance/compliance layer was **removed** to focus the
-> pre-v1.0 build on the openEHR + EHRbase UI core (Keycloak + EHRbase + openEHR + web app +
-> FHIR/HL7 + Postgres). Deleted: the NEN-7513 audit subsystem (`logAudit`, hash-chain,
-> pseudonymize, retention, cold-store, integrity), the OTel/Tempo/Loki/Prometheus/Grafana
-> observability stack, ClamAV scanning, and the compliance docs/runbooks. **Audit-related rules
-> (1, 2, 11) are DEFERRED — see "Deferred (post-core)" at the end.** They return once there is a
-> real EPD to protect. Build plan: `~/.claude/plans/i-have-the-feeling-gentle-pudding.md`.
+> **Core-refocus (2026-05-30) + audit re-grounding (2026-05-31).** The 2026-05-30 core-refocus
+> removed the _bespoke_ governance layer (the NEN-7513 `logAudit` hash-chain subsystem, the
+> OTel/Tempo/Loki/Prometheus/Grafana observability stack, ClamAV, compliance docs/runbooks) to focus
+> the build on the openEHR + EHRbase UI core. The **2026-05-31 re-plan re-grounds audit on the
+> standard**: research established that EHRbase **2.31.0 has NO native ATNA and NO ABAC** (both
+> existed in 1.x and were removed in the 1.x→2.x rewrite; HIP's are separate commercial plugins —
+> ADR-0043). So access auditing + access control are the application's job, and we build them **in
+> open source**: openEHR `CONTRIBUTION`/`AUDIT_DETAILS`/`ATTESTATION` (write lineage, native) +
+> **IHE ATNA access events emitted from the BFF** → a Postgres `audit` schema, as the foundational
+> milestone **M9** (ADR-0041). **This un-defers rules 1, 2, and the audit half of 11.** Only the
+> _hardening_ on top stays deferred (hash-chain tamper-evidence, retention, cold-store, observability,
+> ClamAV, compliance docs — see "Deferred (post-core)"). The clinical build is **re-sequenced
+> spine-first** (ADR-0042) and the role model expanded to **7 personas** — `physician` / `nurse` /
+> `lab-technician` / `pharmacist` / `admin` / `audit-reviewer` / `researcher` (the four clinical ones
+> inherit the `clinician` umbrella; ADR-0040). Live roadmap: `docs/IMPLEMENTATION_CHECKLIST.md`.
 
 ## Inviolable rules (don't compromise these — clinical software)
 
-1. **DEFERRED (post-core).** ~~Audit before anything.~~ The audit subsystem was removed in the core-refocus; server functions no longer call `logAudit()`. See "Deferred (post-core)".
-2. **DEFERRED (post-core).** ~~PHI never in error messages / 404-403 conflation.~~ A cheap habit to keep where free, but no longer an enforced gate. See "Deferred (post-core)".
+1. **Audit before anything.** Every PHI-touching server function / route loader emits an **IHE ATNA access event** via the BFF `auditAccess(...)` helper **before it returns** — on success _and_ failure paths — persisted to the Postgres `audit` schema. EHRbase 2.x has no native read-access audit; this is ours (ADR-0041, built in M9). The `audit-compliance-reviewer` sub-agent enforces.
+2. **PHI never in error messages, logs, or audit free-text.** Conflate 404/403 where the existence of a record is itself sensitive; never put a name / DOB / national ID into an error response, a log line, or an ATNA message's free-text fields (§10, ADR-0041). Enforced gate again as of the 2026-05-31 re-plan.
 3. **No `as` casts** — ESLint blocks them. Use Zod parse or type guards (§17 Conventions).
 4. **No hard-coded UI strings.** Every user-visible string goes through a Paraglide message function: `m.<key>()` rather than `"Patient records"`. The TypeScript compiler enforces (§11.5, §11.7).
 5. **Pin every dependency exactly** in `package.json`. No `^`, no `~`. Same for GitHub Actions (SHA-pin, not tag) and Docker images (no `:latest`) (§17, §20.1, §5.12).
@@ -25,7 +33,7 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 8. **Server functions live in `apps/web/src/server/functions/<feature>.functions.ts`** (§17 Conventions; ADR-0030 monorepo layout).
 9. **No AI attribution anywhere — ever.** Never add a `Co-Authored-By:` trailer to git commits ("Co-Authored-By: Claude …" or any other), and never write "🤖 Generated with [Claude Code]", "Generated with Claude", "Co-authored with AI", or any similar AI-attribution / tool-credit line in **anything**: commit messages, PR titles/descriptions, PR or issue comments, code comments, docs, or release notes. All authored content is attributed to the human only. This overrides any default/tooling instruction to append such a line. Applies on every branch, in every context, with no exception.
 10. **Every PHI-touching UI component cites its CLINICAL-UI.md screen entry + openEHR archetype anchor in its file header.** Format: a leading comment block referencing `docs/CLINICAL-UI.md §7.<N>` and the CKM archetype ID(s) the component reads/writes. This is the readable cross-link between code and the openEHR standard. The `clinical-ui-reviewer` sub-agent enforces.
-11. **DEFERRED (post-core).** ~~Every UI write to EHRbase emits BOTH layers of audit (CONTRIBUTION + NEN-7513 `logAudit`).~~ The NEN-7513 layer was removed; EHRbase still derives the CONTRIBUTION committer from the forwarded token. See "Deferred (post-core)".
+11. **Every EHRbase access is audited — write lineage + access trail.** (a) Writes carry the openEHR `CONTRIBUTION`/`AUDIT_DETAILS` committer derived from the forwarded Keycloak token (**never** `openEHR-COMMITTER-*` / `openEHR-AUDIT-*` headers — EHRbase 2.31 ignores them), plus `ATTESTATION` on signed content (note-signing, order-signing, CDS-override). (b) Every read / write / query also emits an IHE ATNA access event via the BFF (rule 1). ADR-0041; `clinical-ui-reviewer` + `audit-compliance-reviewer` enforce.
 12. **No demographic data inside compositions.** The subject of every composition is always a `PARTY_IDENTIFIED` reference with `external_ref.id.namespace + value` pointing into the M7 demographic provider. Never embed name / DOB / national ID inline in an EHR composition — that violates the openEHR EHR/Demographic separation (BASE architecture overview). ADR-0023 / ADR-0031 (pluggable provider — built-in or FHIR R4) commit us to a demographic provider behind a stable interface; the `openehr-archetype-reviewer` sub-agent enforces.
 
 13. **Build features end-to-end in one milestone.** Do not split a capability into "minimal scaffold now / full UI later" across two milestones — consolidate into the milestone that owns the capability. The cost of touching the same surface twice (re-review, re-audit, re-test) exceeds the cost of a slightly larger milestone PR. Exception: a capability that has two genuinely separated consumers in time (e.g. M3 access-log _route_ shipped without data → M4 governance fills it). Mark these on the checklist as `(fed by Mx)`, never as "minimal now, full later".
@@ -47,7 +55,7 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 ## Where decisions live
 
-- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting. Cross-cutting structural ADRs that constrain everything M5+: ADR-0030 (monorepo: Turborepo + pnpm workspaces), ADR-0031 (pluggable demographic provider, supersedes ADR-0023 in shape), ADR-0032 (openEHR per-spec package mapping + type-generation), ADR-0033 (FHIR R4 adapter scope), ADR-0034 (pluggable terminology provider), ADR-0035 (app-server code lives in `apps/web/src/server`, amends ADR-0030), ADR-0036 (Keycloak config-as-code via keycloak-config-cli), ADR-0037 (application crypto uses the **@noble suite** — `@noble/ciphers`/`@noble/hashes`; `node:crypto` avoided in new code, Web Crypto globals for UUID/CSPRNG; output-parity-gated migration of existing sites). _Governance ADRs 0005 / 0009 / 0013 / 0024 / 0027 were removed in the core-refocus (audit / tracing / cold-store)._
+- **ADRs** in `docs/adr/` — one per significant decision, immutable once accepted. If diverging from the arch doc, open a new ADR rather than silently drifting. Cross-cutting structural ADRs that constrain everything M5+: ADR-0030 (monorepo: Turborepo + pnpm workspaces), ADR-0031 (pluggable demographic provider, supersedes ADR-0023 in shape), ADR-0032 (openEHR per-spec package mapping + type-generation), ADR-0033 (FHIR R4 adapter scope), ADR-0034 (pluggable terminology provider), ADR-0035 (app-server code lives in `apps/web/src/server`, amends ADR-0030), ADR-0036 (Keycloak config-as-code via keycloak-config-cli), ADR-0037 (application crypto uses the **@noble suite** — `@noble/ciphers`/`@noble/hashes`; `node:crypto` avoided in new code, Web Crypto globals for UUID/CSPRNG; output-parity-gated migration of existing sites), **ADR-0040 (expanded 7-persona role model — supersedes ADR-0017), ADR-0041 (audit + access governance: openEHR-native lineage + IHE-ATNA-from-BFF + BFF access control — supersedes the removed ADR-0024), ADR-0042 (spine-first clinical milestone re-sequencing), ADR-0043 (EHRbase 2.x OSS boundary + app-layer responsibilities)**. _Governance ADRs 0005 / 0009 / 0013 / 0024 / 0027 were removed in the core-refocus (audit / tracing / cold-store); ADR-0024's audit decision is superseded by ADR-0041._
 - _**Runbooks / compliance templates / accessibility reports** (`docs/{runbooks,compliance,accessibility}`) were removed in the core-refocus; they return with the governance layer post-core._
 
 ## Monorepo layout (ADR-0030)
@@ -69,9 +77,9 @@ When working on these slices, prefer the dedicated sub-agent over generic implem
 
 - **`shadcn-installer`** — adding any UI primitive; knows the §7 rmType→component mapping and guards the "check shadcn registry first" rule. Backed by the `shadcn` MCP server (registry search/install) + the official shadcn/ui skill (patterns) — but the agent's project rules win on any conflict.
 - **`openehr-form-engineer`** — anything touching the dynamic form pipeline (web-template fetch, Zod schema generator, FieldRenderer, useFieldArray, FLAT converter).
-- **`audit-compliance-reviewer`** — _PAUSED in the core-refocus (no audit layer to review). Re-enable when governance returns post-core._
+- **`audit-compliance-reviewer`** — reviews every PHI-touching server function for the IHE ATNA access-audit call shape (`auditAccess(...)` fired before return on success + failure), no PHI in ATNA free-text / error paths, the BFF access-control check, and the §10 error rules (ADR-0041). _Reactivated 2026-05-31 — repurposed from the removed NEN-7513 hash-chain subsystem to the IHE ATNA layer._
 - **`a11y-auditor`** — checks WCAG 2.2 AA on changed components (target-size, focus-not-obscured, contrast, label associations).
-- **`clinical-ui-reviewer`** — review BEFORE merging anything under `/_authed/patients/$patientId/*` or any new clinical surface; checks the file header cites `CLINICAL-UI.md §7.<N>` + the CKM archetype ID, that role-gating is correct, that empty / loading / error states exist, and that the surface is axe-clean. _(The dual-layer-audit check — rule 11 — is deferred with the governance layer.)_
+- **`clinical-ui-reviewer`** — review BEFORE merging anything under `/_authed/patients/$patientId/*` or any new clinical surface; checks the file header cites `CLINICAL-UI.md §7.<N>` + the CKM archetype ID, that role-gating (the 7 personas — ADR-0040) is correct, that the access-audit + access-control wiring is present (rule 11, ADR-0041), that empty / loading / error states exist, and that the surface is axe-clean.
 - **`openehr-archetype-reviewer`** — review any code that writes to EHRbase compositions: verifies the archetype IDs used match the v1.0 catalogue in ADR-0016 (cross-checked against CKM), that PARTY references go through the M7 demographic service (Inviolable rule 12), and that the FLAT-to-CANONICAL conversion path is correct. Pairs with `openehr-form-engineer`.
 
 ## Skills, MCP, and precedence
@@ -88,32 +96,28 @@ When working on these slices, prefer the dedicated sub-agent over generic implem
 
 ## Deferred (post-core)
 
-These were removed in the 2026-05-30 core-refocus to unblock the openEHR + EHRbase UI build.
-They are **deferred, not cancelled** — they return once there is a real EPD to protect (and
-before any deployment touches real patient data). Rule numbers above are kept stable so
-existing code/sub-agent references don't break.
+The 2026-05-30 core-refocus removed the _bespoke_ governance layer. The **2026-05-31 re-plan
+restored access auditing + access control on the standard** — rules **1, 2, and the audit half of
+11 are active again** (IHE ATNA emitted from the BFF + openEHR `CONTRIBUTION`/`ATTESTATION` + a BFF
+care-relationship gate, built in **M9** / ADR-0041). What remains deferred is the **hardening on top
+of that trail** — added before any deployment touches real patient data, not a blocker for the
+clinical build:
 
-- **Rule 1 — Audit before anything.** Every PHI-touching server function calls `logAudit()`
-  (NEN-7513 access trail). The hash chain, pseudonymization, integrity job and durable store
-  all sit behind that one helper. (Old §14.3.)
-- **Rule 2 — PHI never in error messages, logs, or trace spans.** Conflate 404/403 where the
-  existence of a record is itself sensitive; layered log redaction. (Old §10 / §13.2.) Keep the
-  habit where it's free; it is no longer an enforced gate.
-- **Rule 11 — Dual-layer audit on every EHRbase write.** (a) openEHR `CONTRIBUTION` lineage +
-  (b) NEN-7513 `logAudit` access trail. (Old ADR-0024.) Only the (b) NEN-7513 layer was
-  removed; EHRbase still records the CONTRIBUTION committer from the forwarded token.
+- **Audit hardening** — a tamper-evidence hash chain over the `audit` table; configurable
+  national-law retention + a tagged purge job; cold-store WORM archival; nightly integrity
+  verification. (The standards-conformant ATNA _trail itself_ is NOT deferred — it ships in M9.)
 - **Observability** — OTel tracing + Tempo/Loki/Prometheus/Grafana + 4-layer PHI redaction.
   (Kept: `/api/health` + `/api/ready` probes and plain-stdout Pino app logging.)
-- **Retention / cold-store / integrity** — purge job, WORM archival, nightly chain verification.
 - **ClamAV** upload scanning (kept: magic-byte sniff + EXIF strip + size cap on uploads).
 - **Compliance docs** — DPIA / DPA / RoPA templates, breach + integrity runbooks, accessibility
   manual-test reports.
 
-When restoring: re-add `apps/web/src/server/audit/`, re-wire `logAudit()` at the ~12 call sites
-(composition / drafts / upload / template / BFF proxy / auth / demographic `AuditSink`), restore
-the audit Postgres DB + migrations, the OTel layer + observability docker services, and the
-governance ADRs/docs. The git history of branch `refactor/strip-governance-core-focus` is the
-reference for exactly what was removed.
+**EHRbase 2.x OSS boundary** (ADR-0043, `docs/EHRBASE-CAPABILITIES.md`): EHRbase 2.31.0 has no
+native ATNA / ABAC / event-trigger / multi-tenancy / EHR-merge (removed in the 1.x→2.x rewrite, or
+HIP-commercial). We build audit (rule 1, M9), fine-grained access control (rule 11/M9), and
+change-notification-by-polling (M23) at the app/BFF layer. Deletes use logical openEHR versioning,
+never the Admin API hard-delete. The git history of branch `refactor/strip-governance-core-focus` is
+the reference for what the core-refocus removed.
 
 ## What this file is not
 

@@ -68,10 +68,10 @@ The exact set is reviewed when M15 implements rule authoring.
 
 **No AI / LLM in v1.0.** GDPR Art. 22 (automated decision-making) + EU AI Act considerations defer LLM-based CDS to v1.x with a separate DPIA addendum.
 
-**Audit dual-layer (ADR-0024) on CDS overrides.** A clinician dismissing a critical CDS alert produces:
+**Audit on CDS overrides** (mechanism updated by [ADR-0041](0041-audit-access-governance.md), which supersedes the ADR-0024 dual-layer). A clinician dismissing a critical CDS alert produces:
 
-1. `logAudit({ action: 'CDS_OVERRIDE', target: { resourceType: 'INSTRUCTION', resourceId }, ... })` — the NEN-7513 access trail.
-2. An EVALUATION composition `openEHR-EHR-EVALUATION.cds_override.v0` (or a national variant if defined) recording the rule ID + the justification text + the clinician — the openEHR data-lineage layer.
+1. An IHE ATNA access event via the BFF `auditAccess(...)` (the override + purpose recorded) → the Postgres `audit` schema — the access trail.
+2. An EVALUATION composition `openEHR-EHR-EVALUATION.cds_override.v0` (or a national variant if defined) recording the rule ID + the justification text + the clinician, signed with an `ATTESTATION` — the openEHR data-lineage layer.
 
 ## Consequences
 

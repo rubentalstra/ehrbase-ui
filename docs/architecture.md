@@ -75,8 +75,8 @@ This document describes the architecture of an open-source web UI for the **EHRb
 | Code editor (AQL)            | **@uiw/react-codemirror** + `@codemirror/lang-sql`                                                 | **v4.25.x** / **v6.10.x** (current 4.25.10 / 6.10.0)                                       |
 | Backend (proxied)            | **EHRbase** (pinned, never `:latest`)                                                              | **2.31.x** (current 2.31.0, Apr 28 2026 — Java 25)                                         |
 | Identity                     | **Keycloak** (OIDC + PKCE)                                                                         | **≥ 26.6.2** (CVE-2026-37981 fix — see §5.x note)                                          |
-| Session + audit-chain store  | **Valkey** (BSD-licensed Redis fork, drop-in)                                                      | **≥ 9.1.0** (3 CVE fixes — see §5.x note)                                                  |
-| Logging                      | **pino** (separate transports: app, audit)                                                         | **v10.x** (current 10.3.x, May 2026)                                                       |
+| Session store                | **Valkey** (BSD-licensed Redis fork, drop-in)                                                      | **≥ 9.1.0** (3 CVE fixes — see §5.x note)                                                  |
+| Logging                      | **pino** (app logs, stdout); access audit = IHE ATNA → Postgres `audit` schema (ADR-0041)          | **v10.x** (current 10.3.x, May 2026)                                                       |
 | Database (EHRbase, Keycloak) | **PostgreSQL**                                                                                     | **18.x** (current 18.4, May 14 2026)                                                       |
 | Build / dev                  | **Vite** (Vite 8 GA but blocked on TanStack Start integration bugs; see §17 "Vite version policy") | **v7.3.x** for v1.0 (current 7.3.3, May 2026)                                              |
 | Linter                       | **ESLint** (flat config)                                                                           | **v10.x** (current 10.4.0, May 2026)                                                       |
@@ -112,7 +112,7 @@ If you're reading this table more than a few months after the date at its head a
 2. **BFF inside the same process** — Keycloak OAuth and EHRbase calls go through TanStack Start server functions and server routes. Browser never sees access tokens.
 3. **Single deployable unit** — UI + BFF in one Node process. Valkey and EHRbase are separate services.
 4. **Component ownership** — shadcn/ui components are copied into the repo. Custom code is reserved for openEHR-specific concerns (dynamic forms, composition viewer, AQL editor).
-5. **Audit logging is code-shape, not afterthought** — every PHI-touching server function calls `logAudit()`. The hash chain, pseudonymization, integrity job and persistent store all sit behind that one helper, so server-function code never has to care about how audit gets persisted. Retrofitting audit calls into hundreds of server functions later is how organizations end up in GDPR fine tables; designing the call shape up front avoids that.
+5. **Audit is code-shape, on the standard** — write lineage is openEHR-native (`CONTRIBUTION`/`AUDIT_DETAILS` + `ATTESTATION`); access auditing is an **IHE ATNA** event emitted from the BFF `auditAccess(...)` choke point on every PHI read/write/query → a Postgres `audit` schema (ADR-0041, M9). EHRbase 2.31.0 ships neither read-access audit nor ABAC (ADR-0043), so both live at our BFF — the one place that sees the authenticated user, role, purpose-of-use, and patient context. Designing the call shape up front (vs. retrofitting into hundreds of server functions) is what keeps organizations out of GDPR fine tables.
 
 **Explicitly NOT in v1.0** (deferred deliberately, not forgotten — every item below has a tracking stub in [`docs/v1.x-roadmap.md`](v1.x-roadmap.md)):
 
@@ -154,6 +154,8 @@ If you're reading this table more than a few months after the date at its head a
 **Web Template** = JSON describing the form structure derived from an operational template. Tree of nodes; each leaf has an `rmType` (DV_TEXT, DV_QUANTITY, DV_CODED_TEXT, …) and optional `inputs[]` constraints. This is what the dynamic form renderer consumes (see §7).
 
 **No comprehensive open-source UI exists today.** Validated again in this revision. This project is the first such effort with this stack.
+
+**Open-source boundary (EHRbase 2.x).** We build only against open-source (Apache-2.0) EHRbase 2.31.0. ATNA audit + ABAC access control existed in EHRbase 1.x but were **removed in the 1.x→2.x rewrite**; event-trigger, multi-tenancy, EHR-merge and Yugabyte are commercial **HIP EHRbase** features; the FHIR Bridge is archived. So access auditing (IHE ATNA), fine-grained access control, and change-notification are **our app/BFF-layer responsibility** — see [`docs/EHRBASE-CAPABILITIES.md`](EHRBASE-CAPABILITIES.md) + [ADR-0043](adr/0043-ehrbase-oss-boundary.md). The `/admin/*` API hard-deletes bypass versioning and are **dev-only**; production deletes use logical openEHR versioning (a new version with `change_type = deleted`).
 
 **EHR and Demographic information are logically separate** per the openEHR BASE architecture overview: _"One of the basic principles of openEHR is the complete separation of EHR and demographic information, such that an EHR taken in isolation contains little or no clue as to the identity of the patient it belongs to."_ EHRbase implements only the **EHR side** of the openEHR spec — its REST surface (ITS-REST Release 1.0.3) exposes `/ehr/*`, `/query/aql`, `/definition/template/*`, `/admin/*`, with no `/demographic/*` endpoints. Compositions reference subjects via `PARTY_PROXY` / `PARTY_SELF` / `PARTY_IDENTIFIED` (with `external_ref.id.namespace + value`) — these are references into a demographic store, not the demographic data itself. **We build the openEHR-spec demographic side ourselves as a module in this app** (M7; ADR-0023) — own Postgres schema, own REST surface (`/api/demographic/*`), implementing `PERSON` / `PARTY_IDENTITY` / `CONTACT` / `ADDRESS` / `ROLE` / `PARTY_RELATIONSHIP`.
 
@@ -415,16 +417,19 @@ export const requireAuth = createServerFn().handler(async () => {
 
 ### 5.6 Roles, authorization & break-glass emergency access
 
-**Role model (v1.0).** Roles come from Keycloak realm claims; the app reads them off the session. Four roles ship in v1.0:
+**Role model (v1.0).** Roles come from Keycloak realm claims; the app reads them off the session. **Seven personas ship in v1.0** ([ADR-0040](adr/0040-expanded-role-model.md)). The four clinical personas inherit the umbrella `clinician` for coarse RBAC — `requireRole('clinician')` matches all four — while the persona distinction drives the default home + per-surface write capability (CLINICAL-UI §5/§7). All clinical personas read PHI only for patients in their care relationship (enforced by the M9 BFF gate), break-glass otherwise.
 
-| Role             | Can                                                                                                                                              | Cannot                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `clinician`      | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients                                           | Read PHI for other patients (without break-glass); manage users; review audit log |
-| `admin`          | Manage templates, users, roles, configuration                                                                                                    | Read PHI (without break-glass)                                                    |
-| `audit-reviewer` | Read the audit log; run the sample-of-60 review dashboard (the NL national-standard cadence we adopt as the EU-baseline review SLA — see §14.13) | Read PHI directly                                                                 |
-| `researcher`     | Read pseudonymized PHI; full AQL access against pseudonymized dataset                                                                            | Read identifying fields (name, national patient identifier, address)              |
+| Persona          | Inherits    | Can                                                                                                    | Cannot                                                               |
+| ---------------- | ----------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `physician`      | `clinician` | Prescribe + order, write/sign clinical notes, full clinical write for patients in care                 | Manage users; review audit log                                       |
+| `nurse`          | `clinician` | Record vitals, administer meds, write nurse notes, close care-plan tasks, add detected reactions       | Prescribe; manage users                                              |
+| `lab-technician` | `clinician` | Enter + validate laboratory results                                                                    | Prescribe; write clinical notes; manage users                        |
+| `pharmacist`     | `clinician` | Verify / dispense medication orders, review drug interactions                                          | Prescribe; write clinical notes                                      |
+| `admin`          | —           | Manage templates, users, roles, configuration                                                          | Read PHI (without break-glass)                                       |
+| `audit-reviewer` | —           | Read the IHE ATNA access trail; run the sample-of-60 review dashboard (EU-baseline review SLA, §14.13) | Read PHI directly                                                    |
+| `researcher`     | —           | Read pseudonymized PHI; full AQL against the pseudonymized dataset                                     | Read identifying fields (name, national patient identifier, address) |
 
-Enforcement happens at one place: a `requireRole(...roles)` middleware that wraps every server function that touches PHI. The `requireAuth` middleware (already in §5.2) is the parent — `requireRole` builds on it. Pure RBAC denials return 403 and emit an audit event of type `AUTHZ_DENIED`.
+Enforcement happens at one place: a `requireRole(...roles)` middleware that wraps every server function that touches PHI, plus the M9 fine-grained care-relationship gate. The `requireAuth` middleware (already in §5.2) is the parent — `requireRole` builds on it. Pure RBAC denials return 403 (with a `break-glass: available` hint on PHI routes) and emit an IHE ATNA access event with a `denied` outcome (ADR-0041).
 
 **Hospital deployments configure their own role mapping.** A Keycloak realm at one hospital might map LDAP groups to these four roles; another might federate via UZI-pas (smartcard) and derive roles from BIG number role codes. The app does not care — it only sees claims at the OIDC layer.
 
@@ -612,7 +617,7 @@ Clinical workflows produce paper. A printable patient summary, a printable compo
 
 ### Clinical-UI surface catalogue (§§6.1–6.17)
 
-These sub-sections describe the _engineering_ of each clinical surface — the shadcn primitives + custom code + data-flow. The clinical / functional contract (purpose, role, openEHR archetypes, audit fields, CDS hooks) lives in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md); these §-numbers cross-reference its screen-catalogue entries.
+These sub-sections describe the _engineering_ of each clinical surface — the shadcn primitives + custom code + data-flow. The clinical / functional contract (purpose, role, openEHR archetypes, audit fields, CDS hooks) lives in [`docs/CLINICAL-UI.md`](CLINICAL-UI.md); these §-numbers cross-reference its screen-catalogue entries. **The milestone tags in the sub-sections below were re-sequenced 2026-05-31 ([ADR-0042](adr/0042-clinical-milestone-resequencing.md)); CLINICAL-UI.md §7 + the [implementation checklist](IMPLEMENTATION_CHECKLIST.md) (with its old→new mapping) are authoritative for which milestone owns a surface.**
 
 #### 6.1 Workspace IA + patient routing — ADR-0015
 
@@ -644,7 +649,7 @@ Grid of vital-sign × time. Custom `VitalsFlowsheet` component (the "small custo
 
 #### 6.8 Clinical notes (M10) — `CLINICAL-UI.md` §7.7
 
-Custom `NoteEditor` (TipTap-based rich text + structured-field slots). SOAP layout via openEHR `SECTION`. Saved as `openEHR-EHR-COMPOSITION.encounter.v1` + `EVALUATION.clinical_synopsis.v1`. Autosave drafts encrypted in Valkey (24 h TTL). Signing writes the canonical composition + the dual-layer audit (ADR-0024).
+Custom `NoteEditor` (TipTap-based rich text + structured-field slots). SOAP layout via openEHR `SECTION`. Saved as `openEHR-EHR-COMPOSITION.encounter.v1` + `EVALUATION.clinical_synopsis.v1`. Autosave drafts encrypted in Valkey (24 h TTL). Signing writes the canonical composition with an `ATTESTATION` + an IHE ATNA access event (ADR-0041).
 
 #### 6.9 Problems + medications + allergies + immunisations (M11) — `CLINICAL-UI.md` §§7.8–7.11
 
@@ -703,7 +708,7 @@ Web Template JSON  ──► Zod schema generator  ──► react-hook-form
                                           POST /ehr/{id}/composition?format=FLAT
                                                        │
                                                        ▼
-                                          logAudit({ action: 'CREATE' })
+                                          BFF auditAccess() → IHE ATNA event (ADR-0041)
 ```
 
 ### `rmType` → shadcn component mapping
@@ -1484,12 +1489,21 @@ Metrics flow via the same OTel SDK → Collector → Prometheus (which now nativ
 
 ## 14. GDPR & EU Healthcare Audit Logging
 
-> **❌ REMOVED in the core-refocus (2026-05-30).** The NEN-7513 audit subsystem (`logAudit`,
-> hash chain, pseudonymization, retention/purge, cold-store WORM, integrity job) and the
-> compliance docs (DPIA/DPA/RoPA, breach runbook) were removed to focus the pre-v1.0 build on
-> the openEHR + EHRbase UI core. **Deferred, not cancelled** — this MUST be restored before any
-> deployment touches real patient data. This section is retained as the restore reference. See
-> CLAUDE.md → "Deferred (post-core)".
+> **⚠️ Audit re-grounded on the standard (2026-05-31 — [ADR-0041](adr/0041-audit-access-governance.md)).**
+> The 2026-05-30 core-refocus removed the **bespoke NEN-7513 hash-chain subsystem** (`logAudit`,
+> hash chain, pseudonymization, retention/purge, cold-store WORM, integrity job). The 2026-05-31
+> re-plan **replaces its mechanism with the standard**: openEHR-native `CONTRIBUTION`/`AUDIT_DETAILS`
+>
+> - `ATTESTATION` (write lineage) **plus IHE ATNA access events emitted from the BFF → a Postgres
+>   `audit` schema**, built as foundational milestone **M9**. EHRbase 2.31.0 has no native ATNA or
+>   ABAC ([ADR-0043](adr/0043-ehrbase-oss-boundary.md)), so this is the application layer's job, in
+>   open source. **The active audit design is [ADR-0041](adr/0041-audit-access-governance.md) +
+>   [`docs/CLINICAL-UI.md`](CLINICAL-UI.md) §8.8.** §14.1 (legal framework) still applies verbatim.
+>   §14.2–§14.x below — the NEN-7513 record schema, the `logAudit` pattern, the hash chain,
+>   retention/purge, cold-store — are retained as (a) the field set the IHE ATNA AuditMessage must
+>   carry and (b) the reference for the **deferred hardening** (tamper-evidence + retention + WORM on
+>   top of the M9 trail); they are NOT the active mechanism. NEN-7513 compliance is satisfied by the
+>   IHE ATNA trail. See CLAUDE.md → "Deferred (post-core)".
 
 > **This section is mandatory reading.** Every EU clinical deployment must satisfy **GDPR** in full and the national healthcare-records law at the deployment site. Non-compliance penalties under GDPR Art. 83 reach **€20M or 4 % of global turnover**. The Portuguese DPA fined Hospital do Barreiro €400 000 in 2018 specifically for inadequate access controls and missing audit trails — exactly the kind of failure this section exists to prevent. National laws (e.g. NL: Wabvpz + NEN 7510/7512/7513 + WGBO; DE: §203 StGB + Bundesärzteordnung; FR: PGSSI-S + Code de la santé publique L1110-4) add their own requirements on top — the architecture treats those as configuration over a common EU baseline, not as the baseline itself.
 

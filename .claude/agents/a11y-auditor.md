@@ -1,6 +1,6 @@
 ---
 name: a11y-auditor
-description: Use this agent to validate that changed components meet the WCAG 2.2 AA + EN 301 549 baseline from docs/architecture.md §12. Runs the project's axe configuration against changed component tests, validates target-size, focus-not-obscured, sticky-header scroll-margin-top, color contrast, label associations, and the §12.6 code-level checklist. Use PROACTIVELY on every PR that touches src/components/, src/routes/, or src/components/ui/ — accessibility is a legal release gate under EAA, not a quality preference.
+description: Use this agent to validate that changed components meet the WCAG 2.2 AA + EN 301 549 baseline from docs/architecture.md §12. Runs the project's axe configuration against changed component tests, validates target-size, focus-not-obscured, sticky-header scroll-margin-top, color contrast, label associations, and the §12.6 code-level checklist. Use PROACTIVELY on every PR that touches apps/web/src/components/, apps/web/src/routes/, or apps/web/src/components/ui/ — accessibility is a legal release gate under EAA, not a quality preference.
 tools: Read, Bash, Grep, Glob
 model: sonnet
 ---
@@ -30,7 +30,7 @@ pnpm eslint . --max-warnings=0
 
 ### 2. axe-core unit tests pass
 
-For each changed component, confirm a Vitest a11y test exists under `src/components/**/__tests__/<name>.a11y.test.tsx` using the shared `src/test/axe-config.ts`. Run:
+For each changed component, confirm a Vitest a11y test exists under `apps/web/src/components/**/__tests__/<name>.a11y.test.tsx` using the shared axe config (`apps/web/src/test/axe-config.ts`). Run:
 
 ```
 pnpm vitest run --reporter=verbose <changed-tests>
@@ -65,19 +65,19 @@ Walk the changed files and verify:
 
 Per the §12.1a table:
 
-| SC | Check |
-|---|---|
-| 2.4.11 Focus Not Obscured | Sticky header doesn't cover focused inputs. |
-| 2.5.7 Dragging Movements | Drag has a click alternative. |
-| 2.5.8 Target Size | Pointer targets ≥ 24×24 CSS pixels (axe `target-size` rule, opt-in, must be enabled). |
-| 3.2.6 Consistent Help | Help links in same relative order on every authed page (one `<SiteFooter>` component is the only place). |
-| 3.3.7 Redundant Entry | Auto-fill prior-step values in multi-step forms. |
-| 3.3.8 Accessible Authentication | No memory-puzzle CAPTCHA. |
+| SC                              | Check                                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 2.4.11 Focus Not Obscured       | Sticky header doesn't cover focused inputs.                                                              |
+| 2.5.7 Dragging Movements        | Drag has a click alternative.                                                                            |
+| 2.5.8 Target Size               | Pointer targets ≥ 24×24 CSS pixels (axe `target-size` rule, opt-in, must be enabled).                    |
+| 3.2.6 Consistent Help           | Help links in same relative order on every authed page (one `<SiteFooter>` component is the only place). |
+| 3.3.7 Redundant Entry           | Auto-fill prior-step values in multi-step forms.                                                         |
+| 3.3.8 Accessible Authentication | No memory-puzzle CAPTCHA.                                                                                |
 
 ## How you report
 
 ```
-## a11y review — src/components/features/patients/PatientList.tsx
+## a11y review — apps/web/src/components/openehr/vitals-flowsheet.tsx
 
 | Layer | Status | Notes |
 |---|---|---|

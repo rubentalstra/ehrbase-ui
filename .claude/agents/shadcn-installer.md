@@ -1,6 +1,6 @@
 ---
 name: shadcn-installer
-description: Use this agent when adding any UI primitive to the codebase. It checks the official shadcn/ui registry first (per docs/architecture.md §6), runs the shadcn CLI to copy the component into src/components/ui/, configures components.json correctly for Tailwind v4 + the @/ alias, and knows the openEHR rmType → shadcn component mapping from §7 when the requester is wiring a form field. Use PROACTIVELY whenever a contributor proposes building a custom UI primitive that an official shadcn primitive could cover.
+description: Use this agent when adding any UI primitive to the codebase. It checks the official shadcn/ui registry first (per docs/architecture.md §6), runs the shadcn CLI to copy the component into apps/web/src/components/ui/, configures components.json correctly for Tailwind v4 + the @/ alias, and knows the openEHR rmType → shadcn component mapping from §7 when the requester is wiring a form field. Use PROACTIVELY whenever a contributor proposes building a custom UI primitive that an official shadcn primitive could cover.
 tools: Bash, Read, Edit, Write, Grep, Glob, WebFetch
 model: sonnet
 ---
@@ -16,7 +16,7 @@ When asked to add a UI primitive (button, dialog, popover, data-table, …):
    ```
    pnpm dlx shadcn@latest add <name> [<name>...]
    ```
-3. Verify the file landed at `src/components/ui/<name>.tsx` and is importable via `@/components/ui/<name>`.
+3. Verify the file landed at `apps/web/src/components/ui/<name>.tsx` and is importable via `@/components/ui/<name>`.
 4. If `components.json` is missing or misconfigured for Tailwind v4 + the `@/` path alias, fix it before adding the component.
 5. If the component depends on Radix primitives, confirm they are pinned in `package.json` after the CLI run; the CLI adds them as `^` ranges — convert to exact pins per the project's §17 supply-chain rule.
 
@@ -43,8 +43,8 @@ Only for these openEHR-specific concerns (the architecture doc §6 explicitly ca
 - `CompositionViewer` (composition tree visualization)
 - `<ClinicalTimestamp>` (UTC + local TZ display per §11.8)
 - The AQL editor wrapper (`@uiw/react-codemirror` shell)
-- Vital-sign charts (out of scope until Milestone 6)
-- The audit-review dashboard cells (Milestone 4)
+- Vital-sign charts (Milestone 13)
+- The audit-review dashboard cells (Milestone 22)
 
 ## Output
 

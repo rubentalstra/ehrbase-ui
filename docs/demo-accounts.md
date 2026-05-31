@@ -6,18 +6,29 @@
 
 ## What you get
 
-Four pre-seeded users, one per realm role from [`keycloak/config/ehrbase-realm.json`](../keycloak/config/ehrbase-realm.json) (the same roles RBAC checks in [`apps/web/src/server/auth/require-role.ts`](../apps/web/src/server/auth/require-role.ts)).
+Pre-seeded users, one per realm role from [`keycloak/config/ehrbase-realm.json`](../keycloak/config/ehrbase-realm.json) (the same roles RBAC checks in [`apps/web/src/server/auth/require-role.ts`](../apps/web/src/server/auth/require-role.ts)).
 
-| Username             | Email                             | Password            | Realm role       | What this account can do                                                                                                                                                                                                                          |
-| -------------------- | --------------------------------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev-clinician`      | `dev-clinician@example.test`      | `DevClinician123!`  | `clinician`      | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients (§5.6).                                                                                                                                    |
-| `dev-admin`          | `dev-admin@example.test`          | `DevAdmin12345!`    | `admin`          | Manage templates, users, roles, configuration. Cannot read PHI without break-glass.                                                                                                                                                               |
-| `dev-audit-reviewer` | `dev-audit-reviewer@example.test` | `DevReviewer123!`   | `audit-reviewer` | Recognised by RBAC (`requireRole(['audit-reviewer'])`). The audit-review surface (access log, NEN 7513 review dashboard) is part of the deferred governance layer — **not built yet** (see [`CLAUDE.md`](../CLAUDE.md) → "Deferred (post-core)"). |
-| `dev-researcher`     | `dev-researcher@example.test`     | `DevResearcher123!` | `researcher`     | Recognised by RBAC. Intended for research AQL against a pseudonymised dataset; the pseudonymised-dataset gating is part of the deferred governance layer (post-core).                                                                             |
+**Currently seeded (4 accounts):**
+
+| Username             | Email                             | Password            | Realm role       | What this account can do                                                                                                                                                                                     |
+| -------------------- | --------------------------------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `dev-clinician`      | `dev-clinician@example.test`      | `DevClinician123!`  | `clinician`      | Umbrella clinical role. Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients (§5.6). In M8 this splits into the four clinical personas below.              |
+| `dev-admin`          | `dev-admin@example.test`          | `DevAdmin12345!`    | `admin`          | Manage templates, users, roles, configuration. Cannot read PHI without break-glass.                                                                                                                          |
+| `dev-audit-reviewer` | `dev-audit-reviewer@example.test` | `DevReviewer123!`   | `audit-reviewer` | Recognised by RBAC (`requireRole(['audit-reviewer'])`). The audit-review dashboard reads the IHE ATNA access trail emitted in **M9** ([ADR-0041](adr/0041-audit-access-governance.md)) and ships in **M22**. |
+| `dev-researcher`     | `dev-researcher@example.test`     | `DevResearcher123!` | `researcher`     | Recognised by RBAC. Intended for research AQL against a pseudonymised dataset via the AQL editor (**M20**); the pseudonymised-dataset gating is a deferred hardening item (post-core).                       |
+
+**Expanding to the 7-persona set (lands in M8 — [ADR-0040](adr/0040-expanded-role-model.md)):** the
+realm + `ehrbase-users.dev.json` gain four clinical personas that inherit the `clinician` umbrella —
+`dev-physician`, `dev-nurse`, `dev-lab-technician`, `dev-pharmacist` — each with its own home screen
+and per-surface write capabilities (CLINICAL-UI §5/§7). `dev-clinician` is retained as a
+multi-role/umbrella convenience. Until M8, log in as `dev-clinician` to exercise clinical-write paths.
 
 Login works with either the **username** OR the **email** (the realm has `loginWithEmailAllowed: true`).
 
-> The "what this account can do" column describes the **target** per-role capabilities. While the build is engine-first, all four accounts sign in through the same OIDC flow and land on the [Workbench](architecture.md); the role-scoped PHI surfaces and the governance-gated capabilities (audit review, pseudonymised research dataset) are still being built.
+> The "what this account can do" column describes the **target** per-role capabilities. The clinical
+> surfaces live under `/_authed/patients/$patientId/*` (M8+); the existing `/_authed/workbench/*`
+> stays as an admin/developer tool (ADR-0042 / plan). Until the clinical surfaces land, all accounts
+> sign in through the same OIDC flow and reach the workbench.
 
 The passwords satisfy the realm policy ([`passwordPolicy` in `keycloak/config/ehrbase-realm.json`](../keycloak/config/ehrbase-realm.json)): length(12) + lowerCase + upperCase + digits + specialChars + notUsername + notEmail + passwordHistory(5).
 

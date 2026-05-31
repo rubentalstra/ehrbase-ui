@@ -98,7 +98,7 @@ export interface DemographicProvider {
 
 **Pseudonymisation** (HMAC-SHA256 with `AUDIT_PSEUDONYM_SECRET`, §14.4) lives in `packages/demographic-core/src/identifier/pseudonymize.server.ts` and is provider-agnostic.
 
-**Audit** — every adapter call emits a `resourceType: 'PARTY'` NEN-7513 event via `@ehrbase-ui/audit::logAudit()`. The provider name lands in the audit event's `source.adapterName` field for forensic clarity (ADR-0024 dual-layer rule).
+**Audit** — every adapter call is access-audited as a `resourceType: 'PARTY'` event. (Mechanism updated by [ADR-0041](0041-audit-access-governance.md): an IHE ATNA event emitted from the BFF `auditAccess(...)` → the Postgres `audit` schema, not the removed `@ehrbase-ui/audit` package.) The provider name lands in the event's source/adapter field for forensic clarity.
 
 ## Consequences
 

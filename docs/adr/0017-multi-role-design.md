@@ -1,10 +1,10 @@
 # ADR-0017 — Multi-role design (physician + nurse + admin from day one)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0040](0040-expanded-role-model.md)
 - **Date:** 2026-05-28
 - **Deciders:** Initial maintainer (@rubentalstra)
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** ADR-0040 (expands the role set from 5 to 7 personas — adds `lab-technician` + `pharmacist`)
 
 ## Context
 

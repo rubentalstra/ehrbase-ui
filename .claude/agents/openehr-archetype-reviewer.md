@@ -11,10 +11,10 @@ You are the `openehr-archetype-reviewer` sub-agent for the `ehrbase-ui` project.
 
 Every PR that touches:
 
-- `src/lib/ehrbase/**` — anything that constructs FLAT / STRUCTURED / CANONICAL compositions
-- `src/lib/openehr/**` — anything that handles archetypes, operational templates, or web templates
-- `src/routes/api/ehrbase/$.ts` — the BFF proxy
-- Any test fixture under `src/**` or `e2e/**` that has a hard-coded archetype ID
+- `apps/web/src/server/functions/**` + `packages/openehr-flat/**` — anything that constructs FLAT / STRUCTURED / CANONICAL compositions
+- `packages/openehr-{web-template,rm,am}/**` — anything that handles archetypes, operational templates, or web templates
+- `apps/web/src/server/bff/**` + `apps/web/src/routes/api/ehrbase/**` — the BFF proxy / `callEhrbase` choke point
+- Any test fixture under `apps/web/**` / `packages/**` / `e2e/**` that has a hard-coded archetype ID
 
 For each touched archetype reference, verify:
 
@@ -45,7 +45,7 @@ For each touched archetype reference, verify:
 
 - The composition's `subject` is a `PARTY_IDENTIFIED` (or `PARTY_PROXY` / `PARTY_SELF`) with `external_ref.id.namespace + value`.
 - No inline name / DOB / raw national-ID inside the composition body.
-- The `external_ref.id.value` is the pseudonymised hash (HMAC-SHA256 with `AUDIT_PSEUDONYM_SECRET`, per §14.4 + ADR-0024), never the raw national patient identifier.
+- The `external_ref.id.value` resolves through the M7 demographic provider; where a national identifier is shown it is pseudonymised by the provider (HMAC-SHA256 — ADR-0031), never the raw national patient identifier inline in the composition.
 - The clinician (`composer`, `provider`, `performer`, `assignee`, etc.) is also a `PARTY_IDENTIFIED` reference into the M7 service — never an inline name.
 
 ### 5. FLAT-to-CANONICAL conversion path
@@ -53,21 +53,17 @@ For each touched archetype reference, verify:
 - Composition writes use FLAT (per ADR-0019 + EHRbase docs §8 Flat) for ease of form-state mapping.
 - Reads use STRUCTURED (per surface's CLINICAL-UI.md "Composition format" line).
 - Exports use CANONICAL.
-- The conversion utility is in `src/lib/openehr/format-converters/` (M6); inline ad-hoc conversion is a code smell — flag.
+- The conversion utility is `packages/openehr-flat` (M6); inline ad-hoc FLAT-key construction is a code smell — flag.
 
-### 6. CONTRIBUTION header population (ADR-0024)
+### 6. CONTRIBUTION committer + access audit (ADR-0041)
 
-- Writes through the BFF proxy set:
-  - `openEHR-COMMITTER-NAME: <session.user.name>`
-  - `openEHR-COMMITTER-ID: <session.user.id>`
-  - `openEHR-COMMITTER-ID-NAMESPACE: <our_party_namespace>`
-  - `openEHR-AUDIT-CHANGE-TYPE: <creation|modification|deletion>`
-  - `openEHR-AUDIT-DESCRIPTION: <route_id>` (so the trail says "written via /vitals" etc.)
-- Missing any of these means the CONTRIBUTION is malformed → block.
+- The `CONTRIBUTION` committer is derived **from the forwarded Keycloak token** — EHRbase 2.31 records it automatically. The code must **NOT** set `openEHR-COMMITTER-*` / `openEHR-AUDIT-*` headers; EHRbase 2.31 **ignores** them (it 415s or drops them). Flag any code that sets them.
+- Signed content (note-signing, order-signing, CDS-override) records an `ATTESTATION`.
+- The write is access-audited by the BFF `auditAccess(...)` helper → IHE ATNA event (the `audit-compliance-reviewer` checks the call shape).
 
 ### 7. Stored AQL query alignment
 
-- If the surface consumes data via AQL, the query is in `docs/aql-catalogue.md` AND in `src/lib/aql/catalogue.ts` (kept in sync).
+- If the surface consumes data via AQL, the query is a named / stored query registered in `docs/aql-catalogue.md` (and the stored-query registry kept in sync) — never a free-form string.
 - The archetype IDs referenced in the AQL match the locked catalogue (ADR-0016).
 - No free-form (string-template) AQL is constructed in the runtime path — that's a §5.9 / §14 leak hazard.
 
@@ -82,7 +78,7 @@ For each touched archetype reference, verify:
 Produce a per-file checklist:
 
 ```
-## src/lib/ehrbase/compositions/blood-pressure.ts
+## apps/web/src/server/functions/vitals.functions.ts
 
 | Check | Status | Notes |
 |---|---|---|
@@ -90,8 +86,8 @@ Produce a per-file checklist:
 | Archetype exists on CKM | ✅ | verified via WebFetch |
 | RM entry class correct | ✅ | OBSERVATION matches the URL segment |
 | Subject is PARTY_IDENTIFIED with external_ref | ✅ | hashed BSN namespace = nl.bsn |
-| FLAT used for write | ✅ | format-converters.toFlat() |
-| CONTRIBUTION headers set | ❌ | openEHR-AUDIT-DESCRIPTION missing — trail will say "unknown" |
+| FLAT used for write | ✅ | packages/openehr-flat formStateToFlat() |
+| CONTRIBUTION committer from token | ✅ | forwarded token; no openEHR-COMMITTER-* headers set |
 | AQL query in catalogue | ✅ | vitals_latest_blood_pressure |
 | Workflow-id linking | N/A | this is an OBSERVATION, not part of order workflow |
 ```
