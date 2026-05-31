@@ -26,7 +26,10 @@ import { auditAccess } from '@/server/audit'
 import { requireRole } from '@/server/auth/require-role'
 import { callEhrbase } from '@/server/bff/call-ehrbase.server'
 import { getEhrbaseContext } from '@/server/bff/ehrbase-context.server'
-import { getDemographicProvider } from '@/server/demographic/provider.factory.server'
+import {
+  getDemographicProvider,
+  getPartyRefNamespace,
+} from '@/server/demographic/provider.factory.server'
 
 import { createEhrImpl } from './ehr.server.ts'
 import type {
@@ -43,7 +46,6 @@ import type {
   ProvisionEhrResult,
   UpdatePatientInput,
 } from './patient.functions.ts'
-import type { EhrSubject } from './ehr.functions.ts'
 
 const READ_ROLES = ['clinician', 'admin']
 const WRITE_ROLES = ['admin']
@@ -122,9 +124,10 @@ export async function getProviderCapabilitiesImpl(): Promise<DemographicProvider
   return getDemographicProvider().capabilities
 }
 
-export async function getLinkedEhrImpl(subject: EhrSubject): Promise<LinkedEhrResult> {
+export async function getLinkedEhrImpl(input: PartyIdInput): Promise<LinkedEhrResult> {
   const role = await requireRole(READ_ROLES, { phi: true })
   const correlationId = crypto.randomUUID()
+  const subject = { namespace: getPartyRefNamespace(), id: input.id }
   const { getRequest } = await import('@tanstack/react-start/server')
   const ehrCtx = await getEhrbaseContext(getRequest().headers)
   if (!ehrCtx) throw fail(401, 'UNAUTHENTICATED')
@@ -258,9 +261,10 @@ export async function endPatientRelationshipImpl(
   return { ok: true }
 }
 
-export async function provisionEhrImpl(subject: EhrSubject): Promise<ProvisionEhrResult> {
+export async function provisionEhrImpl(input: PartyIdInput): Promise<ProvisionEhrResult> {
   const role = await requireRole(WRITE_ROLES, { phi: true })
   const correlationId = crypto.randomUUID()
+  const subject = { namespace: getPartyRefNamespace(), id: input.id }
   const { ehrId } = await createEhrImpl({ subject })
   await auditAccess({
     action: 'CREATE',

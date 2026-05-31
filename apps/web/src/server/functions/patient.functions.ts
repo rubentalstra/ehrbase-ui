@@ -22,8 +22,6 @@ import {
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { EhrSubjectSchema } from './ehr.functions.ts'
-
 // ─── Input schemas ──────────────────────────────────────────────────────────
 export const PartyIdInputSchema = z.object({ id: z.string().min(1) })
 export type PartyIdInput = z.infer<typeof PartyIdInputSchema>
@@ -117,7 +115,7 @@ export const getProviderCapabilities = createServerFn({ method: 'GET' }).handler
 )
 
 export const getLinkedEhr = createServerFn({ method: 'GET' })
-  .inputValidator((d: unknown) => EhrSubjectSchema.parse(d))
+  .inputValidator((d: unknown) => PartyIdInputSchema.parse(d))
   .handler(async ({ data }): Promise<LinkedEhrResult> => {
     const { getLinkedEhrImpl } = await import('./patient.server')
     return getLinkedEhrImpl(data)
@@ -181,7 +179,7 @@ export const endPatientRelationship = createServerFn({ method: 'POST' })
   })
 
 export const provisionEhr = createServerFn({ method: 'POST' })
-  .inputValidator((d: unknown) => EhrSubjectSchema.parse(d))
+  .inputValidator((d: unknown) => PartyIdInputSchema.parse(d))
   .handler(async ({ data }): Promise<ProvisionEhrResult> => {
     const { provisionEhrImpl } = await import('./patient.server')
     return provisionEhrImpl(data)

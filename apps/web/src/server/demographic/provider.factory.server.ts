@@ -27,7 +27,7 @@ function build(): DemographicProvider {
   // new ADR when an external patient index is needed. Until then any non-builtin
   // value is rejected (no silent fallback — rule 13).
   const provider = (process.env.DEMOGRAPHIC_PROVIDER ?? 'builtin').toLowerCase()
-  const partyRefNamespace = process.env.DEMOGRAPHIC_PARTY_NAMESPACE ?? 'demographic'
+  const partyRefNamespace = getPartyRefNamespace()
 
   if (provider !== 'builtin') {
     throw new Error(
@@ -41,6 +41,15 @@ function build(): DemographicProvider {
     pseudonymize: pseudonymizeIdentifier,
     partyRefNamespace,
   })
+}
+
+/**
+ * The PartyRef namespace this deployment stamps into `EHR_STATUS.subject.external_ref`
+ * (rule 12) — the single source the factory + the EHR-linkage server fns share, so an
+ * EHR looked up / provisioned by party id uses the same namespace `createParty` did.
+ */
+export function getPartyRefNamespace(): string {
+  return process.env.DEMOGRAPHIC_PARTY_NAMESPACE ?? 'demographic'
 }
 
 let cached: DemographicProvider | undefined

@@ -11,7 +11,6 @@ import {
   DatabaseIcon,
   FileTextIcon,
   SearchIcon,
-  ShieldIcon,
   TerminalIcon,
   UserIcon,
   UsersIcon,
@@ -60,7 +59,9 @@ function navSections(roles: string[]): NavSection[] {
   if (roles.includes('admin')) {
     sections.push({
       label: m.nav_section_administration(),
-      items: [{ label: m.nav_admin(), icon: ShieldIcon, disabled: true }],
+      items: [
+        { label: m.nav_admin_patients(), icon: UsersIcon, to: '/admin/patients' },
+      ],
     })
   }
 
