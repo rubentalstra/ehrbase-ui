@@ -133,7 +133,11 @@ function ComposeWorkbench() {
                 <AlertDescription>{parseError}</AlertDescription>
               </Alert>
             )}
-            {parsedTemplate !== null && activeEhrId !== null && (
+            {/* activeEhrId is already narrowed to non-null by the enclosing
+                guard above — re-checking it here compared `string` to null
+                (always true), which CodeQL flagged (js/comparison-between-
+                incompatible-types). parsedTemplate is the only check needed. */}
+            {parsedTemplate !== null && (
               <ComposeForm
                 template={parsedTemplate}
                 ehrId={activeEhrId}
