@@ -18,6 +18,7 @@ import { IdentifierField } from '@/components/admin/identifier-field'
 import { IDENTIFIER_NAMESPACE_KEYS, nsLabel } from '@/components/admin/identifier-namespaces'
 import { PatientForm } from '@/components/admin/patient-form'
 import { patientDisplayName } from '@/components/admin/patient-display'
+import { PatientSearch } from '@/components/patient/patient-search'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
 import {
   AlertDialog,
@@ -386,7 +387,9 @@ function LinkedEhrCard({ partyId, readonly }: { partyId: string; readonly: boole
             <AlertDescription>{m.admin_patients_ehr_load_failed()}</AlertDescription>
           </Alert>
         ) : ehr.data.ehrId ? (
-          <p className="font-mono text-sm">{m.admin_patients_ehr_linked({ id: ehr.data.ehrId })}</p>
+          // The ehr_id is an internal handle (ADR-0046) — show linked status,
+          // not the raw UUID.
+          <Badge variant="secondary">{m.admin_patients_ehr_linked()}</Badge>
         ) : (
           <div className="flex items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">{m.admin_patients_ehr_none()}</p>
@@ -470,13 +473,15 @@ function MergeDialog({
   onMerged: () => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
-  const [from, setFrom] = useState('')
+  // The source patient is CHOSEN by search (name/DOB/MRN), never a pasted id
+  // (ADR-0046). `from` holds the resolved party id used by the merge call.
+  const [from, setFrom] = useState<Party | null>(null)
   const merge = useMutation({
-    mutationFn: () => mergePatient({ data: { into: partyId, from: from.trim() } }),
+    mutationFn: () => mergePatient({ data: { into: partyId, from: from?.id ?? '' } }),
     onSuccess: async () => {
       toast.success(m.admin_patients_merged())
       setOpen(false)
-      setFrom('')
+      setFrom(null)
       await onMerged()
     },
     onError: () => toast.error(m.admin_patients_merge_failed()),
@@ -487,23 +492,29 @@ function MergeDialog({
       <Button variant="outline" disabled={disabled} onClick={() => setOpen(true)}>
         {m.admin_patients_merge()}
       </Button>
-      <DialogContent>
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{m.admin_patients_merge_heading()}</DialogTitle>
           <DialogDescription>{m.admin_patients_merge_warning()}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-1">
-          <Label htmlFor="merge-from">{m.admin_patients_merge_from()}</Label>
-          <Input id="merge-from" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <div className="space-y-2">
+          <Label>{m.admin_patients_merge_from()}</Label>
+          {from ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">{patientDisplayName(from)}</span>
+              <Button variant="outline" size="sm" onClick={() => setFrom(null)}>
+                {m.patient_picker_change()}
+              </Button>
+            </div>
+          ) : (
+            <PatientSearch onSelect={(p) => setFrom(p.id === partyId ? null : p)} />
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             {m.admin_patients_form_cancel()}
           </Button>
-          <Button
-            disabled={from.trim().length === 0 || merge.isPending}
-            onClick={() => merge.mutate()}
-          >
+          <Button disabled={from === null || merge.isPending} onClick={() => merge.mutate()}>
             {m.admin_patients_merge_confirm()}
           </Button>
         </DialogFooter>

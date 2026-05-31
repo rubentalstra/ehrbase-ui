@@ -6,13 +6,13 @@
 
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
 
 import { m } from '@ehrbase-ui/i18n/messages'
 import { parseWebTemplate } from '@ehrbase-ui/openehr-web-template'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
+import { PatientEhrSelect } from '@/components/patient/patient-ehr-select'
 import { getWebTemplate } from '@/server/functions/template.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -27,16 +27,12 @@ export const Route = createFileRoute('/_authed/workbench/compose')({
   errorComponent: FeatureErrorBoundary,
 })
 
-const UuidSchema = z.uuid()
-
 function ComposeWorkbench() {
   const [templateIdInput, setTemplateIdInput] = useState('')
-  const [ehrIdInput, setEhrIdInput] = useState('')
+  const [ehrId, setEhrId] = useState<string | null>(null)
   const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null)
   const [activeEhrId, setActiveEhrId] = useState<string | null>(null)
   const [versionUid, setVersionUid] = useState<string | null>(null)
-
-  const validEhrId = UuidSchema.safeParse(ehrIdInput.trim()).success
 
   const templateQuery = useQuery({
     queryKey: ['workbench', 'web-template', activeTemplateId],
@@ -45,9 +41,9 @@ function ComposeWorkbench() {
   })
 
   function handleLoad() {
-    if (templateIdInput.trim() && validEhrId) {
+    if (templateIdInput.trim() && ehrId) {
       setActiveTemplateId(templateIdInput.trim())
-      setActiveEhrId(ehrIdInput.trim())
+      setActiveEhrId(ehrId)
       setVersionUid(null)
     }
   }
@@ -86,18 +82,12 @@ function ComposeWorkbench() {
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ehr-id-input">{m.compose_ehr_id_label()}</Label>
-            <Input
-              id="ehr-id-input"
-              value={ehrIdInput}
-              onChange={(e) => setEhrIdInput(e.target.value)}
-              placeholder={m.compose_ehr_id_placeholder()}
-              className="font-mono"
-            />
+            <Label>{m.workbench_patient_selected()}</Label>
+            <PatientEhrSelect onChange={(id) => setEhrId(id)} />
           </div>
           <Button
             type="button"
-            disabled={templateIdInput.trim().length === 0 || !validEhrId}
+            disabled={templateIdInput.trim().length === 0 || ehrId === null}
             onClick={handleLoad}
           >
             {m.compose_load_template()}

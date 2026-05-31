@@ -86,6 +86,14 @@
   "patient_overview_ehr_none": "No EHR linked yet.",
   "patient_overview_demographics": "Demographics",
   "patient_overview_manage": "Manage demographics",
+  "patient_picker_title": "Find a patient",
+  "patient_picker_description": "Search by name, date of birth, or MRN, then select a patient.",
+  "patient_picker_choose": "Choose a patient",
+  "patient_picker_change": "Change patient",
+  "patient_picker_none": "No patient selected.",
+  "patient_picker_no_ehr": "This patient has no linked EHR yet.",
+  "workbench_patient_selected": "Patient",
+  "workbench_pick_patient_hint": "Choose a patient to load their EHR — no UUID needed.",
 
   "footer_label": "Site help and links",
   "footer_help": "Help",
@@ -475,7 +483,7 @@
   "admin_patients_rel_caregiver": "Caregiver",
   "admin_patients_rel_other": "Other",
 
-  "admin_patients_ehr_linked": "EHR {id}",
+  "admin_patients_ehr_linked": "EHR linked",
   "admin_patients_ehr_none": "No EHR linked yet.",
   "admin_patients_ehr_provision": "Provision EHR",
   "admin_patients_ehr_provisioned": "EHR provisioned and linked.",

@@ -18,10 +18,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
 import { type ColumnDef } from '@tanstack/react-table'
-import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
+import { PatientEhrSelect } from '@/components/patient/patient-ehr-select'
 import { executeAql, type JsonValue } from '@/server/functions/query.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -34,8 +34,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { CompositionViewer } from '@/components/openehr/composition-viewer'
 
 export const Route = createFileRoute('/_authed/workbench/compositions')({
@@ -47,8 +45,6 @@ export const Route = createFileRoute('/_authed/workbench/compositions')({
 // $ehrId is substituted by EHRbase server-side.
 const COMPOSITION_LIST_AQL =
   'SELECT c/uid/value AS uid, c/name/value AS name, c/archetype_details/template_id/value AS templateId FROM EHR e[ehr_id/value=$ehrId] CONTAINS COMPOSITION c ORDER BY c/context/start_time/value DESC'
-
-const UuidSchema = z.uuid()
 
 // Row shape derived from the AQL result.
 interface CompositionRow {
@@ -122,15 +118,12 @@ function compositionColumns(
 }
 
 function CompositionsWorkbench() {
-  const [ehrIdInput, setEhrIdInput] = useState('')
   const [activeEhrId, setActiveEhrId] = useState<string | null>(null)
 
   // Viewer dialog state.
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerCompositionUid, setViewerCompositionUid] = useState<string | null>(null)
   const [viewerTemplateId, setViewerTemplateId] = useState<string | null>(null)
-
-  const validEhrId = UuidSchema.safeParse(ehrIdInput.trim()).success
 
   const listMutation = useMutation({
     mutationFn: (ehrId: string) =>
@@ -142,11 +135,11 @@ function CompositionsWorkbench() {
       }),
   })
 
-  function handleLoad() {
-    if (!validEhrId) return
-    const id = ehrIdInput.trim()
-    setActiveEhrId(id)
-    listMutation.mutate(id)
+  // Choosing a patient resolves their ehrId (no UUID typed) and loads their
+  // compositions.
+  function handlePick(ehrId: string | null) {
+    setActiveEhrId(ehrId)
+    if (ehrId) listMutation.mutate(ehrId)
   }
 
   const openViewer = useCallback((row: CompositionRow) => {
@@ -174,26 +167,14 @@ function CompositionsWorkbench() {
         <p className="text-muted-foreground text-sm">{m.compositions_subtitle()}</p>
       </div>
 
-      {/* EHR ID input */}
+      {/* Pick a patient (by name/DOB/MRN) — no ehrId UUID typed (ADR-0046). */}
       <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="space-y-1">
-            <Label htmlFor="compositions-ehr-id">{m.compositions_ehr_id_label()}</Label>
-            <Input
-              id="compositions-ehr-id"
-              value={ehrIdInput}
-              onChange={(e) => setEhrIdInput(e.target.value)}
-              placeholder={m.compositions_ehr_id_placeholder()}
-              className="font-mono"
-            />
-          </div>
-          <Button
-            type="button"
-            disabled={!validEhrId || listMutation.isPending}
-            onClick={handleLoad}
-          >
-            {listMutation.isPending ? m.compositions_loading() : m.compositions_load()}
-          </Button>
+        <CardContent className="space-y-3 pt-6">
+          <p className="text-muted-foreground text-sm">{m.workbench_pick_patient_hint()}</p>
+          <PatientEhrSelect onChange={(ehrId) => handlePick(ehrId)} />
+          {listMutation.isPending ? (
+            <p className="text-muted-foreground text-sm">{m.compositions_loading()}</p>
+          ) : null}
         </CardContent>
       </Card>
 

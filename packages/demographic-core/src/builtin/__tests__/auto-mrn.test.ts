@@ -1,10 +1,11 @@
 // Auto-MRN + partial-DOB search (ADR-0046). Runs against in-process PGlite so the
 // counter-table allocation + the prefix birthDate match are exercised for real.
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
+import { sql } from "drizzle-orm";
 
 import { RecordingAuditSink } from "../../contract.ts";
 import type { ProviderContext } from "../../provider.ts";
@@ -21,9 +22,18 @@ const ctx: ProviderContext = {
 
 let db: DemographicDb;
 
-beforeEach(async () => {
+// Warm ONE PGlite for the suite (cold start ~4-5s would blow the per-test hook
+// timeout under the full parallel workspace run); truncate between tests for
+// isolation — including the MRN counter so allocation restarts at 0000001.
+beforeAll(async () => {
   db = drizzle({ client: new PGlite() });
   await applyDemographicSchema(db);
+}, 60_000);
+
+beforeEach(async () => {
+  await db.execute(
+    sql`truncate table demographic_party, demographic_party_history, demographic_party_identifier, demographic_party_name, demographic_mrn_counter, demographic_relationship`,
+  );
 });
 
 function provider(autoAssignMrn: boolean): BuiltinDemographicProvider {
