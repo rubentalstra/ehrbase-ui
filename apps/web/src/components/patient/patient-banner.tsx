@@ -1,5 +1,6 @@
-// Patient banner — CLINICAL-UI.md §6 (patient header model); openEHR Demographic
-// IM PARTY_IDENTIFIED + EHR_STATUS.subject.external_ref (rule 10).
+// Patient banner — CLINICAL-UI.md §7.1 (patient header banner) + §6 (patient
+// header model); openEHR Demographic IM PARTY_IDENTIFIED + EHR_STATUS.subject
+// .external_ref (rule 10). ADR-0046.
 //
 // The persistent identity header shown on every patient-context route. Renders
 // the clinical-safety identity set — name (Family, Given) + DOB (+ age) + sex +

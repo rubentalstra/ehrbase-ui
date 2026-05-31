@@ -1,4 +1,4 @@
-// Patient search — CLINICAL-UI.md §6 (patient search); ADR-0046. Find a patient
+// Patient search — CLINICAL-UI.md §7.2 (global patient search); ADR-0046. Find a patient
 // by name / DOB / MRN — NEVER by a UUID/ehrId. Reused by the /patients page
 // (navigate) and the break-glass / merge pickers (onSelect). Results show the
 // safe identity set: Family, Given · DOB (age) · MRN · sex. rule 4 (Paraglide),

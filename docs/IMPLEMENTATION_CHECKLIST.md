@@ -166,17 +166,23 @@ M9** (IHE ATNA from the BFF — [ADR-0041](adr/0041-audit-access-governance.md))
 > The patient-bound layout + cross-cutting surfaces that lead to every clinical screen. Reads the M7
 > `DemographicProvider`. Establishes the role model + patient context; **rich role dashboards move to
 > M19** (after the data they aggregate exists — ADR-0042).
+>
+> **Human-centric identity rewrite shipped (ADR-0046 / rule 15):** no machine identifier is a
+> user-facing handle. Auto-MRN at create; global patient search by name/DOB/MRN (⌘K + `/patients`);
+> the `/patients/$patientId` patient-context shell + persistent banner; the `PatientPicker` retrofit
+> removed every UUID input (break-glass, workbench, merge). The 7-persona role model + role
+> picker/landing + recently-viewed + encounters remain open below.
 
 - [ ] 7 Keycloak realm roles (physician / nurse / lab-technician / pharmacist / admin / audit-reviewer / researcher) + `ehrbase-users.dev.json` demo users — ADR-0040, ADR-0036
 - [ ] Extend `ROLES` const (`apps/web/src/server/auth/require-role.ts` + `apps/web/src/lib/auth/auth.functions.ts`) to the 7-set; `clinician` umbrella inheritance for the four clinical sub-roles
 - [ ] First-login role picker at `/_authed/role-picker` for multi-role users — ADR-0040/0017
-- [ ] Patient header banner — layout wrapping `/_authed/patients/$patientId/*`; reads M7 provider + EHR `ehr_status` + summary AQL `patient_summary_header` (empty-then-populates)
+- [x] Patient header banner — layout wrapping `/_authed/patients/$patientId/*`; reads M7 provider + resolved EHR (ADR-0046; `patient-banner.tsx`). Summary AQL (allergies/problems) fills in later milestones
 - [ ] Care-team / care-relationship model + banner indicator (display) — consumed by the M9 access gate
-- [ ] Global patient search at `/_authed/patients/search` — M7 provider + EHRbase existence check
+- [x] Global patient search (name/DOB/MRN) — ⌘K command palette + `/_authed/patients` page (ADR-0046; M7 provider + EHRbase existence check via getLinkedEhr)
 - [ ] Recently-viewed list at `/_authed/patients/recent` — per-user app-DB table
 - [ ] Encounter / visit list at `/_authed/patients/$patientId/encounters` — AQL over `DIRECTORY/FOLDER` (empty until M12 notes create encounters)
 - [ ] Basic role landing (`/_authed/home` → my-patients list per role) — NOT the rich dashboards (M19)
-- [ ] Keep `/_authed/workbench/*` as an admin/developer-gated tool (ADR-0042 / plan)
+- [x] Keep `/_authed/workbench/*` as an admin/developer tool — UUID inputs replaced by patient search (ADR-0046); AQL stays a power tool
 - [ ] Storybook stories for the banner + role landing; E2E: deep link to a patient survives login; role picker works
 
 ## Milestone 9 — Access governance: extend IHE ATNA + fine-grained access control (ADR-0041)

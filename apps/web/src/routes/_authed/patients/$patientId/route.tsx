@@ -1,4 +1,4 @@
-// Patient-context layout (CLINICAL-UI.md §6; ADR-0046). Resolves the patient +
+// Patient-context layout (CLINICAL-UI.md §7.1 + §6; ADR-0046). Resolves the patient +
 // their ehrId ONCE via getPatientContext (the ehr_id is internal — never shown
 // or typed), renders the persistent PatientBanner, and provides the context to
 // every child surface (overview, records, …). $patientId is the demographic id

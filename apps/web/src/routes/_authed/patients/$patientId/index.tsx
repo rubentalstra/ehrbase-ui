@@ -1,4 +1,4 @@
-// /patients/$patientId — patient overview (CLINICAL-UI.md §6; ADR-0046). Reads
+// /patients/$patientId — patient overview (CLINICAL-UI.md §7.1; ADR-0046). Reads
 // the resolved patient from the context (no ehrId handling here). EHR-linked
 // status is shown as a plain indicator — the raw ehr_id is never rendered.
 // Admins get a link to manage demographics; clinical record surfaces land here
