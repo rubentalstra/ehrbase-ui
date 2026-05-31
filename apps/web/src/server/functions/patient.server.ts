@@ -150,8 +150,13 @@ export async function getLinkedEhrImpl(input: PartyIdInput): Promise<LinkedEhrRe
 export async function getPatientContextImpl(input: PartyIdInput): Promise<PatientContextResult> {
   // Resolve the patient + their EHR in one call so no surface handles a raw
   // ehrId (ADR-0046). Reuses the audited read impls (RBAC + ATNA inside each).
+  // The patient IDENTITY is the critical part: a transient EHR-lookup failure
+  // (EHRbase hiccup / expired upstream token) must NOT blank the banner — fall
+  // back to ehrId:null (renders "no EHR linked") rather than failing the context.
   const party = await getPatientImpl({ id: input.id })
-  const { ehrId } = await getLinkedEhrImpl({ id: input.id })
+  const ehrId = await getLinkedEhrImpl({ id: input.id })
+    .then((r) => r.ehrId)
+    .catch(() => null)
   return { party, ehrId }
 }
 
