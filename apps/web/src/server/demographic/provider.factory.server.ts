@@ -40,6 +40,10 @@ function build(): DemographicProvider {
     audit: new PostgresAuditSink('demographic:builtin'),
     pseudonymize: pseudonymizeIdentifier,
     partyRefNamespace,
+    // Auto-assign a short human MRN at create (ADR-0046) — the primary
+    // human-facing handle. Default on; a deployment fed MRNs by an external
+    // hospital system sets DEMOGRAPHIC_AUTO_MRN=false.
+    autoAssignMrn: (process.env.DEMOGRAPHIC_AUTO_MRN ?? 'true').toLowerCase() !== 'false',
   })
 }
 

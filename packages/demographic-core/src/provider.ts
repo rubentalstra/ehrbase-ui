@@ -92,7 +92,11 @@ export type Party = z.infer<typeof PartySchema>;
 
 // ─── Operation inputs ──────────────────────────────────────────────────────────
 export const CreatePartyInputSchema = z.object({
-  identifiers: z.array(PartyIdentifierSchema).min(1),
+  // May be empty: when no identifier is supplied the built-in provider
+  // auto-assigns a human MRN (ADR-0046). The adapter still guarantees a STORED
+  // party has >=1 identifier (the MRN), so a patient can be created by name +
+  // DOB alone — clinicians never have to invent an identifier.
+  identifiers: z.array(PartyIdentifierSchema).default([]),
   names: z.array(HumanNameSchema).min(1),
   gender: AdministrativeGenderSchema.optional(),
   birthDate: z.string().optional(),

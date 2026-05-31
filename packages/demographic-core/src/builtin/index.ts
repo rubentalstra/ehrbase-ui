@@ -12,6 +12,7 @@ export {
 export {
   demographicChangeTypeEnum,
   demographicGenderEnum,
+  demographicMrnCounter,
   demographicParty,
   demographicPartyHistory,
   demographicPartyIdentifier,

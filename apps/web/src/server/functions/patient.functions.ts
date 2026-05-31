@@ -80,6 +80,15 @@ export interface CreatePatientResult {
 export interface LinkedEhrResult {
   ehrId: string | null
 }
+/** Patient + their linked EHR, resolved in one call so the UI never handles a
+ *  raw ehrId (ADR-0046). `ehrId` is null when no EHR is linked yet. */
+export interface PatientContextResult {
+  party: Party
+  ehrId: string | null
+}
+
+export const EhrIdInputSchema = z.object({ ehrId: z.string().min(1) })
+export type EhrIdInput = z.infer<typeof EhrIdInputSchema>
 export interface ProvisionEhrResult {
   ehrId: string
 }
@@ -119,6 +128,24 @@ export const getLinkedEhr = createServerFn({ method: 'GET' })
   .handler(async ({ data }): Promise<LinkedEhrResult> => {
     const { getLinkedEhrImpl } = await import('./patient.server')
     return getLinkedEhrImpl(data)
+  })
+
+// Patient context (party + resolved ehrId) — the single call the patient-context
+// shell loader uses so no surface ever handles a raw ehrId (ADR-0046).
+export const getPatientContext = createServerFn({ method: 'GET' })
+  .inputValidator((d: unknown) => PartyIdInputSchema.parse(d))
+  .handler(async ({ data }): Promise<PatientContextResult> => {
+    const { getPatientContextImpl } = await import('./patient.server')
+    return getPatientContextImpl(data)
+  })
+
+// Reverse lookup: EHR id → patient (for resolving an id that appears in AQL
+// output back to a human). Returns null if no party matches the EHR's subject.
+export const getPatientByEhrId = createServerFn({ method: 'GET' })
+  .inputValidator((d: unknown) => EhrIdInputSchema.parse(d))
+  .handler(async ({ data }): Promise<Party | null> => {
+    const { getPatientByEhrIdImpl } = await import('./patient.server')
+    return getPatientByEhrIdImpl(data)
   })
 
 // Writes (['admin'])
