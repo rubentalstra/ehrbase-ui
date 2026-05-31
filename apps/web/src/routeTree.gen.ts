@@ -26,9 +26,10 @@ import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-g
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedWorkbenchTemplatesRouteImport } from './routes/_authed/workbench/templates'
 import { Route as AuthedWorkbenchEhrRouteImport } from './routes/_authed/workbench/ehr'
-import { Route as AuthedWorkbenchAqlRouteImport } from './routes/_authed/workbench/aql'
-import { Route as AuthedWorkbenchComposeRouteImport } from './routes/_authed/workbench/compose'
+import { Route as AuthedWorkbenchDirectoryRouteImport } from './routes/_authed/workbench/directory'
 import { Route as AuthedWorkbenchCompositionsRouteImport } from './routes/_authed/workbench/compositions'
+import { Route as AuthedWorkbenchComposeRouteImport } from './routes/_authed/workbench/compose'
+import { Route as AuthedWorkbenchAqlRouteImport } from './routes/_authed/workbench/aql'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -115,22 +116,28 @@ const AuthedWorkbenchEhrRoute = AuthedWorkbenchEhrRouteImport.update({
   path: '/ehr',
   getParentRoute: () => AuthedWorkbenchRouteRoute,
 } as any)
-const AuthedWorkbenchAqlRoute = AuthedWorkbenchAqlRouteImport.update({
-  id: '/aql',
-  path: '/aql',
-  getParentRoute: () => AuthedWorkbenchRouteRoute,
-} as any)
-const AuthedWorkbenchComposeRoute = AuthedWorkbenchComposeRouteImport.update({
-  id: '/compose',
-  path: '/compose',
-  getParentRoute: () => AuthedWorkbenchRouteRoute,
-} as any)
+const AuthedWorkbenchDirectoryRoute =
+  AuthedWorkbenchDirectoryRouteImport.update({
+    id: '/directory',
+    path: '/directory',
+    getParentRoute: () => AuthedWorkbenchRouteRoute,
+  } as any)
 const AuthedWorkbenchCompositionsRoute =
   AuthedWorkbenchCompositionsRouteImport.update({
     id: '/compositions',
     path: '/compositions',
     getParentRoute: () => AuthedWorkbenchRouteRoute,
   } as any)
+const AuthedWorkbenchComposeRoute = AuthedWorkbenchComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
+} as any)
+const AuthedWorkbenchAqlRoute = AuthedWorkbenchAqlRouteImport.update({
+  id: '/aql',
+  path: '/aql',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -142,10 +149,11 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
   '/workbench/aql': typeof AuthedWorkbenchAqlRoute
-  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
-  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/workbench/compose': typeof AuthedWorkbenchComposeRoute
   '/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
@@ -162,10 +170,11 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
   '/workbench/aql': typeof AuthedWorkbenchAqlRoute
-  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
-  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/workbench/compose': typeof AuthedWorkbenchComposeRoute
   '/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
@@ -185,10 +194,11 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
   '/_authed/workbench/aql': typeof AuthedWorkbenchAqlRoute
-  '/_authed/workbench/ehr': typeof AuthedWorkbenchEhrRoute
-  '/_authed/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/_authed/workbench/compose': typeof AuthedWorkbenchComposeRoute
   '/_authed/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/_authed/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/_authed/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/_authed/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
@@ -208,10 +218,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/ready'
     | '/workbench/aql'
-    | '/workbench/ehr'
-    | '/workbench/templates'
     | '/workbench/compose'
     | '/workbench/compositions'
+    | '/workbench/directory'
+    | '/workbench/ehr'
+    | '/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
@@ -228,10 +239,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/ready'
     | '/workbench/aql'
-    | '/workbench/ehr'
-    | '/workbench/templates'
     | '/workbench/compose'
     | '/workbench/compositions'
+    | '/workbench/directory'
+    | '/workbench/ehr'
+    | '/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
@@ -250,10 +262,11 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/ready'
     | '/_authed/workbench/aql'
-    | '/_authed/workbench/ehr'
-    | '/_authed/workbench/templates'
     | '/_authed/workbench/compose'
     | '/_authed/workbench/compositions'
+    | '/_authed/workbench/directory'
+    | '/_authed/workbench/ehr'
+    | '/_authed/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
@@ -398,18 +411,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkbenchEhrRouteImport
       parentRoute: typeof AuthedWorkbenchRouteRoute
     }
-    '/_authed/workbench/aql': {
-      id: '/_authed/workbench/aql'
-      path: '/aql'
-      fullPath: '/workbench/aql'
-      preLoaderRoute: typeof AuthedWorkbenchAqlRouteImport
-      parentRoute: typeof AuthedWorkbenchRouteRoute
-    }
-    '/_authed/workbench/compose': {
-      id: '/_authed/workbench/compose'
-      path: '/compose'
-      fullPath: '/workbench/compose'
-      preLoaderRoute: typeof AuthedWorkbenchComposeRouteImport
+    '/_authed/workbench/directory': {
+      id: '/_authed/workbench/directory'
+      path: '/directory'
+      fullPath: '/workbench/directory'
+      preLoaderRoute: typeof AuthedWorkbenchDirectoryRouteImport
       parentRoute: typeof AuthedWorkbenchRouteRoute
     }
     '/_authed/workbench/compositions': {
@@ -419,24 +425,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkbenchCompositionsRouteImport
       parentRoute: typeof AuthedWorkbenchRouteRoute
     }
+    '/_authed/workbench/compose': {
+      id: '/_authed/workbench/compose'
+      path: '/compose'
+      fullPath: '/workbench/compose'
+      preLoaderRoute: typeof AuthedWorkbenchComposeRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/workbench/aql': {
+      id: '/_authed/workbench/aql'
+      path: '/aql'
+      fullPath: '/workbench/aql'
+      preLoaderRoute: typeof AuthedWorkbenchAqlRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
   }
 }
 
 interface AuthedWorkbenchRouteRouteChildren {
   AuthedWorkbenchAqlRoute: typeof AuthedWorkbenchAqlRoute
-  AuthedWorkbenchEhrRoute: typeof AuthedWorkbenchEhrRoute
-  AuthedWorkbenchTemplatesRoute: typeof AuthedWorkbenchTemplatesRoute
   AuthedWorkbenchComposeRoute: typeof AuthedWorkbenchComposeRoute
   AuthedWorkbenchCompositionsRoute: typeof AuthedWorkbenchCompositionsRoute
+  AuthedWorkbenchDirectoryRoute: typeof AuthedWorkbenchDirectoryRoute
+  AuthedWorkbenchEhrRoute: typeof AuthedWorkbenchEhrRoute
+  AuthedWorkbenchTemplatesRoute: typeof AuthedWorkbenchTemplatesRoute
   AuthedWorkbenchIndexRoute: typeof AuthedWorkbenchIndexRoute
 }
 
 const AuthedWorkbenchRouteRouteChildren: AuthedWorkbenchRouteRouteChildren = {
   AuthedWorkbenchAqlRoute: AuthedWorkbenchAqlRoute,
-  AuthedWorkbenchEhrRoute: AuthedWorkbenchEhrRoute,
-  AuthedWorkbenchTemplatesRoute: AuthedWorkbenchTemplatesRoute,
   AuthedWorkbenchComposeRoute: AuthedWorkbenchComposeRoute,
   AuthedWorkbenchCompositionsRoute: AuthedWorkbenchCompositionsRoute,
+  AuthedWorkbenchDirectoryRoute: AuthedWorkbenchDirectoryRoute,
+  AuthedWorkbenchEhrRoute: AuthedWorkbenchEhrRoute,
+  AuthedWorkbenchTemplatesRoute: AuthedWorkbenchTemplatesRoute,
   AuthedWorkbenchIndexRoute: AuthedWorkbenchIndexRoute,
 }
 

@@ -26,6 +26,7 @@ function WorkbenchLayout() {
     { to: '/workbench/aql', label: m.workbench_tab_aql() },
     { to: '/workbench/compose', label: m.workbench_tab_compose() },
     { to: '/workbench/compositions', label: m.workbench_tab_compositions() },
+    { to: '/workbench/directory', label: m.workbench_tab_directory() },
   ]
 
   return (

@@ -19,9 +19,12 @@ import { getEhrbaseContext, type EhrbaseContext } from "@/server/bff/ehrbase-con
 import type {
   DeleteCompositionInput,
   DeleteCompositionResult,
+  ExportCompositionInput,
+  ExportCompositionResult,
   ReadCompositionInput,
   ReadCompositionResult,
   UpdateCompositionInput,
+  UpdateCompositionResult,
   WriteCompositionInput,
   WriteCompositionResult,
 } from "./composition.functions";
@@ -48,6 +51,27 @@ function flatSearch(templateId?: string): string {
 
 // EHRbase returns the FLAT composition as a flat key/value map.
 const FlatResponseSchema = z.record(z.string(), z.unknown());
+
+// The typed 412 CONFLICT body callEhrbase throws (see call-ehrbase.server):
+// { code: "CONFLICT", etag?: string }. Parse it to recover the current etag.
+const ConflictBodySchema = z.object({ code: z.literal("CONFLICT"), etag: z.string().optional() });
+
+// Recognise the typed 412 thrown by callEhrbase and recover the current
+// version_uid (the etag, de-quoted). Returns null when the thrown value is NOT a
+// 412 conflict — the caller re-throws those untouched. Returns
+// { currentVersionUid } when it IS a conflict (etag may itself be absent).
+async function conflictVersionUid(
+  err: unknown,
+): Promise<{ currentVersionUid: string | null } | null> {
+  if (!(err instanceof Response) || err.status !== 412) return null;
+  try {
+    const parsed = ConflictBodySchema.safeParse(await err.clone().json());
+    const etag = parsed.success ? parsed.data.etag : undefined;
+    return { currentVersionUid: etag ? etag.replace(/^"|"$/gu, "") : null };
+  } catch {
+    return { currentVersionUid: null };
+  }
+}
 
 function fail(status: number, code: string): Response {
   return new Response(JSON.stringify({ code }), {
@@ -126,26 +150,34 @@ export async function fetchComposition(
 
 export async function reviseComposition(
   input: UpdateCompositionInput,
-): Promise<WriteCompositionResult> {
+): Promise<UpdateCompositionResult> {
   const ctx = await requireContext();
   const template = await loadWebTemplate(ctx, input.templateId);
   const body = toFlatBody(template, input.formState);
   if (body === null) throw fail(422, "INVALID_FORM_STATE");
 
-  const res = await callEhrbase(ctx, {
-    method: "PUT",
-    path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
-    classifyPath: CLASSIFY_PATH,
-    search: flatSearch(input.templateId),
-    contentType: FLAT_MEDIA_TYPE,
-    accept: FLAT_MEDIA_TYPE,
-    // EHRbase 2.31 FLAT quirk (verified live): the composition PUT/DELETE parses
-    // If-Match as a bare value and rejects the spec-mandated surrounding quotes
-    // with 400 "UUID string too large" — so send the version_uid UNQUOTED.
-    ifMatch: input.versionUid,
-    body,
-  });
-  return { versionUid: versionUidFrom(res) };
+  try {
+    const res = await callEhrbase(ctx, {
+      method: "PUT",
+      path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
+      classifyPath: CLASSIFY_PATH,
+      search: flatSearch(input.templateId),
+      contentType: FLAT_MEDIA_TYPE,
+      accept: FLAT_MEDIA_TYPE,
+      // EHRbase 2.31 FLAT quirk (verified live): the composition PUT/DELETE parses
+      // If-Match as a bare value and rejects the spec-mandated surrounding quotes
+      // with 400 "UUID string too large" — so send the version_uid UNQUOTED.
+      ifMatch: input.versionUid,
+      body,
+    });
+    return { status: "ok", versionUid: versionUidFrom(res) };
+  } catch (err) {
+    // 412 → first-class conflict result (carries the current version_uid so the
+    // client can re-apply onto the latest and retry). Anything else re-throws.
+    const conflict = await conflictVersionUid(err);
+    if (conflict) return { status: "conflict", ...conflict };
+    throw err;
+  }
 }
 
 export async function removeComposition(
@@ -160,4 +192,26 @@ export async function removeComposition(
     ifMatch: input.versionUid,
   });
   return { deleted: true };
+}
+
+// CANONICAL (structured) export — the SAME composition GET as fetchComposition
+// but WITHOUT `?format=FLAT`, so EHRbase returns the canonical openEHR
+// COMPOSITION (Accept: application/json). No template load / FLAT conversion: the
+// canonical body is returned verbatim as a pretty-printed JSON string for
+// download. version_uid still comes from the ETag.
+export async function exportCompositionCanonical(
+  input: ExportCompositionInput,
+): Promise<ExportCompositionResult> {
+  const ctx = await requireContext();
+  const res = await callEhrbase(ctx, {
+    method: "GET",
+    path: `ehr/${input.ehrId}/composition/${encodeURIComponent(input.compositionUid)}`,
+    classifyPath: CLASSIFY_PATH,
+    // No `?format=FLAT` → canonical representation.
+    accept: FLAT_MEDIA_TYPE,
+  });
+  return {
+    canonical: JSON.stringify(res.json, null, 2),
+    versionUid: versionUidFrom(res),
+  };
 }

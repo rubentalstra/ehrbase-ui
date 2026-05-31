@@ -18,20 +18,41 @@
 // No audit call here: reads in the workbench context do not reach PHI in the
 // core-refocus scope (audit returns post-core per CLAUDE.md "Deferred").
 
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
+import { toast } from 'sonner'
 
 import type { WebTemplate } from '@ehrbase-ui/openehr-web-template'
 import { parseWebTemplate } from '@ehrbase-ui/openehr-web-template'
 import { m } from '@ehrbase-ui/i18n/messages'
 
-import { readComposition } from '@/server/functions/composition.functions'
+import {
+  exportComposition,
+  readComposition,
+} from '@/server/functions/composition.functions'
 import { getWebTemplate } from '@/server/functions/template.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { FieldRenderer } from './field-renderer'
+
+// Trigger a client-side download of the canonical JSON string. Browser-only
+// (guarded by typeof document) — no PHI leaves the page beyond the user's own
+// save action; the object URL is revoked immediately after the click.
+function downloadJson(filename: string, json: string): void {
+  if (typeof document === 'undefined') return
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
+  URL.revokeObjectURL(url)
+}
 
 export interface CompositionViewerProps {
   ehrId: string
@@ -49,12 +70,32 @@ interface ViewerInnerProps {
   template: WebTemplate
   formStateValues: Record<string, unknown>
   versionUid: string
+  ehrId: string
+  compositionUid: string
 }
 
-function ViewerInner({ template, formStateValues, versionUid }: ViewerInnerProps) {
+function ViewerInner({
+  template,
+  formStateValues,
+  versionUid,
+  ehrId,
+  compositionUid,
+}: ViewerInnerProps) {
   // Initialise form with the fetched values.  No resolver — read-only, no submit.
   const form = useForm<Record<string, unknown>>({
     defaultValues: formStateValues,
+  })
+
+  // Canonical export → client download. The canonical JSON is fetched on demand
+  // (not on viewer load) so the read path stays FLAT-only unless the user asks.
+  const exportMutation = useMutation({
+    mutationFn: () => exportComposition({ data: { ehrId, compositionUid } }),
+    onSuccess: (result) => {
+      downloadJson(`composition-${compositionUid}.json`, result.canonical)
+    },
+    onError: () => {
+      toast.error(m.viewer_download_failed())
+    },
   })
 
   return (
@@ -69,6 +110,18 @@ function ViewerInner({ template, formStateValues, versionUid }: ViewerInnerProps
             <Badge variant="secondary">{template.templateId}</Badge>
           </dd>
         </dl>
+
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={exportMutation.isPending}
+            onClick={() => exportMutation.mutate()}
+          >
+            {m.viewer_download_canonical()}
+          </Button>
+        </div>
 
         <div className="border-t pt-4">
           {/* FieldRenderer in read-only mode — reuses all rmType renderers from P1.3 */}
@@ -168,6 +221,8 @@ export function CompositionViewer({ ehrId, templateId, compositionUid }: Composi
       template={parsedTemplate}
       formStateValues={formStateValues}
       versionUid={compositionQuery.data.versionUid}
+      ehrId={ehrId}
+      compositionUid={compositionUid}
     />
   )
 }

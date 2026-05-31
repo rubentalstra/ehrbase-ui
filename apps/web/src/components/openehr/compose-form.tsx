@@ -29,13 +29,29 @@ import { m } from '@ehrbase-ui/i18n/messages'
 
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { writeComposition } from '@/server/functions/composition.functions'
+import {
+  updateComposition,
+  writeComposition,
+} from '@/server/functions/composition.functions'
 
+import { ConflictDialog } from './conflict-dialog'
 import { FieldRenderer } from './field-renderer'
+
+// When present, the form is in EDIT mode: it updates an existing composition
+// (PUT with If-Match) rather than creating a new one (POST). The version_uid is
+// the optimistic-concurrency token; a stale one triggers the 412 conflict flow.
+export interface ComposeFormExisting {
+  compositionUid: string
+  versionUid: string
+  /** The composition's current form-state, used to seed the form's defaults. */
+  initialValues: Record<string, unknown>
+}
 
 export interface ComposeFormProps {
   template: WebTemplate
   ehrId: string
+  /** Present ⇒ edit an existing composition; absent ⇒ create a new one. */
+  existing?: ComposeFormExisting
   /** Called with the resulting versionUid on success. */
   onSuccess?: (versionUid: string) => void
 }
@@ -59,9 +75,23 @@ function isRecordSchema(
  * - On submit: calls writeComposition (FLAT conversion + audit happen server-side).
  * - Displays the resulting versionUid via toast on success.
  */
-export function ComposeForm({ template, ehrId, onSuccess }: ComposeFormProps) {
+export function ComposeForm({ template, ehrId, existing, onSuccess }: ComposeFormProps) {
   const rawSchema = generateFormSchema(template)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const isEdit = existing !== undefined
+
+  // Conflict state: when an update returns `{ status: "conflict" }`, hold the
+  // pending values + the reported latest version_uid so ConflictDialog can diff
+  // and offer reload-or-retry.
+  const [conflict, setConflict] = useState<{
+    pendingValues: Record<string, unknown>
+    currentVersionUid: string | null
+  } | null>(null)
+  const [retrying, setRetrying] = useState(false)
+  // The active version_uid for the next If-Match. Starts at the loaded version;
+  // a successful retry/save advances it so a second save in the same session is
+  // not itself a stale write.
+  const [versionUid, setVersionUid] = useState(existing?.versionUid ?? '')
 
   // Wrap in z.record if the root schema is not a ZodObject (e.g. z.unknown() for
   // an empty template). For all practical templates the root is a ZodObject.
@@ -71,28 +101,86 @@ export function ComposeForm({ template, ehrId, onSuccess }: ComposeFormProps) {
 
   const form = useForm<Record<string, unknown>>({
     resolver: zodResolver(schema),
-    defaultValues: {},
+    defaultValues: existing?.initialValues ?? {},
     mode: 'onBlur',
   })
 
   const { handleSubmit, control, formState } = form
 
+  // CREATE path (POST). Unchanged from the original deliverable.
+  async function create(values: Record<string, unknown>) {
+    const result = await writeComposition({
+      data: { ehrId, templateId: template.templateId, formState: JSON.stringify(values) },
+    })
+    toast.success(m.compose_success({ versionUid: result.versionUid }))
+    onSuccess?.(result.versionUid)
+  }
+
+  // UPDATE path (PUT + If-Match). On a 412 the server returns a typed conflict
+  // result instead of throwing — open the ConflictDialog rather than erroring.
+  async function update(
+    values: Record<string, unknown>,
+    ifMatchVersionUid: string,
+  ): Promise<'ok' | 'conflict'> {
+    if (existing === undefined) return 'ok'
+    const result = await updateComposition({
+      data: {
+        ehrId,
+        templateId: template.templateId,
+        compositionUid: existing.compositionUid,
+        versionUid: ifMatchVersionUid,
+        formState: JSON.stringify(values),
+      },
+    })
+    if (result.status === 'conflict') {
+      setConflict({ pendingValues: values, currentVersionUid: result.currentVersionUid })
+      return 'conflict'
+    }
+    setVersionUid(result.versionUid)
+    toast.success(m.compose_update_success({ versionUid: result.versionUid }))
+    onSuccess?.(result.versionUid)
+    return 'ok'
+  }
+
   const onSubmit = async (values: Record<string, unknown>) => {
     setSubmitError(null)
     try {
-      const result = await writeComposition({
-        data: {
-          ehrId,
-          templateId: template.templateId,
-          formState: JSON.stringify(values),
-        },
-      })
-      toast.success(m.compose_success({ versionUid: result.versionUid }))
-      onSuccess?.(result.versionUid)
+      if (isEdit) {
+        await update(values, versionUid)
+      } else {
+        await create(values)
+      }
     } catch {
       setSubmitError(m.compose_error())
       toast.error(m.compose_error())
     }
+  }
+
+  // Conflict resolution (b): re-apply the user's pending changes onto the latest
+  // version_uid and retry the update. A second conflict re-opens the dialog with
+  // the newer version.
+  async function retryOnLatest(latestVersionUid: string) {
+    if (conflict === null) return
+    setRetrying(true)
+    setSubmitError(null)
+    try {
+      const outcome = await update(conflict.pendingValues, latestVersionUid)
+      if (outcome === 'ok') setConflict(null)
+    } catch {
+      setSubmitError(m.compose_error())
+      toast.error(m.compose_error())
+      setConflict(null)
+    } finally {
+      setRetrying(false)
+    }
+  }
+
+  // Conflict resolution (a): discard the user's edits and reload the latest
+  // server version. Delegated to the host (it owns the composition source) via
+  // onSuccess with the reported latest version, falling back to a plain close.
+  function reloadDiscard() {
+    setConflict(null)
+    if (conflict?.currentVersionUid) onSuccess?.(conflict.currentVersionUid)
   }
 
   return (
@@ -117,10 +205,29 @@ export function ComposeForm({ template, ehrId, onSuccess }: ComposeFormProps) {
           className="w-full sm:w-auto"
         >
           {formState.isSubmitting
-            ? m.compose_submitting()
-            : m.compose_submit()}
+            ? isEdit
+              ? m.compose_update_submitting()
+              : m.compose_submitting()
+            : isEdit
+              ? m.compose_update_submit()
+              : m.compose_submit()}
         </Button>
       </form>
+
+      {existing !== undefined && conflict !== null && (
+        <ConflictDialog
+          open={true}
+          ehrId={ehrId}
+          templateId={template.templateId}
+          compositionUid={existing.compositionUid}
+          currentVersionUid={conflict.currentVersionUid}
+          pendingValues={conflict.pendingValues}
+          isRetrying={retrying}
+          onReloadDiscard={reloadDiscard}
+          onRetryOnLatest={retryOnLatest}
+          onCancel={() => setConflict(null)}
+        />
+      )}
     </FormProvider>
   )
 }
