@@ -323,11 +323,8 @@ services:
   # $validate-code) — point the GENERIC-FHIR adapter at it:
   #   TERMINOLOGY_PROVIDER=generic-fhir
   #   TERMINOLOGY_FHIR_BASE=http://localhost:8094/fhir
-  # The SNOWSTORM adapter (the v1.0 default) needs the full Snowstorm + the
-  # IHTSDO/snowstorm image + an Elasticsearch sidecar (heavy; not bundled here):
-  #   snowstorm: image snomedinternational/snowstorm:10.11.2 (Apache-2.0)
-  #   + docker.elastic.co/elasticsearch/elasticsearch:8.11.1
-  # then TERMINOLOGY_PROVIDER=snowstorm TERMINOLOGY_FHIR_BASE=http://localhost:8095/fhir.
+  # The SNOWSTORM adapter (the v1.0 default) is provided by the `snowstorm-es` +
+  # `snowstorm` services below, behind their own heavy opt-in `snomed` profile.
   # Unit + contract tests use the in-memory FHIR terminology double — no Docker.
   terminology-fhir:
     image: hapiproject/hapi:v8.8.0-1
@@ -349,10 +346,65 @@ services:
       start_period: 90s
     networks: [ehrbase-net]
 
+  # ── SNOMED CT terminology server (TERMINOLOGY_PROVIDER=snowstorm, the default) ─
+  # Heavy: Elasticsearch + Snowstorm need ≈ 8 GB RAM, so they sit behind their own
+  # opt-in `snomed` profile → `docker compose --profile snomed up`. Then set
+  #   TERMINOLOGY_PROVIDER=snowstorm
+  #   TERMINOLOGY_FHIR_BASE=http://localhost:8095/fhir
+  # IMPORTANT: Snowstorm starts EMPTY — a SNOMED CT RF2 edition must be imported via
+  # its native API (license-gated; https://www.snomed.org or your national release
+  # centre). ZERO-SETUP alternative (no local stack, no profile): point
+  #   TERMINOLOGY_FHIR_BASE=https://snowstorm.ihtsdotools.org/fhir
+  # at the public SNOMED International FHIR sandbox (international edition, read-only).
+  # Tag-pinned (no :latest — rule 5). Mirrors github.com/IHTSDO/snowstorm compose.
+  snowstorm-es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    profiles: ['snomed']
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: -Xms4g -Xmx4g
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+    mem_reservation: 4g
+    volumes:
+      - snowstorm_es:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:9200 >/dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    networks: [ehrbase-net]
+
+  snowstorm:
+    image: snomedinternational/snowstorm:10.11.2
+    profiles: ['snomed']
+    depends_on:
+      snowstorm-es:
+        condition: service_healthy
+    # Verbatim from the official IHTSDO/snowstorm compose, with the ES url pointed
+    # at our `snowstorm-es` service.
+    entrypoint: java -Xms2g -Xmx4g --add-opens java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED -cp @/app/jib-classpath-file org.snomed.snowstorm.SnowstormApplication --elasticsearch.urls=http://snowstorm-es:9200
+    ports: ['8095:8080']
+    mem_reservation: 4g
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget -q -O /dev/null http://localhost:8080/fhir/metadata || exit 1',
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 40
+      start_period: 180s
+    networks: [ehrbase-net]
+
 volumes:
   ehrbase_pg:
   platform_pg:
   valkey_data:
+  snowstorm_es:
 
 networks:
   ehrbase-net:
