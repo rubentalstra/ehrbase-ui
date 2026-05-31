@@ -36,6 +36,33 @@ const config: StorybookConfig = {
       plugins: [tailwindcss()],
       resolve: {
         alias: {
+          // Storybook runs WITHOUT the TanStack Start plugin (above) that
+          // rewrites `createServerFn` to a client fetch stub. A storied
+          // component that statically imports a server function (FieldRenderer →
+          // terminology.functions) would therefore drag the whole server-only
+          // graph (Drizzle/postgres, ioredis, @noble crypto,
+          // @tanstack/start-storage-context → node:async_hooks) into the browser
+          // bundle and break the preview build. Alias the server-fn module to a
+          // client stub — mirrors the real post-transform client shape. Must
+          // precede the '@' alias so this exact specifier matches first.
+          '@/server/functions/terminology.functions': fileURLToPath(
+            new URL('./terminology-functions-stub.ts', import.meta.url),
+          ),
+          // createServerFn's client runtime (@tanstack/start-client-core →
+          // @tanstack/start-storage-context) imports node:async_hooks, and a
+          // DB-backed server function drags in `postgres` (→ perf_hooks). Vite
+          // externalises node: builtins to export-less browser stubs, so those
+          // NAMED imports are hard Rollup errors — shim the two that leak.
+          'node:async_hooks': fileURLToPath(
+            new URL('./async-hooks-stub.ts', import.meta.url),
+          ),
+          async_hooks: fileURLToPath(
+            new URL('./async-hooks-stub.ts', import.meta.url),
+          ),
+          'node:perf_hooks': fileURLToPath(
+            new URL('./perf-hooks-stub.ts', import.meta.url),
+          ),
+          perf_hooks: fileURLToPath(new URL('./perf-hooks-stub.ts', import.meta.url)),
           '@': fileURLToPath(new URL('../src', import.meta.url)),
         },
       },
