@@ -13,7 +13,7 @@ ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-alpine AS builder
 WORKDIR /app
 ENV CI=true
-RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.5.0 --activate
 
 # Manifests first for a cacheable install layer. In the monorepo every
 # package.json is needed for the workspace graph to resolve correctly —

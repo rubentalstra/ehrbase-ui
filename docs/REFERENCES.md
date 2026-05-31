@@ -15,14 +15,14 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 | Tool          | Verified                                   | Pinned                                                               | Source                                           |
 | ------------- | ------------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------ |
 | Node.js       | 24.16.0 (LTS Krypton, released 2026-05-21) | **24.16.0**                                                          | https://nodejs.org/en/about/previous-releases    |
-| pnpm          | 11.3.0                                     | **11.3.0**                                                           | https://registry.npmjs.org/pnpm/latest           |
+| pnpm          | 11.5.0                                     | **11.5.0**                                                           | https://registry.npmjs.org/pnpm/latest           |
 | Docker engine | 29.4.3                                     | **≥ 29.0** (for containerd default image store + CVE-2026-32288 fix) | https://docs.docker.com/engine/release-notes/29/ |
 
 ### Framework
 
 | Package                  | Verified                                      | Pinned       | Source                                                   |
 | ------------------------ | --------------------------------------------- | ------------ | -------------------------------------------------------- |
-| `@tanstack/react-start`  | 1.168.13 (post-CVE-2026-45321 cleanup)        | **1.168.13** | https://registry.npmjs.org/@tanstack/react-start/latest  |
+| `@tanstack/react-start`  | 1.168.14 (post-CVE-2026-45321 cleanup)        | **1.168.14** | https://registry.npmjs.org/@tanstack/react-start/latest  |
 | `@tanstack/react-router` | 1.170.8                                       | **1.170.8**  | https://registry.npmjs.org/@tanstack/react-router/latest |
 | `@tanstack/react-query`  | 5.100.14                                      | **5.100.14** | https://registry.npmjs.org/@tanstack/react-query/latest  |
 | `react` / `react-dom`    | 19.2.6                                        | **19.2.6**   | https://registry.npmjs.org/react/latest                  |
@@ -67,7 +67,7 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 | ----------------------------- | -------- | ---------- | ------------------------------------------------------------- |
 | `eslint`                      | 10.4.0   | **10.4.0** | https://registry.npmjs.org/eslint/latest                      |
 | `typescript-eslint`           | 8.60.0   | **8.60.0** | https://registry.npmjs.org/typescript-eslint/latest           |
-| `@eslint-react/eslint-plugin` | 5.8.5    | **5.8.5**  | https://registry.npmjs.org/@eslint-react/eslint-plugin/latest |
+| `@eslint-react/eslint-plugin` | 5.8.6    | **5.8.6**  | https://registry.npmjs.org/@eslint-react/eslint-plugin/latest |
 | `eslint-plugin-react-hooks`   | 7.1.1    | **7.1.1**  | https://registry.npmjs.org/eslint-plugin-react-hooks/latest   |
 | `eslint-plugin-jsx-a11y-x`    | 0.2.0    | **0.2.0**  | https://registry.npmjs.org/eslint-plugin-jsx-a11y-x/latest    |
 
@@ -96,16 +96,18 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Backend (proxied) & infrastructure
 
-| Service    | Verified                                                                                         | Pinned                                  | Source                                         |
-| ---------- | ------------------------------------------------------------------------------------------------ | --------------------------------------- | ---------------------------------------------- |
-| EHRbase    | 2.31.0 (28 Apr 2026, Java 25)                                                                    | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases    |
-| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)                                                      | **≥ 26.6.2**                            | https://www.keycloak.org/downloads             |
-| Valkey     | 9.1.0 (three use-after-free CVE fixes)                                                           | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags    |
-| PostgreSQL | 18.4 (14 May 2026)                                                                               | **18.4**                                | https://www.postgresql.org/docs/release/       |
-| SeaweedFS  | 4.29 (26 May 2026) — dev cold-store default (ADR-0027)                                           | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs         |
-| HAPI FHIR  | 8.8.0-1 (R4 dev server for the FHIR demographic adapter — `fhir` compose profile, ADR-0031/0033) | **hapiproject/hapi:v8.8.0-1**           | https://hub.docker.com/r/hapiproject/hapi/tags |
+| Service    | Verified                                                                                                                                                       | Pinned                                  | Source                                         |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------- |
+| EHRbase    | 2.31.0 (28 Apr 2026, Java 25)                                                                                                                                  | **2.31.0**                              | https://github.com/ehrbase/ehrbase/releases    |
+| Keycloak   | 26.6.2 (CVE-2026-37981 PII-enumeration fix)                                                                                                                    | **≥ 26.6.2**                            | https://www.keycloak.org/downloads             |
+| Valkey     | 9.1.0 (three use-after-free CVE fixes)                                                                                                                         | **≥ 9.1.0**                             | https://hub.docker.com/r/valkey/valkey/tags    |
+| PostgreSQL | 18.4 (14 May 2026)                                                                                                                                             | **18.4**                                | https://www.postgresql.org/docs/release/       |
+| SeaweedFS  | 4.29 (26 May 2026) — dev cold-store default (ADR-0027) — ❌ REMOVED in the core-refocus (2026-05-30), deferred post-core; see CLAUDE.md → Deferred (post-core) | **see image tag in docker-compose.yml** | https://github.com/seaweedfs/seaweedfs         |
+| HAPI FHIR  | 8.8.0-1 (R4 dev server for the FHIR demographic adapter — `fhir` compose profile, ADR-0031/0033)                                                               | **hapiproject/hapi:v8.8.0-1**           | https://hub.docker.com/r/hapiproject/hapi/tags |
 
 ### Observability stack (M5 — ADR-0009, web-verified 2026-05-29)
+
+> ❌ REMOVED in the core-refocus (2026-05-30) — deferred post-core; see CLAUDE.md → Deferred (post-core).
 
 | Service                  | Verified              | Pinned                                    | Source                                                             |
 | ------------------------ | --------------------- | ----------------------------------------- | ------------------------------------------------------------------ |
@@ -140,6 +142,8 @@ OTel SDK + transport (verified 2026-05-29 via `npm view`):
 
 ### Antivirus (M6 — ClamAV sidecar, web-verified 2026-05-29)
 
+> ❌ REMOVED in the core-refocus (2026-05-30) — deferred post-core; see CLAUDE.md → Deferred (post-core).
+
 | Service       | Verified              | Pinned         | Source                                      |
 | ------------- | --------------------- | -------------- | ------------------------------------------- |
 | clamav/clamav | 1.5-debian (May 2026) | **1.5-debian** | https://hub.docker.com/r/clamav/clamav/tags |
@@ -171,6 +175,8 @@ OTel SDK + transport (verified 2026-05-29 via `npm view`):
 | `@mmt_d/mmt-openehr-types` | Last updated ~1 year ago               | Generated-types only, stale                                                       |
 
 ### Audit cold-store dependencies (M4 — ADR-0027)
+
+> ❌ REMOVED in the core-refocus (2026-05-30) — deferred post-core; see CLAUDE.md → Deferred (post-core).
 
 | Package                | Verified | Pinned       | Source                                                 |
 | ---------------------- | -------- | ------------ | ------------------------------------------------------ |

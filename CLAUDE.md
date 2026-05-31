@@ -31,11 +31,11 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 ## Versions (verified 2026-05-26 — drift tracked in `docs/REFERENCES.md`)
 
-- Node **24.16.0**, pnpm **11.3.0**
-- TanStack Start **1.168.13** (post-CVE-2026-45321 cleanup — never downgrade past this)
+- Node **24.16.0**, pnpm **11.5.0**
+- TanStack Start **1.168.14** (post-CVE-2026-45321 cleanup — never downgrade past the 1.168.13 floor)
 - React **19.2.6**, Vite **7.3.3** (NOT v8 — blocked by TanStack#7436 / #7091)
 - Tailwind **4.3.0**, Paraglide **2.18.1**
-- ESLint **10.4.0**, TypeScript-ESLint **8.60.0**, eslint-plugin-jsx-a11y-x **0.2.0**, @eslint-react/eslint-plugin **5.8.5**, eslint-plugin-react-hooks **7.1.1**
+- ESLint **10.4.0**, TypeScript-ESLint **8.60.0**, eslint-plugin-jsx-a11y-x **0.2.0**, @eslint-react/eslint-plugin **5.8.6**, eslint-plugin-react-hooks **7.1.1**
 - TypeScript **6.0.3**, Zod **4.4.3**, react-hook-form **7.76.1**, @hookform/resolvers **5.4.0**
 - Pino **10.3.1**, ioredis **5.11.0**, arctic **3.7.0**
 - Vitest **4.1.7**, @playwright/test **1.60.0**, axe-core **4.11.4**, vitest-axe **0.1.0**, @axe-core/playwright **4.11.3**
