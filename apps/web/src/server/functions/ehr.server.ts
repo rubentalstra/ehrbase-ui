@@ -138,10 +138,11 @@ export async function reviseEhrStatus(
     classifyPath: CLASSIFY_PATH,
     contentType: JSON_MEDIA_TYPE,
     accept: JSON_MEDIA_TYPE,
-    // openEHR ITS-REST mandates the double-quoted version_uid in If-Match for the
-    // canonical EHR_STATUS endpoint (unlike the FLAT composition endpoint, which
-    // wants it bare — see composition.server). Re-verify against the live stack.
-    ifMatch: `"${input.versionUid}"`,
+    // EHRbase 2.31 wants the BARE version_uid in If-Match for EHR_STATUS too —
+    // the double-quoted (RFC-7232 / ITS-REST) form returns 400 "UUID string too
+    // large", same quirk as the FLAT composition endpoint. Live-confirmed
+    // 2026-05-31 (scripts/dev e2e): quoted → 400, bare → 204.
+    ifMatch: input.versionUid,
     body: JSON.stringify(input.ehrStatus),
   });
   return { versionUid: versionUidFrom(res) };

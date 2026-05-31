@@ -101,10 +101,10 @@ export async function reviseDirectory(input: UpdateDirectoryInput): Promise<Dire
     classifyPath: CLASSIFY_PATH,
     contentType: JSON_MEDIA_TYPE,
     accept: JSON_MEDIA_TYPE,
-    // openEHR ITS-REST mandates the double-quoted version_uid in If-Match for the
-    // canonical directory endpoint (like EHR_STATUS, not the bare-value FLAT
-    // composition quirk). Re-verify against the live stack.
-    ifMatch: `"${input.versionUid}"`,
+    // EHRbase 2.31 wants the BARE version_uid in If-Match (quoted → 400 "UUID
+    // string too large") — the same quirk confirmed live for FLAT compositions
+    // and EHR_STATUS (2026-05-31 e2e). Not the RFC-7232/ITS-REST quoted form.
+    ifMatch: input.versionUid,
     body: JSON.stringify(input.folder),
   });
   return { versionUid: versionUidFrom(res) };

@@ -125,7 +125,7 @@ describe("fetchEhrStatus", () => {
 });
 
 describe("reviseEhrStatus", () => {
-  it("PUTs with a DOUBLE-QUOTED If-Match version_uid (canonical endpoint)", async () => {
+  it("PUTs with a BARE If-Match version_uid (EHRbase 2.31 quirk — quoted 400s)", async () => {
     vi.mocked(callEhrbase).mockResolvedValue({
       status: 200,
       etag: '"st-obj::local.ehrbase.org::2"',
@@ -143,6 +143,6 @@ describe("reviseEhrStatus", () => {
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("PUT");
     expect(opts?.path).toBe(`ehr/${EHR_ID}/ehr_status`);
-    expect(opts?.ifMatch).toBe('"st-obj::local.ehrbase.org::1"');
+    expect(opts?.ifMatch).toBe("st-obj::local.ehrbase.org::1");
   });
 });

@@ -71,21 +71,29 @@ The point of the architecture: a hospital composes its stack. **Fixed core** (al
 `--profile`. Everything talks standard wire protocols, so a site can point at its own managed
 EHRbase / Keycloak / Postgres / Snowstorm instead of the bundled dev containers.
 
-## 4. Live-EHRbase confirmation TODOs
+## 4. Live-EHRbase verification — results (2026-05-31)
 
-These FLAT/REST contract details are coded against the spec + fixtures but flagged in-code for
-verification against a running EHRbase 2.31 (grep `live-EHRbase` / `re-verify`):
+Ran against a fresh EHRbase 2.31.0 dev stack (version + composition probes + a supplementary
+e2e covering the F4/F5 surfaces). **CONFIRMED working:**
 
-- DV_ORDINAL `|code` and DV_MULTIMEDIA `|name`/`|size`/`|mediatype` FLAT suffixes (F1).
-- `EHR_STATUS` + DIRECTORY `If-Match` = double-quoted version_uid (vs the bare form the FLAT
-  composition endpoint needs).
-- Stored-query `PUT ?type=AQL` + `text/plain` body; the `saved`/`time_created` field name.
-- `CONTRIBUTION` listing via `EHR CONTAINS CONTRIBUTION` AQL (container support is
-  version-dependent; falls back to empty list).
-- `version_at_time` query param on the versioned-composition `/version` endpoint.
+- **EHRbase 2.31.0** (`/rest/status`: ehrbase 2.31.0 / openehr_sdk 2.31.0 / archie 3.13.0 / PG16.2).
+- **FLAT composition** create/read/update + the **412 concurrency guard**; **`If-Match` is the
+  BARE version_uid** (composition).
+- **EHR_STATUS** get + update — **`If-Match` is BARE here too**: the double-quoted form returns
+  `400 "UUID string too large"`, bare → `204`. (Our code used quoted; **fixed to bare** — same
+  for the directory PUT, which shares the quirk.)
+- **AQL** ad-hoc `POST /query/aql` → 200 RESULTSET. **Stored query** `PUT ?type=AQL` (text/plain)
+  / `GET` / run → 200/200/200. **DIRECTORY** `POST` (with `archetype_node_id`) → 201.
+- `db-migrate` exits 0 (auth + demographic); `keycloak-config` applies the realm WARN-free on a
+  fresh volume; all containers error-free in the log scan.
 
-Verify with: `docker compose --profile demo up -d --wait` → `pnpm seed:templates` → exercise the
-workbench (compose → write → read-back → AQL) and the dev probes in `scripts/dev/`.
+**Still to confirm** (needs a template/composition that actually exercises these — the vitals
+OPT doesn't): DV_ORDINAL `|code` + DV_MULTIMEDIA `|name`/`|size`/`|mediatype` FLAT suffixes (F1);
+`version_at_time` on the versioned-composition `/version` endpoint; `CONTRIBUTION` listing via
+`EHR CONTAINS CONTRIBUTION` (container support is version-dependent — falls back to empty list).
+
+Re-verify with: `docker compose up -d --wait` → `pnpm seed:templates` → the dev probes in
+`scripts/dev/` + the workbench compose → write → read-back → AQL loop.
 
 ## 5. Deferred layers (tracked elsewhere)
 

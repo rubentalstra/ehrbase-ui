@@ -89,7 +89,7 @@ describe("addDirectory", () => {
 });
 
 describe("reviseDirectory", () => {
-  it("PUTs with a DOUBLE-QUOTED If-Match version_uid (canonical endpoint)", async () => {
+  it("PUTs with a BARE If-Match version_uid (EHRbase 2.31 quirk — quoted 400s)", async () => {
     vi.mocked(callEhrbase).mockResolvedValue({
       status: 200,
       etag: '"dir::sys::2"',
@@ -103,6 +103,6 @@ describe("reviseDirectory", () => {
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("PUT");
     expect(opts?.path).toBe(`ehr/${EHR_ID}/directory`);
-    expect(opts?.ifMatch).toBe('"dir::sys::1"');
+    expect(opts?.ifMatch).toBe("dir::sys::1");
   });
 });
