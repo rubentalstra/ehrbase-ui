@@ -26,6 +26,7 @@ import { auditAccess } from '@/server/audit'
 import { requireRole } from '@/server/auth/require-role'
 import { callEhrbase } from '@/server/bff/call-ehrbase.server'
 import { getEhrbaseContext } from '@/server/bff/ehrbase-context.server'
+import { ensureDemoSeed } from '@/server/demographic/demo-seed.server'
 import {
   getDemographicProvider,
   getPartyRefNamespace,
@@ -100,6 +101,7 @@ const CanonicalEhrSchema = z.object({ ehr_id: z.object({ value: z.string() }) })
 // ─── Reads ───────────────────────────────────────────────────────────────────
 export async function searchPatientsImpl(query: PartySearchQuery): Promise<PatientSearchResult> {
   const role = await requireRole(READ_ROLES, { phi: true })
+  await ensureDemoSeed()
   const ctx = providerCtx(role, crypto.randomUUID())
   return viaProvider(() => getDemographicProvider().searchParty(query, ctx))
 }
@@ -121,6 +123,7 @@ export async function listPatientVersionsImpl(input: PartyIdInput): Promise<Part
 
 export async function getProviderCapabilitiesImpl(): Promise<DemographicProviderCapabilities> {
   await requireRole(READ_ROLES)
+  await ensureDemoSeed()
   return getDemographicProvider().capabilities
 }
 

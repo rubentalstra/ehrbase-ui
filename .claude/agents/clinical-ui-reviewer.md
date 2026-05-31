@@ -76,6 +76,11 @@ For each touched component, verify:
 - COMPOSITION updates include `If-Match` header with the last-read ETag.
 - The 412 (Precondition Failed) response is handled with a side-by-side diff modal — never silently overwrite.
 
+### 11. Dev demo seed data (CLAUDE.md rule 14 / docs/DEV-DEMO-DATA.md)
+
+- The surface ships representative **demo seed data** behind `SEED_DEMO_DATA` (dev + non-prod, idempotent) so it's observable on dev-stack startup + exercised by e2e.
+- The seed is extended in the SAME PR as the surface (not deferred); a surface with no seedable data to render is a blocking finding.
+
 ## How you report
 
 Produce a per-file checklist:

@@ -38,6 +38,8 @@ Progress tracker: [`docs/IMPLEMENTATION_CHECKLIST.md`](./docs/IMPLEMENTATION_CHE
 
 13. **Build features end-to-end in one milestone.** Do not split a capability into "minimal scaffold now / full UI later" across two milestones — consolidate into the milestone that owns the capability. The cost of touching the same surface twice (re-review, re-audit, re-test) exceeds the cost of a slightly larger milestone PR. Exception: a capability that has two genuinely separated consumers in time (e.g. M3 access-log _route_ shipped without data → M4 governance fills it). Mark these on the checklist as `(fed by Mx)`, never as "minimal now, full later".
 
+14. **Every new UI surface ships dev demo seed data.** Behind the `SEED_DEMO_DATA` flag (dev + non-prod only; idempotent), seed representative records **in the same PR** so the surface is observable on dev-stack startup and exercised by e2e — a surface you can't see populated is one you can't trust. Extend the seed when you add a surface (`docs/DEV-DEMO-DATA.md`). The `clinical-ui-reviewer` sub-agent checks it.
+
 ## Versions (verified 2026-05-26 — drift tracked in `docs/REFERENCES.md`)
 
 - Node **24.16.0**, pnpm **11.5.0**

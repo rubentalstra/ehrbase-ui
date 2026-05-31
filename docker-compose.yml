@@ -283,6 +283,10 @@ services:
       # syslog forwarder to an external Audit Record Repository is M9.
       AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
       ATNA_AUDIT_SOURCE_ID: ${ATNA_AUDIT_SOURCE_ID:-ehrbase-ui-dev}
+      # Dev demo data (docs/DEV-DEMO-DATA.md; CLAUDE.md rule 14). When 'true' the
+      # first /admin/patients load seeds demo demographic patients so the UI + e2e
+      # are observable. Hard-gated to NODE_ENV != production as a second guard.
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       SESSION_IDLE_TIMEOUT_SECONDS: '900'
       SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info
