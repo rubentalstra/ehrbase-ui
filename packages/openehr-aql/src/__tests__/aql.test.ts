@@ -594,4 +594,20 @@ describe("validateAql", () => {
   it("validates archetype ids and node codes embedded in catalogue strings", () => {
     expect(validateAql(CATALOGUE.vitals_latest_blood_pressure ?? "", { boundParams: ["ehr_id"] }).filter((d) => d.severity === "error")).toEqual([]);
   });
+
+  // Regression: identifier extraction must stay linear-time on adversarial
+  // input. The old unanchored global archetype-id scan was quadratic — a long
+  // run of identifier characters with a near-match prefix made it re-backtrack
+  // at every offset (CodeQL js/polynomial-redos). A pathological 100k-char path
+  // must validate in well under a second.
+  it("does not blow up on a pathological identifier run (ReDoS guard)", () => {
+    const evil = `A-A-A.${"a".repeat(100_000)}`;
+    const q: AqlQuery = {
+      select: { columns: [{ path: evil }] },
+      from: { rmType: "OBSERVATION", alias: "o" },
+    };
+    const start = Date.now();
+    validateAql(q);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
 });

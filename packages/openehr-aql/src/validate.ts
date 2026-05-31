@@ -56,10 +56,23 @@ export interface ValidateOptions {
   boundParams?: readonly string[];
 }
 
-const ARCHETYPE_ID_RE = /[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Z][A-Z0-9_]*\.[A-Za-z0-9_-]+\.v\d+/g;
+// ANCHORED archetype-id matcher (whole token). Paired with the maximal-token
+// tokenizer below: we extract maximal identifier tokens, then test each with
+// this anchored pattern — rather than scanning the whole string with a global,
+// unanchored regex. An unanchored global scan re-attempts the greedy leading
+// `[A-Za-z0-9]+` at every offset inside a long character run, which is
+// quadratic on adversarial input (CodeQL js/polynomial-redos). Anchored
+// per-token matching is linear: `^`/`$` pin the single start/end, and every
+// internal repetition is followed by a required literal (`-` / `.`) that lies
+// OUTSIDE its own character class, so there is no ambiguous backtracking.
+const ARCHETYPE_ID_RE = /^[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Z][A-Z0-9_]*\.[A-Za-z0-9_-]+\.v\d+$/;
+// Maximal run of archetype-id / node-code characters. A bare class repetition
+// with nothing required after it never backtracks → linear-time tokenization.
+const ID_TOKEN_RE = /[A-Za-z0-9._-]+/g;
 // Match anything that *looks like* an at/ac node code attempt (`[at…]` / `[ac…]`)
 // so a malformed one (`[at00X1]`) is caught rather than silently skipped. The
-// exact at/ac grammar is then enforced by isAtCode / isAcCode.
+// exact at/ac grammar is then enforced by isAtCode / isAcCode. Bounded by the
+// literal `[` / `]`, so it cannot exhibit the multi-start backtracking above.
 const NODE_CODE_RE = /\[(at|ac)[A-Za-z0-9.]*\]/g;
 
 /** Validate an AQL query (AST or source string) at the identifier level. */
@@ -103,8 +116,8 @@ export function validateAql(input: AqlQuery | string, options: ValidateOptions =
   };
 
   const recordEmbeddedIdentifiers = (text: string): void => {
-    for (const m of text.matchAll(ARCHETYPE_ID_RE)) {
-      recordArchetype(m[0]);
+    for (const m of text.matchAll(ID_TOKEN_RE)) {
+      if (ARCHETYPE_ID_RE.test(m[0])) recordArchetype(m[0]);
     }
     for (const m of text.matchAll(NODE_CODE_RE)) {
       const code = m[0].slice(1, -1);

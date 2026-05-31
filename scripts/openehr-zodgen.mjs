@@ -46,7 +46,6 @@ function collect(dir, out) {
 }
 const defs = {};
 collect(path.join(pkgDir, "schema"), defs);
-const localNames = new Set(Object.keys(defs));
 
 // ── ref URL → Zod identifier ("NAME" local, or "<alias>.NAME" cross-package) ──
 const REF_RE = /components\/([A-Z_]+)\/[^/]+\/[^/]+\/([A-Za-z0-9_]+)\.json#\/definitions\/([A-Za-z0-9_]+)/;

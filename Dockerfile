@@ -53,9 +53,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # tini for proper signal forwarding to Node; curl for the readiness check.
+# Strip npm from the runtime image: the runner executes the self-contained
+# Nitro bundle via `node` and never invokes npm/npx. Removing it drops npm's
+# own bundled transitive packages (brace-expansion, ip-address via socks, …)
+# from the image — eliminating a class of base-image advisory noise and
+# shrinking the runtime attack surface. corepack/node are untouched.
 RUN apk add --no-cache curl tini && \
     addgroup -S -g 1001 nodejs && \
-    adduser -S -u 1001 -G nodejs ehrbase-ui
+    adduser -S -u 1001 -G nodejs ehrbase-ui && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Copy the Nitro build output + app manifest. Both live under apps/web/ in
 # the monorepo layout (ADR-0030).
