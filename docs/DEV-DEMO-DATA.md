@@ -14,9 +14,14 @@
   this to `true`.
 - Anything else / unset — no-op.
 
-**Two guards, always.** The seed runs only when `SEED_DEMO_DATA === 'true'` **and**
-`NODE_ENV !== 'production'`. A production deployment can never seed demo (PHI-shaped)
-data, even if the flag is set by mistake.
+**The flag is the single gate.** The seed runs only when `SEED_DEMO_DATA === 'true'`,
+read at **runtime**. We deliberately do NOT also gate on `NODE_ENV`: the dev stack
+runs the **production Nitro build**, which inlines `process.env.NODE_ENV` to a literal
+at build time — so a `NODE_ENV !== 'production'` check would wrongly no-op the dev
+stack. `SEED_DEMO_DATA` is a custom env var that is never inlined, so it reliably
+reflects the deployment's intent. A production deployment **must leave it unset /
+false** (same posture as the dev-only Keycloak demo users); the seed data is synthetic
+(no real PHI) and idempotent regardless.
 
 ## How it runs
 

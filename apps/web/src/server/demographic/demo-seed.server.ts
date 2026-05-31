@@ -2,9 +2,12 @@
 // handful of demographic patients so every admin/patients surface is observable
 // the moment you spin up the dev stack — and so e2e runs against real rows.
 //
-// GATING: only when `SEED_DEMO_DATA === 'true'` AND NODE_ENV !== 'production'.
-// In production (or with the flag unset) this is a no-op — the guard plus the
-// NODE_ENV check make demo PHI-shaped data impossible to seed into a real deploy.
+// GATING: only when `SEED_DEMO_DATA === 'true'`. The flag is the SINGLE gate and
+// is read at runtime — a custom env var the production Nitro build never inlines
+// (unlike `process.env.NODE_ENV`, which the build replaces with a literal, so a
+// NODE_ENV check would wrongly no-op the dev stack, which runs the prod build).
+// Production simply never sets the flag — same posture as the dev-only Keycloak
+// demo users (keycloak-config). The seed data is synthetic (no real PHI).
 //
 // IDEMPOTENT: keyed on a marker MRN (DEMO-0001). Re-running (server restart, a
 // second list load) finds the marker and skips. Memoised per process so the
@@ -97,7 +100,7 @@ const DEMO_PATIENTS: CreatePartyInput[] = [
 ]
 
 function enabled(): boolean {
-  return process.env.SEED_DEMO_DATA === 'true' && process.env.NODE_ENV !== 'production'
+  return process.env.SEED_DEMO_DATA === 'true'
 }
 
 async function runSeed(): Promise<void> {
