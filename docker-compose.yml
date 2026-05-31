@@ -268,49 +268,20 @@ services:
       DRAFT_ENCRYPTION_SECRET: ${DRAFT_ENCRYPTION_SECRET:-dev-only-rotate-in-prod}
       # Demographic identifier-pseudonymisation HMAC key (demographic-core, rule 12).
       AUDIT_PSEUDONYM_SECRET: ${AUDIT_PSEUDONYM_SECRET:-dev-only-rotate-in-prod}
-      # Demographic provider (M7 — ADR-0031). Default built-in Postgres adapter;
-      # full CRUD via the least-privilege demographic_writer role. Switch to the
-      # FHIR adapter with DEMOGRAPHIC_PROVIDER=fhir + DEMOGRAPHIC_FHIR_BASE
-      # (the `hapi-fhir` dev service below provides an R4 server).
+      # Demographic provider (M7 — ADR-0031). Built-in Postgres adapter is the
+      # only provider for now; full CRUD via the least-privilege
+      # demographic_writer role. The external FHIR/HL7v2/PDQ adapter was removed
+      # in the core refocus — the DemographicProvider interface is retained so a
+      # wire adapter can be re-added behind a new ADR (no other value is valid).
       DEMOGRAPHIC_PROVIDER: ${DEMOGRAPHIC_PROVIDER:-builtin}
       DEMOGRAPHIC_DB_URL: postgres://demographic_writer:demographic_writer@platform-db:5432/demographic
       DEMOGRAPHIC_DB_OWNER_URL: postgres://demographic_owner:demographic_owner@platform-db:5432/demographic
       DEMOGRAPHIC_PARTY_NAMESPACE: ${DEMOGRAPHIC_PARTY_NAMESPACE:-demographic}
-      DEMOGRAPHIC_FHIR_BASE: ${DEMOGRAPHIC_FHIR_BASE:-http://hapi-fhir:8080/fhir}
-      DEMOGRAPHIC_FHIR_VERSION: ${DEMOGRAPHIC_FHIR_VERSION:-R4}
-      DEMOGRAPHIC_FHIR_TOKEN: ${DEMOGRAPHIC_FHIR_TOKEN:-}
       SESSION_IDLE_TIMEOUT_SECONDS: '900'
       SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info
       APP_VERSION: dev
     ports: ['3000:3000']
-    networks: [ehrbase-net]
-
-  # HAPI FHIR R4 server — the dev backend for the FHIR demographic adapter
-  # (DEMOGRAPHIC_PROVIDER=fhir; ADR-0031, ADR-0033). Behind the `fhir` profile so
-  # the default `docker compose up` stays on the built-in adapter; start it with
-  # `docker compose --profile fhir up`. Tag-pinned (no :latest — rule 5),
-  # consistent with the other services here.
-  hapi-fhir:
-    image: hapiproject/hapi:v8.8.0-1
-    profiles: ['fhir']
-    environment:
-      hapi.fhir.fhir_version: R4
-      hapi.fhir.default_encoding: json
-      # In-memory H2 (dev only); deployments point the adapter at the hospital
-      # FHIR server instead. No volume → ephemeral, fine for adapter testing.
-      spring.datasource.url: jdbc:h2:mem:hapi;DB_CLOSE_DELAY=-1
-    ports: ['8090:8080']
-    healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'wget -q -O /dev/null http://localhost:8080/fhir/metadata || exit 1',
-        ]
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      start_period: 90s
     networks: [ehrbase-net]
 
   # Terminology server — the dev backend for the external terminology adapters

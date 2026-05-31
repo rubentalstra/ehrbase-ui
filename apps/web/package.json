@@ -35,7 +35,6 @@
     "@aws-sdk/lib-storage": "3.1054.0",
     "@better-auth/sso": "1.6.11",
     "@ehrbase-ui/config-tsconfig": "workspace:*",
-    "@ehrbase-ui/demographic-adapter-fhir": "workspace:*",
     "@ehrbase-ui/demographic-core": "workspace:*",
     "@ehrbase-ui/i18n": "workspace:*",
     "@ehrbase-ui/openehr-flat": "workspace:*",

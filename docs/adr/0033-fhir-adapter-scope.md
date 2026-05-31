@@ -1,10 +1,23 @@
 # ADR-0033 — FHIR adapter scope (R4 only for v1.0; R5/R6 pure-additive)
 
-- **Status:** Accepted
+- **Status:** Accepted — adapter **removed in the core refocus** (2026-05-31)
 - **Date:** 2026-05-29
 - **Deciders:** Initial maintainer (@rubentalstra)
 - **Supersedes:** —
 - **Superseded by:** —
+
+> **2026-05-31 — `packages/demographic-adapter-fhir` removed.** The built-in
+> Postgres demographic provider is the default and an external FHIR patient
+> index is not needed now, so the demographic FHIR adapter package and its
+> `DEMOGRAPHIC_PROVIDER=fhir` wiring (factory branch, `DEMOGRAPHIC_FHIR_*` env,
+> the `hapi-fhir` dev service) were stripped. The pluggable `DemographicProvider`
+> interface (`@ehrbase-ui/demographic-core`, ADR-0031) is **retained**, so this
+> scope decision still applies the day a FHIR/HL7v2/PDQ adapter is re-added —
+> open a new ADR (or reinstate this one) at that point. The R4-only scope, the
+> mapping detail, and the addendum below describe the adapter as it last shipped
+> and remain the design of record for any re-implementation. This does NOT touch
+> the terminology FHIR adapter (`@ehrbase-ui/term-adapter-generic-fhir`), which
+> is unrelated and still present.
 
 ## Context
 

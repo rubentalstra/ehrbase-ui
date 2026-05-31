@@ -12,7 +12,6 @@
 // `.server.ts`: imports the DB client + the secret-reading pseudonymiser; never
 // reaches the client bundle.
 
-import { createFhirProvider } from '@ehrbase-ui/demographic-adapter-fhir'
 import { type AuditSink, type DemographicProvider } from '@ehrbase-ui/demographic-core'
 import { createBuiltinProvider } from '@ehrbase-ui/demographic-core/builtin'
 import { pseudonymizeIdentifier } from '@ehrbase-ui/demographic-core/pseudonymize'
@@ -28,31 +27,18 @@ const noopAuditSink: AuditSink = {
 }
 
 function build(): DemographicProvider {
+  // 'builtin' is the only provider for now. The external FHIR/HL7v2/PDQ adapter
+  // was removed in the core refocus — the DemographicProvider interface
+  // (demographic-core) is retained so a wire adapter can be re-added behind a
+  // new ADR when an external patient index is needed. Until then any non-builtin
+  // value is rejected (no silent fallback — rule 13).
   const provider = (process.env.DEMOGRAPHIC_PROVIDER ?? 'builtin').toLowerCase()
   const partyRefNamespace = process.env.DEMOGRAPHIC_PARTY_NAMESPACE ?? 'demographic'
 
-  if (provider === 'fhir') {
-    const baseUrl = process.env.DEMOGRAPHIC_FHIR_BASE
-    if (!baseUrl) {
-      throw new Error('DEMOGRAPHIC_FHIR_BASE must be set when DEMOGRAPHIC_PROVIDER=fhir')
-    }
-    const fhirVersion = process.env.DEMOGRAPHIC_FHIR_VERSION ?? 'R4'
-    if (fhirVersion !== 'R4' && fhirVersion !== 'R4B' && fhirVersion !== 'R5' && fhirVersion !== 'R6') {
-      throw new Error(`DEMOGRAPHIC_FHIR_VERSION must be R4|R4B|R5|R6 (got ${fhirVersion})`)
-    }
-    return createFhirProvider({
-      baseUrl,
-      fhirVersion,
-      audit: noopAuditSink,
-      pseudonymize: pseudonymizeIdentifier,
-      allowWrites: process.env.DEMOGRAPHIC_FHIR_ALLOW_WRITES === 'true',
-      token: process.env.DEMOGRAPHIC_FHIR_TOKEN || undefined,
-      partyRefNamespace,
-    })
-  }
-
   if (provider !== 'builtin') {
-    throw new Error(`Unknown DEMOGRAPHIC_PROVIDER '${provider}' (expected 'builtin' or 'fhir')`)
+    throw new Error(
+      `Unknown DEMOGRAPHIC_PROVIDER '${provider}' (only 'builtin' is implemented; the FHIR adapter was removed — re-add via ADR)`,
+    )
   }
 
   return createBuiltinProvider({

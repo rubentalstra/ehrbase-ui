@@ -74,10 +74,19 @@ export interface DemographicProvider {
 
 `capabilities` lets the admin UI gate actions per provider (read-only banner when `readonly: true`).
 
+> **2026-05-31 — only the built-in adapter is currently implemented.** The
+> `packages/demographic-adapter-fhir` package below was **removed in the core
+> refocus** (ADR-0033 header note). This pluggable-interface decision stands
+> unchanged — `@ehrbase-ui/demographic-core` still defines `DemographicProvider`,
+> the canonical types, the contract suite, and the built-in adapter — so a FHIR
+> (or HL7v2 / PDQ) wire adapter can be re-added behind a new ADR with no app
+> re-touch. `DEMOGRAPHIC_PROVIDER=builtin` is the only valid value for now; any
+> other value is rejected at startup (no silent fallback).
+
 **v1.0 ships two concrete adapters in M7:**
 
 - **`packages/demographic-core` — built-in Postgres** (default; `DEMOGRAPHIC_PROVIDER=builtin`). VERSIONED_PARTY semantics in the `demographic` Postgres schema on `platform-db` (parallel to `audit` + `auth`).
-- **`packages/demographic-adapter-fhir` — FHIR R4 Patient** (`DEMOGRAPHIC_PROVIDER=fhir`). Talks to a hospital FHIR server's `Patient` endpoint via `GET/POST/PUT /Patient` + `GET /Patient?identifier=…`. Maps R4 ↔ openEHR PARTY. R5 + R6 are pure-additive packages added later (ADR-0033 — no app re-touch).
+- **`packages/demographic-adapter-fhir` — FHIR R4 Patient** (`DEMOGRAPHIC_PROVIDER=fhir`). _Removed 2026-05-31 (see note above); description retained as the design of record for a future re-add._ Talks to a hospital FHIR server's `Patient` endpoint via `GET/POST/PUT /Patient` + `GET /Patient?identifier=…`. Maps R4 ↔ openEHR PARTY. R5 + R6 are pure-additive packages added later (ADR-0033 — no app re-touch).
 
 **v1.x reserved slots:**
 
