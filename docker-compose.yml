@@ -58,7 +58,21 @@ services:
       # var is ...JWT_ISSUERURI (not ISSUER_URI). The arch-doc §18 names
       # (SECURITY_OAUTH_ISSUER_URI) bind to nothing → no JwtDecoder bean →
       # "APPLICATION FAILED TO START". See docs/architecture.md §18 note.
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI: http://keycloak:8080/realms/ehrbase
+      #
+      # ISSUERURI must MATCH the `iss` claim of the forwarded user token. The UI
+      # obtains every Keycloak token via the BROWSER-facing URL `localhost:8180`
+      # (the ui container resolves `localhost` to the host gateway — see the `ui`
+      # service `extra_hosts` block — so even the server-side OIDC token/refresh
+      # exchange hits localhost:8180). Keycloak therefore stamps `iss` =
+      # http://localhost:8180/realms/ehrbase on EVERY token, NOT the internal
+      # keycloak:8080 host. So EHRbase must validate that exact issuer string.
+      # Because JWKSETURI is set explicitly, Spring builds the decoder from the JWK
+      # set (reached INTERNALLY at keycloak:8080 — the host gateway isn't on this
+      # network) and ONLY string-validates `iss` against ISSUERURI; it never
+      # network-fetches ISSUERURI, so localhost:8180 being unreachable from this
+      # container is fine. (A mismatch here = "The iss claim is not valid" → 401 on
+      # every forwarded-token EHRbase call — composition CRUD, EHR provision, …)
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUERURI: http://localhost:8180/realms/ehrbase
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI: http://keycloak:8080/realms/ehrbase/protocol/openid-connect/certs
       SECURITY_OAUTH2USERROLE: clinician
       SECURITY_OAUTH2ADMINROLE: admin
@@ -236,9 +250,14 @@ services:
       NODE_ENV: development
       PORT: '3000'
       EHRBASE_URL: http://ehrbase:8080/ehrbase/rest/openehr/v1
-      # Browser-facing Keycloak URL (redirects) vs internal URL (token/JWKS).
-      # The issuer is pinned stable via KC_HOSTNAME so token validation agrees
-      # on both sides (docs/architecture.md §5.4; the classic docker OIDC gotcha).
+      # Keycloak is reached at localhost:8180 for EVERYTHING (redirect AND the
+      # server-side discovery/token/JWKS exchange) — the `extra_hosts:
+      # localhost:host-gateway` block below routes the container's `localhost`
+      # to the host's published 8180 port. So every issued token carries a
+      # STABLE `iss` of http://localhost:8180/realms/ehrbase, which is exactly
+      # what EHRbase's JWT_ISSUERURI validates (docs/architecture.md §5.4; the
+      # classic docker OIDC gotcha). KEYCLOAK_INTERNAL_ISSUER_URL is used only
+      # for trustedOrigins + the M2 legacy path, never for token issuance.
       KEYCLOAK_ISSUER_URL: http://localhost:8180/realms/ehrbase
       KEYCLOAK_INTERNAL_ISSUER_URL: http://keycloak:8080/realms/ehrbase
       KEYCLOAK_CLIENT_ID: ehrbase-ui

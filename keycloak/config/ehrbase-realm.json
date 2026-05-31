@@ -69,7 +69,13 @@
         "use.refresh.tokens": "true",
         "client_credentials.use_refresh_token": "false"
       },
-      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "defaultClientScopes": [
+        "basic",
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
       "optionalClientScopes": ["offline_access", "phone", "address"]
     },
     {
