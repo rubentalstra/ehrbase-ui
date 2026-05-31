@@ -1,13 +1,7 @@
 // Application log stream (docs/architecture.md §13.1).
 //
-// Three log streams are described in the architecture:
-//   1. Audit log     — NEN 7513 events; landed in Milestone 4 with hash chain.
-//   2. Application   — debug/info/warn/error from app code, SANITIZED (no PHI).
-//   3. Access        — HTTP request layer (status, latency, route).
-//
-// This module configures only the APPLICATION stream. The audit stream
-// lives in @/server/audit. Per-request access logging comes from the
-// http auto-instrumentation in @/server/observability/otel.
+// This module configures the APPLICATION log stream: debug/info/warn/error
+// from app code, SANITIZED (no PHI).
 //
 // Redaction policy: the application log must NEVER contain PHI, credentials,
 // or session tokens. Anything that smells like a secret is filtered before
@@ -22,17 +16,12 @@
 // with `ReferenceError: __dirname is not defined in ES module scope`. The
 // canonical 12-factor pattern — JSON to stdout, scrape via the platform's
 // log driver — is also what every hospital deployment will do anyway, so
-// we just emit JSON to stdout in production and let the container runtime
-// ship the lines to the OTel Collector's filelog receiver (apps/web/docker/
-// otel/collector-config.yaml).
+// we just emit JSON to stdout in production.
 //
 // In dev (`pnpm dev`) node_modules is on disk, so Pino can find its worker
-// entries — we keep `pino-pretty` for the colourised dev output and the
-// OTel-pino transport for the local Tempo↔Loki correlation experience.
+// entries — we keep `pino-pretty` for the colourised dev output.
 
 import pino, { type LoggerOptions } from 'pino'
-
-import { getOtelPinoTransport } from '../otel/pino-transport.ts'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
@@ -104,8 +93,7 @@ export const appLog = isProduction
               destination: 2,
             },
           },
-          getOtelPinoTransport(),
-        ].filter((t): t is NonNullable<typeof t> => t !== null),
+        ],
       },
     })
 

@@ -29,7 +29,7 @@ openEHR is the open standard that defines _how clinical data is modelled, stored
 
 A `COMPOSITION` references its subject via a `PARTY_PROXY` / `PARTY_SELF` / `PARTY_IDENTIFIED` — these are **references**, not the demographic data itself. The data lives in the demographic store.
 
-**EHRbase implements only the EHR side** (REST API: EHR / Query / Definition; no `/demographic/*`). Per ADR-0023 + [ADR-0031](adr/0031-pluggable-demographic-provider.md) we ship a **pluggable demographic provider** — the built-in adapter (`packages/demographic-core`) is the v1.0 default openEHR-spec service (own Postgres schema + REST surface); deployments with an existing PMI plug in the FHIR R4 adapter (`packages/demographic-adapter-fhir`) via the `DEMOGRAPHIC_PROVIDER` env var with no code change. HL7 v2 ADT + IHE PDQ adapter slots are reserved for v1.x. See M7 in the implementation checklist.
+**EHRbase implements only the EHR side** (REST API: EHR / Query / Definition; no `/demographic/*`). Per ADR-0023 + [ADR-0031](adr/0031-pluggable-demographic-provider.md) we ship a **pluggable demographic provider** — the built-in adapter (`packages/demographic-core`) is the v1.0 default openEHR-spec service (own Postgres schema + REST surface); deployments with an existing PMI can re-add a FHIR R4 adapter behind the retained `DemographicProvider` interface (the FHIR adapter was removed in the 2026-05-31 core-refocus; HL7 v2 ADT + IHE PDQ slots are reserved for v1.x). See M7 in the implementation checklist + `docs/FOUNDATION-SCOPE.md`.
 
 ### The six RM entry classes
 

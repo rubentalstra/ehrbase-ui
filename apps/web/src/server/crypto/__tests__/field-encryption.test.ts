@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { decryptString, encryptString } from "../field-encryption.server.ts";
 
 beforeAll(() => {
-  process.env.AUDIT_PSEUDONYM_SECRET = "test-secret-for-field-encryption-rounds";
+  process.env.DRAFT_ENCRYPTION_SECRET = "test-secret-for-field-encryption-rounds";
 });
 
 describe("field-encryption (XChaCha20-Poly1305 AEAD at rest)", () => {

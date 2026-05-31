@@ -2,17 +2,15 @@
 // requests made from server FUNCTIONS (composition CRUD, …), mirroring the HTTP
 // BFF proxy at routes/api/ehrbase/$.ts but for typed server-fn callers.
 //
-// It applies, in one place, exactly what the proxy applies (§5, §5.9, §10, §14):
+// It applies, in one place, exactly what the proxy applies (§5, §5.9, §10):
 //   rate-limit (keyed by session) → forward the user's Keycloak Bearer (the
-//   token EHRbase derives the openEHR CONTRIBUTION committer from — ADR-0024
-//   addendum) → audit the PHI-touching call (NEN-7513 logAudit) → map upstream
+//   token EHRbase derives the openEHR CONTRIBUTION committer from) → map upstream
 //   status, CONFLATING 404/403 (§10), surfacing 412 as a distinct typed
 //   conflict, and never leaking a raw upstream body.
 //
 // `.server.ts` (CLAUDE.md rule 7): never reaches the client bundle.
 
-import { logAudit } from "@/server/audit/runtime";
-import { checkRateLimit, classifyRequest, extractEhrId, tooManyRequests } from "@/server/bff";
+import { checkRateLimit, classifyRequest, tooManyRequests } from "@/server/bff";
 
 import type { EhrbaseContext } from "./ehrbase-context.server";
 
@@ -21,9 +19,9 @@ export interface CallEhrbaseOptions {
   /** Upstream path after baseUrl, e.g. `ehr/{uuid}/composition/{uid}`. */
   path: string;
   /**
-   * STATIC path used ONLY for audit/rate-limit classification — never include
-   * user-supplied ids here, so a crafted id can't skew the audit action/resource
-   * (audit-trail integrity). Defaults to `path` when the path is already static.
+   * STATIC path used ONLY for rate-limit classification — never include
+   * user-supplied ids here, so a crafted id can't skew the rate-limit class.
+   * Defaults to `path` when the path is already static.
    */
   classifyPath?: string;
   search?: string;
@@ -77,11 +75,8 @@ export async function callEhrbase(ctx: EhrbaseContext, opts: CallEhrbaseOptions)
   try {
     res = await fetch(url, { method: opts.method, headers, ...(opts.body ? { body: opts.body } : {}) });
   } catch {
-    await audit("FAILURE", "upstream_unreachable");
     throw fail(502, "UPSTREAM_ERROR");
   }
-
-  await audit(res.ok ? "SUCCESS" : "FAILURE", res.ok ? undefined : `HTTP ${res.status}`);
 
   // §10 — conflate 404/403 (existence of a record is itself sensitive).
   if (res.status === 403 || res.status === 404) throw fail(404, "NOT_FOUND");
@@ -103,26 +98,4 @@ export async function callEhrbase(ctx: EhrbaseContext, opts: CallEhrbaseOptions)
     location: res.headers.get("location"),
     json: text ? JSON.parse(text) : null,
   };
-
-  async function audit(outcome: "SUCCESS" | "FAILURE", detail?: string): Promise<void> {
-    // Clinical writes (CREATE/UPDATE/DELETE) are CLINICAL_RECORD-retained (20y,
-    // §14.7/WGBO); reads + queries are access-trail (AUDIT_LOG, 5y). logAudit
-    // defaults to AUDIT_LOG, so the write case MUST set it explicitly.
-    const isWrite = cls.action !== "READ" && cls.action !== "QUERY";
-    await logAudit({
-      actor: {
-        userId: ctx.user.id,
-        username: ctx.user.email,
-        displayName: ctx.user.name,
-        roles: ctx.user.roles,
-      },
-      action: cls.action,
-      target: { ehrId: extractEhrId(opts.path), resourceType: cls.resourceType },
-      purpose: "TREATMENT",
-      outcome,
-      outcomeDetail: detail,
-      retentionPolicy: isWrite ? "CLINICAL_RECORD" : "AUDIT_LOG",
-      source: { sessionId: ctx.sid },
-    });
-  }
 }

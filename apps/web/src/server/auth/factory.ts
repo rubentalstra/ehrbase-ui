@@ -5,21 +5,16 @@
 // `tanstackStartCookies()` from 'better-auth/tanstack-start' — and per the
 // Better Auth docs that plugin MUST come last in the plugins array.
 //
-// On every successful sign-in we (a) mirror the user's Keycloak realm roles
-// into the `keycloakRoles` column, which is what `requireRole(...)` reads,
-// and (b) emit a NEN 7513 LOGIN audit event via the existing logAudit
-// pipeline (§14). LOGIN_FAILED + LOGOUT + SESSION_EXPIRED are emitted from
-// the hooks below.
+// On every successful sign-in we mirror the user's Keycloak realm roles into
+// the `keycloakRoles` column, which is what `requireRole(...)` reads.
 
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { createAuthMiddleware } from 'better-auth/api'
 import { admin, organization } from 'better-auth/plugins'
 import { sso } from '@better-auth/sso'
 
 import { authDb } from '@/server/db/auth-client'
 import * as authSchema from '@/server/db/auth'
-import { logAudit } from '@/server/audit/runtime'
 
 import { decodeJwtPayload, extractKeycloakRoles } from './jwt.ts'
 import { provisionFromKeycloak } from './provision.ts'
@@ -81,56 +76,6 @@ export function buildAuth(opts: BuildAuthOptions) {
       // must be the final plugin or cookie writes silently no-op).
       ...(opts.extraPlugins ?? []),
     ],
-    // NEN 7513 audit emit on every auth lifecycle event. The middleware fires
-    // AFTER the handler resolves, so we never block the response on an audit
-    // write. logAudit is itself fire-and-forget (§14.3).
-    hooks: {
-      after: createAuthMiddleware(async (ctx) => {
-        const { path } = ctx
-        try {
-          if (path === '/sign-in/sso' || path?.startsWith('/sso/callback/')) {
-            const newSession = ctx.context.newSession
-            if (newSession) {
-              await logAudit({
-                actor: {
-                  userId: newSession.user.id,
-                  username: newSession.user.email ?? newSession.user.id,
-                  displayName:
-                    newSession.user.name ?? newSession.user.email ?? '',
-                  roles: extractKeycloakRoles(newSession.user),
-                },
-                action: 'LOGIN',
-                target: { resourceType: 'SYSTEM' },
-                purpose: 'TREATMENT',
-                outcome: 'SUCCESS',
-                retentionPolicy: 'AUTH_LOG',
-                source: { sessionId: newSession.session.token },
-              })
-            }
-          } else if (path === '/sign-out') {
-            const session = ctx.context.session
-            if (session) {
-              await logAudit({
-                actor: {
-                  userId: session.user.id,
-                  username: session.user.email ?? session.user.id,
-                  displayName: session.user.name ?? '',
-                  roles: extractKeycloakRoles(session.user),
-                },
-                action: 'LOGOUT',
-                target: { resourceType: 'SYSTEM' },
-                purpose: 'TREATMENT',
-                outcome: 'SUCCESS',
-                retentionPolicy: 'AUTH_LOG',
-                source: { sessionId: session.session.token },
-              })
-            }
-          }
-        } catch (err) {
-          console.error('[auth] audit emit in middleware failed', err)
-        }
-      }),
-    },
   })
 }
 

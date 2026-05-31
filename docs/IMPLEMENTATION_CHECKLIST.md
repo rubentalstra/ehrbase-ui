@@ -4,6 +4,15 @@
 >
 > Sourced from [`docs/architecture.md`](architecture.md) v3.4. When the arch doc changes, this checklist follows. Every line cites the §-section in the arch doc that defines the deliverable.
 
+> **⚠️ Core-refocus (2026-05-30).** The governance/compliance layer was **removed** to focus the
+> pre-v1.0 build on the openEHR + EHRbase UI core. The following are no longer built and are
+> **deferred post-core** (see CLAUDE.md → "Deferred (post-core)"): **M2 2A/2B** (audit DB +
+> write core), **M4** (audit governance + retention + cold-store + DPIA/DPA/RoPA + runbooks),
+> **M5** (observability — OTel/Tempo/Loki/Prometheus/Grafana). Auth/BFF (rest of M2), the
+> openEHR packages (M5.5), the demographic server (M7), and the health/ready probes are KEPT.
+> The active build plan is `~/.claude/plans/i-have-the-feeling-gentle-pudding.md` (engine-first
+> workbench → clinical EPD).
+
 ## Milestone 1 — Foundation (this PR)
 
 Scaffolds every tooling rail the later milestones plug into. No PHI-touching code lands here.
@@ -24,7 +33,11 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [ ] **1N** `.claude/` — sub-agents, `.mcp.json`, project notes
 - [x] **1O** ADR-0001 (stack) + ADR-0010 (storybook upgrade) + ADR-0011 (action pinning) ratified; PR template + CODEOWNERS shipped in 1L
 
-## Milestone 2 — Auth + BFF + audit write core (§5, §14.2–14.5)
+## Milestone 2 — Auth + BFF + ~~audit write core~~ (§5, ~~§14.2–14.5~~)
+
+> Auth + BFF are KEPT and live. The **audit write core (2A audit DB, 2B `logAudit`/hash-chain/
+> pseudonymize/store/integrity)** was REMOVED in the core-refocus (deferred post-core). The
+> break-glass + rate-limit + CSRF + security-headers items below are KEPT but no longer audited.
 
 Single PR. The audit **write path** is built here (not stubbed) because
 break-glass (§5.6) and the BFF proxy depend on a real `logAudit`. ADR-0002,
@@ -78,7 +91,7 @@ append-only) added.
 
 > **Milestones renumbered (2026-05-28; further consolidated 2026-05-29).** v1.0 grew from 8 to 18 to **19** milestones to reflect the full HIX-grade EPD scope on the openEHR open standard. The 2026-05-29 re-org consolidates two previously-split capabilities into single milestones (M7 demographic absorbs the full admin demographic UI that was originally scheduled for M15; CDS is consolidated from M9/M15/M16 into a new M9) per CLAUDE.md Inviolable rule 13. The plan at `~/.claude/plans/okay-now-i-want-delightful-reddy.md` records the full rationale + the monorepo migration that lands in Milestone 0.
 
-## Milestone 4 — Audit governance + retention (§14.6–14.12)
+## Milestone 4 — Audit governance + retention (§14.6–14.12) — ❌ REMOVED (core-refocus 2026-05-30; deferred post-core)
 
 The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm-tier persistence, integrity verifier) shipped in M2. This milestone owns the remaining **governance** chapter — distinct capabilities, each owned here:
 
@@ -92,7 +105,7 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 - [x] Patient-facing Art.15 `/me/access-log` data feed (UI scaffold from M3, fed here) — §14.8
 - [x] Audit-log integrity-check runbook
 
-## Milestone 5 — Observability (§13)
+## Milestone 5 — Observability (§13) — ❌ REMOVED (core-refocus 2026-05-30; kept only /api/health + /api/ready + plain Pino)
 
 > **Moved earlier.** Building observability into the foundation is cheaper than retrofitting; clinical UI surfaces in M8+ emit spans + logs from day one. Lands in `apps/web/src/server/observability/` + `apps/web/src/instrumentation.ts` + `apps/web/src/routes/api/{health,ready}.ts`.
 >
@@ -184,7 +197,7 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 - [x] PARTY hierarchy implementation: PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, ROLE, basic PARTY_RELATIONSHIP — canonical FHIR-shaped `Party` projection (ADR-0031) + relationship table
 - [x] VERSIONED_PARTY semantics — immutable whole-party snapshot per version (current + history); prior versions readable by id+version; `listVersions`
 - [x] REST surface `/api/demographic/*` in `apps/web/src/routes/api/demographic/` — role-gated, provider-audited
-- [x] FHIR R4 adapter: `packages/demographic-adapter-fhir` — version-aware (R4/R4B; R5/R6 throw at construction per ADR-0033); merge via Patient.link + relationships via RelatedPerson (ADR-0033 addendum)
+- [x] ~~FHIR R4 adapter: `packages/demographic-adapter-fhir`~~ — **REMOVED in the core-refocus (2026-05-31).** Built-in Postgres is the sole demographic provider; the `DemographicProvider` interface is retained so a FHIR/HL7v2/PDQ adapter can be re-added behind a new ADR (ADR-0033).
 - [x] Capability flags (`capabilities.readonly` etc.) drive admin UI gating
 - [x] Identifier-namespace registry: NL (BSN, 11-proef), BE (NISS, mod-97), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL, 11-digit), MRN
 - [x] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024)
@@ -318,8 +331,9 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 - [ ] `@uiw/react-codemirror` wrapper with AQL grammar highlighting — AQL Release 1.1.0 spec, types from `@ehrbase-ui/openehr-aql`
 - [ ] AQL autocomplete schema for the main RM classes + the v1.0 archetype catalogue (ADR-0016)
 - [ ] Stored-query persistence — `docs/aql-catalogue.md` model
-- [ ] Result table via shadcn `data-table` + `@tanstack/react-table`
-- [ ] Virtualized rows > 500 via `@tanstack/react-virtual`
+- [x] Shared `DataTable` primitive (sort / filter / pagination / virtualize) — `apps/web/src/components/ui/data-table.tsx`, the mandatory entry point for every table (ADR-0038, CLAUDE.md rule 6a). `@tanstack/react-table` + `@tanstack/react-virtual` pinned in REFERENCES.md. _(Landed early in the foundation phase; the four existing tables — templates, stored queries, compositions, AQL results — were migrated onto it.)_
+- [x] Result table via the `DataTable` primitive + `@tanstack/react-table`
+- [x] Virtualized rows > 500 via `@tanstack/react-virtual`
 - [ ] Query export (CSV / JSON) — rate-limited per §5.9
 - [ ] Stricter `aql-complex` rate limit applied per §5.9
 - [ ] Storybook + E2E: write an AQL query, save it, run it, see virtualised results

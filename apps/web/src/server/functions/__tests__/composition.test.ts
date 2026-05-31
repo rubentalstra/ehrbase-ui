@@ -22,6 +22,7 @@ import { getEhrbaseContext } from "@/server/bff/ehrbase-context.server";
 
 import {
   createComposition,
+  exportCompositionCanonical,
   fetchComposition,
   removeComposition,
   reviseComposition,
@@ -129,7 +130,7 @@ describe("fetchComposition", () => {
 });
 
 describe("reviseComposition", () => {
-  it("PUTs with a double-quoted If-Match version_uid", async () => {
+  it("PUTs with a bare (unquoted) If-Match version_uid and returns an ok result", async () => {
     vi.mocked(callEhrbase).mockResolvedValue({
       status: 200,
       etag: '"obj::sys::3"',
@@ -145,12 +146,69 @@ describe("reviseComposition", () => {
       formState,
     });
 
-    expect(res.versionUid).toBe("obj::sys::3");
+    expect(res).toEqual({ status: "ok", versionUid: "obj::sys::3" });
     const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
     expect(opts?.method).toBe("PUT");
     expect(opts?.path).toBe(`ehr/${EHR_ID}/composition/obj`);
     // EHRbase 2.31 FLAT quirk: If-Match is the bare version_uid (no quotes).
     expect(opts?.ifMatch).toBe("obj::sys::2");
+  });
+
+  it("returns a CONFLICT result (current version_uid de-quoted) on a typed 412", async () => {
+    // The 412 callEhrbase throws: a Response carrying { code, etag }.
+    vi.mocked(callEhrbase).mockRejectedValue(
+      new Response(JSON.stringify({ code: "CONFLICT", etag: '"obj::sys::5"' }), {
+        status: 412,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const res = await reviseComposition({
+      ehrId: EHR_ID,
+      templateId: "vitals.v1",
+      compositionUid: "obj",
+      versionUid: "obj::sys::2",
+      formState,
+    });
+
+    expect(res).toEqual({ status: "conflict", currentVersionUid: "obj::sys::5" });
+  });
+
+  it("re-throws non-412 errors untouched", async () => {
+    const notFound = new Response(JSON.stringify({ code: "NOT_FOUND" }), { status: 404 });
+    vi.mocked(callEhrbase).mockRejectedValue(notFound);
+
+    await expect(
+      reviseComposition({
+        ehrId: EHR_ID,
+        templateId: "vitals.v1",
+        compositionUid: "obj",
+        versionUid: "obj::sys::2",
+        formState,
+      }),
+    ).rejects.toBe(notFound);
+  });
+});
+
+describe("exportCompositionCanonical", () => {
+  it("GETs the composition WITHOUT format=FLAT and returns pretty canonical JSON", async () => {
+    const canonical = { _type: "COMPOSITION", name: { value: "Vitals" } };
+    vi.mocked(callEhrbase).mockResolvedValue({
+      status: 200,
+      etag: '"obj::sys::3"',
+      location: null,
+      json: canonical,
+    });
+
+    const res = await exportCompositionCanonical({ ehrId: EHR_ID, compositionUid: "obj" });
+
+    expect(res.versionUid).toBe("obj::sys::3");
+    expect(JSON.parse(res.canonical)).toEqual(canonical);
+    const opts = vi.mocked(callEhrbase).mock.calls[0]?.[1];
+    expect(opts?.method).toBe("GET");
+    expect(opts?.path).toBe(`ehr/${EHR_ID}/composition/obj`);
+    // Canonical export → NO ?format=FLAT.
+    expect(opts?.search).toBeUndefined();
   });
 });
 

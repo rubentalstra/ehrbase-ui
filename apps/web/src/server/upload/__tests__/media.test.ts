@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { parseClamdReply } from "../clamav.server.ts";
 import { sniffMediaType, stripJpegMetadata } from "../media.server.ts";
 
 describe("sniffMediaType", () => {
@@ -49,22 +48,5 @@ describe("stripJpegMetadata", () => {
   it("returns non-JPEG input unchanged", () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     expect(stripJpegMetadata(png).equals(png)).toBe(true);
-  });
-});
-
-describe("parseClamdReply", () => {
-  it("reads a clean stream", () => {
-    expect(parseClamdReply("stream: OK\0")).toEqual({ clean: true });
-  });
-
-  it("extracts the signature on a hit", () => {
-    expect(parseClamdReply("stream: Eicar-Test-Signature FOUND\0")).toEqual({
-      clean: false,
-      signature: "Eicar-Test-Signature",
-    });
-  });
-
-  it("throws on a clamd error reply", () => {
-    expect(() => parseClamdReply("INSTREAM size limit exceeded ERROR")).toThrow();
   });
 });

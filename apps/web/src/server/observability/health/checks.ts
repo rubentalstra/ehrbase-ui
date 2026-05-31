@@ -1,11 +1,11 @@
 // Readiness aggregator for /api/ready (docs/architecture.md §13.4).
 //
-// Probes five subsystems in parallel with a 2-second timeout per probe:
-//   - Valkey (session store + audit hash-chain head + rate limiter)
+// Probes the subsystems in parallel with a 2-second timeout per probe:
+//   - Valkey (session store + rate limiter)
 //   - EHRbase (BFF upstream — the clinical-data repository)
 //   - Keycloak (identity provider — every authed request needs it)
-//   - audit DB (NEN-7513 write target — ADR-0013 append-only)
 //   - auth DB (Better Auth user/session tables — ADR-0029)
+//   - demographic DB (VERSIONED_PARTY store — ADR-0031)
 //
 // Returns a 200 + a JSON envelope when all probes pass; 503 + the same
 // envelope (with the failing probes' status set to 'fail') otherwise.
@@ -18,8 +18,8 @@
 
 import { sql } from 'drizzle-orm'
 
-import { auditDb } from '@/server/db/client'
 import { authDb } from '@/server/db/auth-client'
+import { demographicDb } from '@/server/db/demographic-client'
 import { valkey } from '@ehrbase-ui/valkey'
 
 const PROBE_TIMEOUT_MS = 2_000
@@ -32,8 +32,8 @@ export type ReadinessReport = {
     valkey: ProbeOutcome
     ehrbase: ProbeOutcome
     keycloak: ProbeOutcome
-    audit_db: ProbeOutcome
     auth_db: ProbeOutcome
+    demographic_db: ProbeOutcome
   }
 }
 
@@ -102,15 +102,15 @@ export async function probeKeycloak(): Promise<ProbeOutcome> {
   })
 }
 
-export async function probeAuditDb(): Promise<ProbeOutcome> {
-  return withTimeout(async () => {
-    await auditDb.execute(sql`select 1`)
-  })
-}
-
 export async function probeAuthDb(): Promise<ProbeOutcome> {
   return withTimeout(async () => {
     await authDb.execute(sql`select 1`)
+  })
+}
+
+export async function probeDemographicDb(): Promise<ProbeOutcome> {
+  return withTimeout(async () => {
+    await demographicDb.execute(sql`select 1`)
   })
 }
 
@@ -119,21 +119,21 @@ export async function probeAuthDb(): Promise<ProbeOutcome> {
  * Response with a JSON envelope listing per-subsystem outcomes.
  */
 export async function checkReadiness(): Promise<Response> {
-  const [valkeyCheck, ehrbaseCheck, keycloakCheck, auditCheck, authCheck] =
+  const [valkeyCheck, ehrbaseCheck, keycloakCheck, authCheck, demographicCheck] =
     await Promise.all([
       probeValkey(),
       probeEhrbase(),
       probeKeycloak(),
-      probeAuditDb(),
       probeAuthDb(),
+      probeDemographicDb(),
     ])
 
   const checks: ReadinessReport['checks'] = {
     valkey: valkeyCheck,
     ehrbase: ehrbaseCheck,
     keycloak: keycloakCheck,
-    audit_db: auditCheck,
     auth_db: authCheck,
+    demographic_db: demographicCheck,
   }
   const allOk = Object.values(checks).every((v) => v === 'ok')
   const report: ReadinessReport = {

@@ -49,10 +49,28 @@ export const DeleteCompositionInputSchema = z.object({
 });
 export type DeleteCompositionInput = z.infer<typeof DeleteCompositionInputSchema>;
 
+// Canonical export — reads a composition in the CANONICAL (structured) openEHR
+// JSON representation rather than FLAT. No templateId needed (EHRbase resolves
+// the template from the stored composition).
+export const ExportCompositionInputSchema = z.object({
+  ehrId: z.uuid(),
+  compositionUid: z.string().min(1),
+});
+export type ExportCompositionInput = z.infer<typeof ExportCompositionInputSchema>;
+
 // ─── Output contracts ─────────────────────────────────────────────────────────
 export interface WriteCompositionResult {
   versionUid: string;
 }
+// Update returns a DISCRIMINATED UNION rather than throwing on a stale write, so
+// the optimistic-concurrency conflict-resolution flow (§7) is a first-class
+// result the form can branch on — not a fragile thrown-error-message parse. On a
+// 412 the typed CONFLICT from callEhrbase carries the current server etag, which
+// becomes `currentVersionUid` (the latest version_uid the client must re-apply
+// onto and retry). All OTHER errors still throw (auth/404/5xx).
+export type UpdateCompositionResult =
+  | { status: "ok"; versionUid: string }
+  | { status: "conflict"; currentVersionUid: string | null };
 export interface ReadCompositionResult {
   /** The form-state object as a JSON string; consumer parses + re-validates. */
   formState: string;
@@ -60,6 +78,15 @@ export interface ReadCompositionResult {
 }
 export interface DeleteCompositionResult {
   deleted: true;
+}
+export interface ExportCompositionResult {
+  /**
+   * The canonical openEHR COMPOSITION as a (pretty-printed) JSON string, ready
+   * for download. A string for the same serializable-return reason as the FLAT
+   * read path (the canonical object is open JSON with `unknown` leaves).
+   */
+  canonical: string;
+  versionUid: string;
 }
 
 // ─── Server fns ───────────────────────────────────────────────────────────────
@@ -79,7 +106,7 @@ export const readComposition = createServerFn({ method: "GET" })
 
 export const updateComposition = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => UpdateCompositionInputSchema.parse(d))
-  .handler(async ({ data }): Promise<WriteCompositionResult> => {
+  .handler(async ({ data }): Promise<UpdateCompositionResult> => {
     const { reviseComposition } = await import("./composition.server");
     return reviseComposition(data);
   });
@@ -89,4 +116,11 @@ export const deleteComposition = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DeleteCompositionResult> => {
     const { removeComposition } = await import("./composition.server");
     return removeComposition(data);
+  });
+
+export const exportComposition = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => ExportCompositionInputSchema.parse(d))
+  .handler(async ({ data }): Promise<ExportCompositionResult> => {
+    const { exportCompositionCanonical } = await import("./composition.server");
+    return exportCompositionCanonical(data);
   });

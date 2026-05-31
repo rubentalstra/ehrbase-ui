@@ -15,7 +15,7 @@ import type { Decorator } from '@storybook/react-vite'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
-const STUB_PATHS = ['/', '/me', '/me/access-log', '/accessibility']
+const STUB_PATHS = ['/', '/me', '/accessibility']
 
 export const withRouter: Decorator = (Story) => {
   const rootRoute = createRootRoute({

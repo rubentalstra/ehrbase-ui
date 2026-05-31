@@ -6,16 +6,15 @@
 // populated by the SSO `provisionUser` hook in
 // src/lib/auth/auth.server.ts.
 //
-// A pure RBAC denial returns 403 and audits ACCESS_DENIED. For PHI routes
-// the 403 additionally carries a `break-glass: available` header so the UI
-// can offer the emergency-access path (§5.6) instead of a dead end.
+// A pure RBAC denial returns 403. For PHI routes the 403 additionally carries a
+// `break-glass: available` header so the UI can offer the emergency-access path
+// (§5.6) instead of a dead end.
 
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { authDb } from '@/server/db/auth-client'
 import { account as accountTable } from '@/server/db/auth'
-import { logAudit } from '@/server/audit/runtime'
 import { getAuthInstance } from './instance.ts'
 import { getAuthRequestHeaders } from './request-context.ts'
 
@@ -128,22 +127,6 @@ export async function requireRole(
     },
   }
   if (allowed) return ctx
-
-  await logAudit({
-    actor: {
-      userId: ctx.user.id,
-      username: ctx.user.email,
-      displayName: ctx.user.name,
-      roles: ctx.user.roles,
-    },
-    action: 'ACCESS_DENIED',
-    target: { resourceType: 'SYSTEM' },
-    purpose: 'TREATMENT',
-    outcome: 'FAILURE',
-    outcomeDetail: `requires one of: ${roles.join(', ')}`,
-    retentionPolicy: 'AUTH_LOG',
-    source: { sessionId: ctx.sid },
-  })
 
   throw forbidden(options.phi ?? false)
 }

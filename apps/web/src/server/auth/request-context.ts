@@ -1,7 +1,6 @@
 // Request-context provider for the auth package.
 //
-// Same shape as @/server/audit's setAuditRequestContextProvider: the
-// host application registers a provider once at startup; consumers (here
+// The host application registers a provider once at startup; consumers (here
 // requireRole + break-glass) read the active Headers without importing
 // any framework runtime. Keeps packages/auth framework-agnostic per
 // ADR-0030.

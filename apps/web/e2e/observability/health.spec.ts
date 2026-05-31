@@ -32,9 +32,11 @@ test.describe('Observability endpoints (§13.4)', () => {
       checks: Record<string, string>
     }
     expect(['ready', 'not_ready']).toContain(body.status)
+    // Post core-refocus (2026-05-30): the audit DB was removed; the readiness
+    // probe now reports the demographic DB instead. Keys must stay sorted.
     expect(Object.keys(body.checks).sort()).toEqual([
-      'audit_db',
       'auth_db',
+      'demographic_db',
       'ehrbase',
       'keycloak',
       'valkey',

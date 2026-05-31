@@ -1,0 +1,26 @@
+{
+  "name": "@ehrbase-ui/term-adapter-generic-fhir",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Generic FHIR R4 Terminology Service adapter (HAPI tx / Ontoserver basic / national terminology servers) for TerminologyProvider — per ADR-0034. Version-aware: R4/R4B only in v1.0 (R5/R6 throw at construction).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ehrbase-ui/term-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@ehrbase-ui/config-tsconfig": "workspace:*",
+    "@types/node": "25.9.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.7"
+  }
+}

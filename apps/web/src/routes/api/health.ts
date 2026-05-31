@@ -9,10 +9,6 @@
 // no upstream call: those belong to /api/ready. Anything that calls a
 // dependency here would loop the container into restart-storms when a
 // downstream is temporarily unhealthy.
-//
-// The OTel HTTP auto-instrumentation IGNORES this path (see
-// packages/observability/src/otel/sdk.ts ignoreIncomingRequestHook) so
-// the liveness traffic doesn't pollute the trace stream.
 
 import { createFileRoute } from '@tanstack/react-router'
 

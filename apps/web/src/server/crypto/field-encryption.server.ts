@@ -10,10 +10,9 @@
 // misuse-resistant API removes that whole class of footgun. The "don't roll your
 // own crypto" rule applies doubly to PHI.
 //
-// The 32-byte key is derived from AUDIT_PSEUDONYM_SECRET via HKDF-SHA256 with a
-// domain-separation salt + info, so it is cryptographically independent from the
-// audit-pseudonymization HMAC use of the same secret (§14.4) — one secret to
-// rotate, no key reuse across purposes.
+// The 32-byte key is derived from DRAFT_ENCRYPTION_SECRET via HKDF-SHA256 with a
+// domain-separation salt + info. A dedicated secret keeps draft-at-rest
+// encryption decoupled from any other application secret — one secret to rotate.
 //
 // `.server.ts` (CLAUDE.md rule 7): never reaches the client bundle.
 
@@ -28,9 +27,9 @@ const KEY_INFO = "ehrbase-ui:at-rest-encryption:v1";
 const KEY_SALT = "ehrbase-ui:at-rest-salt:v1";
 
 function derivedKey(): Uint8Array {
-  const secret = process.env.AUDIT_PSEUDONYM_SECRET;
+  const secret = process.env.DRAFT_ENCRYPTION_SECRET;
   if (!secret) {
-    throw new Error("AUDIT_PSEUDONYM_SECRET is not set — cannot encrypt PHI at rest.");
+    throw new Error("DRAFT_ENCRYPTION_SECRET is not set — cannot encrypt PHI at rest.");
   }
   // HKDF-SHA256(ikm=secret, salt=KEY_SALT, info=KEY_INFO) → 32-byte XChaCha key.
   const enc = new TextEncoder();

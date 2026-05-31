@@ -6,8 +6,8 @@ export {
   probeValkey,
   probeEhrbase,
   probeKeycloak,
-  probeAuditDb,
   probeAuthDb,
+  probeDemographicDb,
   type ProbeOutcome,
   type ReadinessReport,
 } from './checks.ts'

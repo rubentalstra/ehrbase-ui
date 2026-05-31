@@ -8,10 +8,11 @@
 // rather than link to routes that don't exist yet (see NavMain).
 
 import {
+  DatabaseIcon,
   FileTextIcon,
   SearchIcon,
-  ScrollTextIcon,
   ShieldIcon,
+  TerminalIcon,
   UserIcon,
   UsersIcon,
 } from 'lucide-react'
@@ -32,9 +33,18 @@ function navSections(roles: string[]): NavSection[] {
   const sections: NavSection[] = [
     {
       label: m.nav_section_workspace(),
+      items: [{ label: m.nav_account(), icon: UserIcon, to: '/me' }],
+    },
+    {
+      label: m.nav_section_workbench(),
       items: [
-        { label: m.nav_account(), icon: UserIcon, to: '/me' },
-        { label: m.nav_access_log(), icon: ScrollTextIcon, to: '/me/access-log' },
+        {
+          label: m.nav_workbench_templates(),
+          icon: FileTextIcon,
+          to: '/workbench/templates',
+        },
+        { label: m.nav_workbench_ehr(), icon: DatabaseIcon, to: '/workbench/ehr' },
+        { label: m.nav_workbench_aql(), icon: TerminalIcon, to: '/workbench/aql' },
       ],
     },
     {

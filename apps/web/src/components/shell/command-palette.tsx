@@ -8,7 +8,6 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   AccessibilityIcon,
   HomeIcon,
-  ScrollTextIcon,
   SearchIcon,
   UserIcon,
 } from 'lucide-react'
@@ -32,11 +31,6 @@ import {
 const navItems: { to: AppNavRoute; label: () => string; icon: LucideIcon }[] = [
   { to: '/', label: () => m.app_title(), icon: HomeIcon },
   { to: '/me', label: () => m.nav_account(), icon: UserIcon },
-  {
-    to: '/me/access-log',
-    label: () => m.nav_access_log(),
-    icon: ScrollTextIcon,
-  },
   {
     to: '/accessibility',
     label: () => m.footer_accessibility(),

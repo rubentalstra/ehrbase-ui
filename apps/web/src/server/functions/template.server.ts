@@ -3,18 +3,23 @@
 // Fetches the operational web template from EHRbase
 // (GET /definition/template/adl1.4/{id}, Accept: application/json), validates it
 // with @ehrbase-ui/openehr-web-template, and caches the parsed document in
-// Valkey (templates are stable; bounded TTL). Templates are NOT PHI, but the
-// access is audited for a consistent trail (same classification the BFF proxy
-// would apply). Contract/types live in template.functions.ts.
+// Valkey (templates are stable; bounded TTL). Contract/types live in
+// template.functions.ts.
 
 import { parseWebTemplate, type WebTemplate } from "@ehrbase-ui/openehr-web-template";
 import { valkey } from "@ehrbase-ui/valkey";
+import { z } from "zod";
 
-import { logAudit } from "@/server/audit/runtime";
 import { checkRateLimit, classifyRequest, tooManyRequests } from "@/server/bff";
+import { callEhrbase, type EhrbaseOk } from "@/server/bff/call-ehrbase.server";
 import { getEhrbaseContext, type EhrbaseContext } from "@/server/bff/ehrbase-context.server";
 
-import type { TemplateRequest } from "./template.functions";
+import type {
+  TemplateRequest,
+  TemplateSummary,
+  UploadTemplateInput,
+  UploadTemplateResult,
+} from "./template.functions";
 
 const TEMPLATE_CACHE_TTL_SECONDS = 3600; // templates change rarely; 1h is ample
 
@@ -28,7 +33,7 @@ const TEMPLATE_CACHE_TTL_SECONDS = 3600; // templates change rarely; 1h is ample
 const cacheKey = (id: string) => `webtemplate:${id}`;
 
 // The upstream route is FIXED; classify by its static shape, never by the
-// user-supplied templateId, so a crafted id can't skew the audit action/resource.
+// user-supplied templateId, so a crafted id can't skew the rate-limit class.
 const STATIC_TEMPLATE_PATH = "definition/template/adl1.4/";
 
 function fail(status: number, code: string): Response {
@@ -48,7 +53,7 @@ export async function fetchWebTemplate({ templateId }: TemplateRequest): Promise
 /**
  * Cached web-template load for an already-resolved context — reused by the
  * composition CRUD path so a write/read resolves the session once. Same
- * rate-limit-before-cache + audit + 404/403 conflation as fetchWebTemplate.
+ * rate-limit-before-cache + 404/403 conflation as fetchWebTemplate.
  */
 export async function loadWebTemplate(ctx: EhrbaseContext, templateId: string): Promise<WebTemplate> {
   // Rate-limit BEFORE the cache lookup so cache traffic is also bounded, matching
@@ -70,11 +75,8 @@ export async function loadWebTemplate(ctx: EhrbaseContext, templateId: string): 
       headers: { authorization: `Bearer ${ctx.accessToken}`, accept: "application/json" },
     });
   } catch {
-    await audit("FAILURE", "upstream_unreachable");
     throw fail(502, "UPSTREAM_ERROR");
   }
-
-  await audit(res.ok ? "SUCCESS" : "FAILURE", res.ok ? undefined : `HTTP ${res.status}`);
 
   // §10 — conflate 404/403; a definition still shouldn't leak existence detail.
   if (res.status === 404 || res.status === 403) throw fail(404, "NOT_FOUND");
@@ -83,21 +85,90 @@ export async function loadWebTemplate(ctx: EhrbaseContext, templateId: string): 
   const template = parseWebTemplate(await res.json());
   await valkey.setex(cacheKey(templateId), TEMPLATE_CACHE_TTL_SECONDS, JSON.stringify(template));
   return template;
+}
 
-  async function audit(outcome: "SUCCESS" | "FAILURE", detail?: string): Promise<void> {
-    await logAudit({
-      actor: {
-        userId: ctx.user.id,
-        username: ctx.user.email,
-        displayName: ctx.user.name,
-        roles: ctx.user.roles,
+// ─── Template list + OPT upload (Part C Phase 1 — engine-first workbench) ──────
+// Both go through callEhrbase (auth + rate-limit + 404/403 conflation), the same
+// choke point the composition/EHR/AQL server fns use. classifyPath is the static
+// ADL 1.4 definition route so a crafted id can never skew the rate-limit class.
+const JSON_MEDIA_TYPE = "application/json";
+const XML_MEDIA_TYPE = "application/xml";
+const LIST_CLASSIFY_PATH = "definition/template/adl1.4";
+
+async function requireContext(): Promise<EhrbaseContext> {
+  const { getRequest } = await import("@tanstack/react-start/server");
+  const ctx = await getEhrbaseContext(getRequest().headers);
+  if (!ctx) throw fail(401, "UNAUTHENTICATED");
+  return ctx;
+}
+
+// EHRbase returns an array of objects keyed in snake_case; `concept` is the
+// concept name. Lenient: any of the fields may be absent on a future EHRbase, so
+// only the template_id is required for a row to be usable.
+const TemplateListEntrySchema = z.looseObject({
+  template_id: z.string().min(1),
+  concept: z.string().optional(),
+  created_timestamp: z.string().optional(),
+});
+const TemplateListSchema = z.array(z.unknown());
+
+export async function fetchTemplateList(): Promise<TemplateSummary[]> {
+  const ctx = await requireContext();
+  const res = await callEhrbase(ctx, {
+    method: "GET",
+    path: "definition/template/adl1.4",
+    classifyPath: LIST_CLASSIFY_PATH,
+    accept: JSON_MEDIA_TYPE,
+  });
+
+  // Drop rows that don't carry a template_id rather than failing the whole list.
+  const rows = TemplateListSchema.parse(res.json ?? []);
+  return rows.flatMap((row) => {
+    const parsed = TemplateListEntrySchema.safeParse(row);
+    if (!parsed.success) return [];
+    return [
+      {
+        templateId: parsed.data.template_id,
+        conceptName: parsed.data.concept ?? null,
+        createdTimestamp: parsed.data.created_timestamp ?? null,
       },
-      action: cls.action,
-      target: { resourceType: cls.resourceType },
-      purpose: "TREATMENT",
-      outcome,
-      outcomeDetail: detail,
-      source: { sessionId: ctx.sid },
-    });
-  }
+    ];
+  });
+}
+
+// Pull the template id out of the OPT XML (<template_id><value>…</value>) as a
+// fallback when EHRbase's Location header doesn't carry it. Deliberately a plain
+// regex, not an XML parser — we only need the one element and never trust it for
+// anything but display.
+function templateIdFromOpt(opt: string): string | null {
+  const block = /<template_id\b[^>]*>([\s\S]*?)<\/template_id>/u.exec(opt)?.[1];
+  if (block === undefined) return null;
+  const value = /<value\b[^>]*>([\s\S]*?)<\/value>/u.exec(block)?.[1] ?? block;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function templateIdFrom(res: EhrbaseOk, opt: string): string {
+  // EHRbase returns the new template id in the Location header
+  // (`{baseUrl}/definition/template/adl1.4/{template_id}`).
+  const seg = res.location?.split("/").pop();
+  if (seg) return decodeURIComponent(seg);
+  const fromBody = typeof res.json === "string" ? res.json.trim() : null;
+  if (fromBody) return fromBody;
+  const fromOpt = templateIdFromOpt(opt);
+  if (fromOpt) return fromOpt;
+  throw fail(502, "NO_TEMPLATE_ID");
+}
+
+export async function storeTemplate(input: UploadTemplateInput): Promise<UploadTemplateResult> {
+  const ctx = await requireContext();
+  const res = await callEhrbase(ctx, {
+    method: "POST",
+    path: "definition/template/adl1.4",
+    classifyPath: LIST_CLASSIFY_PATH,
+    contentType: XML_MEDIA_TYPE,
+    accept: JSON_MEDIA_TYPE,
+    body: input.opt,
+  });
+  return { templateId: templateIdFrom(res, input.opt) };
 }

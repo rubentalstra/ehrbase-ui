@@ -2,7 +2,7 @@
 // user + realm roles, a sign-out control, and the break-glass path so the
 // emergency-access flow can be exercised end to end. All copy via Paraglide.
 
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { z } from 'zod'
 
@@ -81,9 +81,6 @@ function Me() {
               {user.roles.length > 0 ? user.roles.join(', ') : m.me_no_roles()}
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/me/access-log">{m.me_view_access_log()}</Link>
-          </Button>
         </CardContent>
       </Card>
 

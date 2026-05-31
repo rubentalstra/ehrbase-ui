@@ -17,13 +17,19 @@ import { Route as ApiReadyRouteImport } from './routes/api/ready'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
+import { Route as AuthedWorkbenchRouteRouteImport } from './routes/_authed/workbench/route'
+import { Route as AuthedWorkbenchIndexRouteImport } from './routes/_authed/workbench/index'
 import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
 import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
 import { Route as ApiDemographicSplatRouteImport } from './routes/api/demographic/$'
 import { Route as ApiAuthBreakGlassRouteImport } from './routes/api/auth/break-glass'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as AuthedMeAccessLogRouteImport } from './routes/_authed/me_.access-log'
-import { Route as ApiAdminAuditTasksSplatRouteImport } from './routes/api/admin/audit/tasks/$'
+import { Route as AuthedWorkbenchTemplatesRouteImport } from './routes/_authed/workbench/templates'
+import { Route as AuthedWorkbenchEhrRouteImport } from './routes/_authed/workbench/ehr'
+import { Route as AuthedWorkbenchDirectoryRouteImport } from './routes/_authed/workbench/directory'
+import { Route as AuthedWorkbenchCompositionsRouteImport } from './routes/_authed/workbench/compositions'
+import { Route as AuthedWorkbenchComposeRouteImport } from './routes/_authed/workbench/compose'
+import { Route as AuthedWorkbenchAqlRouteImport } from './routes/_authed/workbench/aql'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -64,6 +70,16 @@ const AuthedMeRoute = AuthedMeRouteImport.update({
   path: '/me',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedWorkbenchRouteRoute = AuthedWorkbenchRouteRouteImport.update({
+  id: '/workbench',
+  path: '/workbench',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedWorkbenchIndexRoute = AuthedWorkbenchIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
+} as any)
 const ApiLogClientErrorRoute = ApiLogClientErrorRouteImport.update({
   id: '/api/log/client-error',
   path: '/api/log/client-error',
@@ -89,32 +105,61 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedMeAccessLogRoute = AuthedMeAccessLogRouteImport.update({
-  id: '/me_/access-log',
-  path: '/me/access-log',
-  getParentRoute: () => AuthedRouteRoute,
+const AuthedWorkbenchTemplatesRoute =
+  AuthedWorkbenchTemplatesRouteImport.update({
+    id: '/templates',
+    path: '/templates',
+    getParentRoute: () => AuthedWorkbenchRouteRoute,
+  } as any)
+const AuthedWorkbenchEhrRoute = AuthedWorkbenchEhrRouteImport.update({
+  id: '/ehr',
+  path: '/ehr',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
 } as any)
-const ApiAdminAuditTasksSplatRoute = ApiAdminAuditTasksSplatRouteImport.update({
-  id: '/api/admin/audit/tasks/$',
-  path: '/api/admin/audit/tasks/$',
-  getParentRoute: () => rootRouteImport,
+const AuthedWorkbenchDirectoryRoute =
+  AuthedWorkbenchDirectoryRouteImport.update({
+    id: '/directory',
+    path: '/directory',
+    getParentRoute: () => AuthedWorkbenchRouteRoute,
+  } as any)
+const AuthedWorkbenchCompositionsRoute =
+  AuthedWorkbenchCompositionsRouteImport.update({
+    id: '/compositions',
+    path: '/compositions',
+    getParentRoute: () => AuthedWorkbenchRouteRoute,
+  } as any)
+const AuthedWorkbenchComposeRoute = AuthedWorkbenchComposeRouteImport.update({
+  id: '/compose',
+  path: '/compose',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
+} as any)
+const AuthedWorkbenchAqlRoute = AuthedWorkbenchAqlRouteImport.update({
+  id: '/aql',
+  path: '/aql',
+  getParentRoute: () => AuthedWorkbenchRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
   '/login': typeof LoginRoute
+  '/workbench': typeof AuthedWorkbenchRouteRouteWithChildren
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/me/access-log': typeof AuthedMeAccessLogRoute
+  '/workbench/aql': typeof AuthedWorkbenchAqlRoute
+  '/workbench/compose': typeof AuthedWorkbenchComposeRoute
+  '/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
+  '/workbench/': typeof AuthedWorkbenchIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,13 +169,18 @@ export interface FileRoutesByTo {
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/me/access-log': typeof AuthedMeAccessLogRoute
+  '/workbench/aql': typeof AuthedWorkbenchAqlRoute
+  '/workbench/compose': typeof AuthedWorkbenchComposeRoute
+  '/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
+  '/workbench': typeof AuthedWorkbenchIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -138,17 +188,23 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/accessibility': typeof AccessibilityRoute
   '/login': typeof LoginRoute
+  '/_authed/workbench': typeof AuthedWorkbenchRouteRouteWithChildren
   '/_authed/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
-  '/_authed/me_/access-log': typeof AuthedMeAccessLogRoute
+  '/_authed/workbench/aql': typeof AuthedWorkbenchAqlRoute
+  '/_authed/workbench/compose': typeof AuthedWorkbenchComposeRoute
+  '/_authed/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
+  '/_authed/workbench/directory': typeof AuthedWorkbenchDirectoryRoute
+  '/_authed/workbench/ehr': typeof AuthedWorkbenchEhrRoute
+  '/_authed/workbench/templates': typeof AuthedWorkbenchTemplatesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/auth/break-glass': typeof ApiAuthBreakGlassRoute
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
-  '/api/admin/audit/tasks/$': typeof ApiAdminAuditTasksSplatRoute
+  '/_authed/workbench/': typeof AuthedWorkbenchIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -156,17 +212,23 @@ export interface FileRouteTypes {
     | '/'
     | '/accessibility'
     | '/login'
+    | '/workbench'
     | '/me'
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/me/access-log'
+    | '/workbench/aql'
+    | '/workbench/compose'
+    | '/workbench/compositions'
+    | '/workbench/directory'
+    | '/workbench/ehr'
+    | '/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
+    | '/workbench/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -176,30 +238,41 @@ export interface FileRouteTypes {
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/me/access-log'
+    | '/workbench/aql'
+    | '/workbench/compose'
+    | '/workbench/compositions'
+    | '/workbench/directory'
+    | '/workbench/ehr'
+    | '/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
+    | '/workbench'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/accessibility'
     | '/login'
+    | '/_authed/workbench'
     | '/_authed/me'
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
-    | '/_authed/me_/access-log'
+    | '/_authed/workbench/aql'
+    | '/_authed/workbench/compose'
+    | '/_authed/workbench/compositions'
+    | '/_authed/workbench/directory'
+    | '/_authed/workbench/ehr'
+    | '/_authed/workbench/templates'
     | '/api/auth/$'
     | '/api/auth/break-glass'
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
-    | '/api/admin/audit/tasks/$'
+    | '/_authed/workbench/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,7 +288,6 @@ export interface RootRouteChildren {
   ApiDemographicSplatRoute: typeof ApiDemographicSplatRoute
   ApiEhrbaseSplatRoute: typeof ApiEhrbaseSplatRoute
   ApiLogClientErrorRoute: typeof ApiLogClientErrorRoute
-  ApiAdminAuditTasksSplatRoute: typeof ApiAdminAuditTasksSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -276,6 +348,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedMeRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/workbench': {
+      id: '/_authed/workbench'
+      path: '/workbench'
+      fullPath: '/workbench'
+      preLoaderRoute: typeof AuthedWorkbenchRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/workbench/': {
+      id: '/_authed/workbench/'
+      path: '/'
+      fullPath: '/workbench/'
+      preLoaderRoute: typeof AuthedWorkbenchIndexRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
     '/api/log/client-error': {
       id: '/api/log/client-error'
       path: '/api/log/client-error'
@@ -311,31 +397,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/me_/access-log': {
-      id: '/_authed/me_/access-log'
-      path: '/me/access-log'
-      fullPath: '/me/access-log'
-      preLoaderRoute: typeof AuthedMeAccessLogRouteImport
-      parentRoute: typeof AuthedRouteRoute
+    '/_authed/workbench/templates': {
+      id: '/_authed/workbench/templates'
+      path: '/templates'
+      fullPath: '/workbench/templates'
+      preLoaderRoute: typeof AuthedWorkbenchTemplatesRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
     }
-    '/api/admin/audit/tasks/$': {
-      id: '/api/admin/audit/tasks/$'
-      path: '/api/admin/audit/tasks/$'
-      fullPath: '/api/admin/audit/tasks/$'
-      preLoaderRoute: typeof ApiAdminAuditTasksSplatRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authed/workbench/ehr': {
+      id: '/_authed/workbench/ehr'
+      path: '/ehr'
+      fullPath: '/workbench/ehr'
+      preLoaderRoute: typeof AuthedWorkbenchEhrRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/workbench/directory': {
+      id: '/_authed/workbench/directory'
+      path: '/directory'
+      fullPath: '/workbench/directory'
+      preLoaderRoute: typeof AuthedWorkbenchDirectoryRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/workbench/compositions': {
+      id: '/_authed/workbench/compositions'
+      path: '/compositions'
+      fullPath: '/workbench/compositions'
+      preLoaderRoute: typeof AuthedWorkbenchCompositionsRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/workbench/compose': {
+      id: '/_authed/workbench/compose'
+      path: '/compose'
+      fullPath: '/workbench/compose'
+      preLoaderRoute: typeof AuthedWorkbenchComposeRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/workbench/aql': {
+      id: '/_authed/workbench/aql'
+      path: '/aql'
+      fullPath: '/workbench/aql'
+      preLoaderRoute: typeof AuthedWorkbenchAqlRouteImport
+      parentRoute: typeof AuthedWorkbenchRouteRoute
     }
   }
 }
 
+interface AuthedWorkbenchRouteRouteChildren {
+  AuthedWorkbenchAqlRoute: typeof AuthedWorkbenchAqlRoute
+  AuthedWorkbenchComposeRoute: typeof AuthedWorkbenchComposeRoute
+  AuthedWorkbenchCompositionsRoute: typeof AuthedWorkbenchCompositionsRoute
+  AuthedWorkbenchDirectoryRoute: typeof AuthedWorkbenchDirectoryRoute
+  AuthedWorkbenchEhrRoute: typeof AuthedWorkbenchEhrRoute
+  AuthedWorkbenchTemplatesRoute: typeof AuthedWorkbenchTemplatesRoute
+  AuthedWorkbenchIndexRoute: typeof AuthedWorkbenchIndexRoute
+}
+
+const AuthedWorkbenchRouteRouteChildren: AuthedWorkbenchRouteRouteChildren = {
+  AuthedWorkbenchAqlRoute: AuthedWorkbenchAqlRoute,
+  AuthedWorkbenchComposeRoute: AuthedWorkbenchComposeRoute,
+  AuthedWorkbenchCompositionsRoute: AuthedWorkbenchCompositionsRoute,
+  AuthedWorkbenchDirectoryRoute: AuthedWorkbenchDirectoryRoute,
+  AuthedWorkbenchEhrRoute: AuthedWorkbenchEhrRoute,
+  AuthedWorkbenchTemplatesRoute: AuthedWorkbenchTemplatesRoute,
+  AuthedWorkbenchIndexRoute: AuthedWorkbenchIndexRoute,
+}
+
+const AuthedWorkbenchRouteRouteWithChildren =
+  AuthedWorkbenchRouteRoute._addFileChildren(AuthedWorkbenchRouteRouteChildren)
+
 interface AuthedRouteRouteChildren {
+  AuthedWorkbenchRouteRoute: typeof AuthedWorkbenchRouteRouteWithChildren
   AuthedMeRoute: typeof AuthedMeRoute
-  AuthedMeAccessLogRoute: typeof AuthedMeAccessLogRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
+  AuthedWorkbenchRouteRoute: AuthedWorkbenchRouteRouteWithChildren,
   AuthedMeRoute: AuthedMeRoute,
-  AuthedMeAccessLogRoute: AuthedMeAccessLogRoute,
 }
 
 const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
@@ -355,7 +492,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDemographicSplatRoute: ApiDemographicSplatRoute,
   ApiEhrbaseSplatRoute: ApiEhrbaseSplatRoute,
   ApiLogClientErrorRoute: ApiLogClientErrorRoute,
-  ApiAdminAuditTasksSplatRoute: ApiAdminAuditTasksSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,7 +1,7 @@
 // Sidebar-footer user menu (adapted from the sidebar-07 block, docs/architecture.md
 // §6). Wired to the session user from the route context — name, email, roles,
-// initials avatar. Menu: My account, Access log, a disabled language switcher
-// placeholder (English today; further EU languages land with the translation task, §11.6),
+// initials avatar. Menu: My account, a disabled language switcher placeholder
+// (English today; further EU languages land with the translation task, §11.6),
 // and Log out. Log out is a plain anchor to the server logout route (a full
 // navigation that clears the session cookie), not a router Link.
 
@@ -9,7 +9,6 @@ import {
   ChevronsUpDownIcon,
   GlobeIcon,
   LogOutIcon,
-  ScrollTextIcon,
   UserIcon,
 } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
@@ -112,12 +111,6 @@ export function NavUser({ user }: { user: NavUserData }) {
                 <Link to="/me">
                   <UserIcon />
                   {m.nav_account()}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/me/access-log">
-                  <ScrollTextIcon />
-                  {m.nav_access_log()}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

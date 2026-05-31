@@ -73,9 +73,6 @@ importers:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../../packages/config-tsconfig
-      '@ehrbase-ui/demographic-adapter-fhir':
-        specifier: workspace:*
-        version: link:../../packages/demographic-adapter-fhir
       '@ehrbase-ui/demographic-core':
         specifier: workspace:*
         version: link:../../packages/demographic-core
@@ -94,6 +91,15 @@ importers:
       '@ehrbase-ui/openehr-web-template':
         specifier: workspace:*
         version: link:../../packages/openehr-web-template
+      '@ehrbase-ui/term-adapter-generic-fhir':
+        specifier: workspace:*
+        version: link:../../packages/term-adapter-generic-fhir
+      '@ehrbase-ui/term-adapter-snowstorm':
+        specifier: workspace:*
+        version: link:../../packages/term-adapter-snowstorm
+      '@ehrbase-ui/term-core':
+        specifier: workspace:*
+        version: link:../../packages/term-core
       '@ehrbase-ui/valkey':
         specifier: workspace:*
         version: link:../../packages/valkey
@@ -166,6 +172,12 @@ importers:
       '@tanstack/react-start':
         specifier: 1.168.14
         version: 1.168.14(crossws@0.4.5(srvx@0.11.16))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+      '@tanstack/react-table':
+        specifier: 8.21.3
+        version: 8.21.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tanstack/react-virtual':
+        specifier: 3.13.26
+        version: 3.13.26(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@tanstack/router-plugin':
         specifier: 1.168.11
         version: 1.168.11(@tanstack/react-router@1.170.8(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
@@ -353,28 +365,6 @@ importers:
 
   packages/config-tsconfig: {}
 
-  packages/demographic-adapter-fhir:
-    dependencies:
-      '@ehrbase-ui/demographic-core':
-        specifier: workspace:*
-        version: link:../demographic-core
-      zod:
-        specifier: 4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@ehrbase-ui/config-tsconfig':
-        specifier: workspace:*
-        version: link:../config-tsconfig
-      '@types/node':
-        specifier: 25.9.1
-        version: 25.9.1
-      typescript:
-        specifier: 6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: 4.1.7
-        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
-
   packages/demographic-core:
     dependencies:
       '@ehrbase-ui/openehr-rm':
@@ -432,6 +422,13 @@ importers:
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/openehr-aql:
+    dependencies:
+      '@ehrbase-ui/openehr-am':
+        specifier: workspace:*
+        version: link:../openehr-am
+      '@ehrbase-ui/openehr-rm':
+        specifier: workspace:*
+        version: link:../openehr-rm
     devDependencies:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
@@ -540,6 +537,9 @@ importers:
       '@ehrbase-ui/openehr-base':
         specifier: workspace:*
         version: link:../openehr-base
+      '@ehrbase-ui/openehr-term':
+        specifier: workspace:*
+        version: link:../openehr-term
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -588,6 +588,25 @@ importers:
         specifier: 4.1.7
         version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
+  packages/term-adapter-generic-fhir:
+    dependencies:
+      '@ehrbase-ui/term-core':
+        specifier: workspace:*
+        version: link:../term-core
+    devDependencies:
+      '@ehrbase-ui/config-tsconfig':
+        specifier: workspace:*
+        version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
+
   packages/term-adapter-snowstorm:
     dependencies:
       '@ehrbase-ui/term-core':
@@ -597,16 +616,37 @@ importers:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/term-core:
     dependencies:
       '@ehrbase-ui/openehr-term':
         specifier: workspace:*
         version: link:../openehr-term
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
     devDependencies:
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../config-tsconfig
+      '@types/node':
+        specifier: 25.9.1
+        version: 25.9.1
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.7
+        version: 4.1.7(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@7.3.3(@types/node@25.9.1)(jiti@2.7.0)(lightningcss@1.32.0)(yaml@2.9.0))
 
   packages/valkey:
     dependencies:
@@ -4363,6 +4403,19 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  '@tanstack/react-table@8.21.3':
+    resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      react: '>=16.8'
+      react-dom: '>=16.8'
+
+  '@tanstack/react-virtual@3.13.26':
+    resolution: {integrity: sha512-DosdgjOxCLahkn0o+ilmZYwEjo1glfMGuRT/j3PQ18yr5XqA8N/BCaL9IJ3B5TRl+nnzyK2IOFgAILwzN3a9xQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@tanstack/router-core@1.171.6':
     resolution: {integrity: sha512-Ol6DQ+j6rf/rPVELIzo8LHwOQV2KL+zry3b+39kL/GKrt7YId52WJRAFMzuseY4XceSW+PU7sG/Cc1QkwJr0hg==}
     engines: {node: '>=20.19'}
@@ -4443,6 +4496,13 @@ packages:
 
   '@tanstack/store@0.9.3':
     resolution: {integrity: sha512-8reSzl/qGWGGVKhBoxXPMWzATSbZLZFWhwBAFO9NAyp0TxzfBP0mIrGb8CP8KrQTmvzXlR/vFPPUrHTLBGyFyw==}
+
+  '@tanstack/table-core@8.21.3':
+    resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
+    engines: {node: '>=12'}
+
+  '@tanstack/virtual-core@3.16.0':
+    resolution: {integrity: sha512-Er2N7q3WOiH6y2JLxsxNX+u2/sLqSsL0bxFgDjuiPiA7vKhZRm+IzcS17vRee3GNXr64UsesA5CAp9yTiIYw9A==}
 
   '@tanstack/virtual-file-routes@1.162.0':
     resolution: {integrity: sha512-uhOeFyxLcU41HzvrxsGpiWdcMbScY1EDgbZ5K7DVRMYInbLYWAC0EA/kx9wXAoSM8q82bUG2hRl8+EAjE6XAbA==}
@@ -12028,6 +12088,18 @@ snapshots:
       react-dom: 19.2.6(react@19.2.6)
       use-sync-external-store: 1.6.0(react@19.2.6)
 
+  '@tanstack/react-table@8.21.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@tanstack/table-core': 8.21.3
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+
+  '@tanstack/react-virtual@3.13.26(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@tanstack/virtual-core': 3.16.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+
   '@tanstack/router-core@1.171.6':
     dependencies:
       '@tanstack/history': 1.162.0
@@ -12155,6 +12227,10 @@ snapshots:
       '@tanstack/router-core': 1.171.6
 
   '@tanstack/store@0.9.3': {}
+
+  '@tanstack/table-core@8.21.3': {}
+
+  '@tanstack/virtual-core@3.16.0': {}
 
   '@tanstack/virtual-file-routes@1.162.0': {}
 

@@ -5,16 +5,11 @@
 //   - require a >=30-char free-text justification,
 //   - enforce the lifetime ceiling of 3 invocations per session (§5.9); the
 //     4th forces logout + re-auth,
-//   - write an EMERGENCY_ACCESS_GRANTED audit event (full justification,
-//     overridden denial, source IP) under lawful basis 9(2)(c) vital interests,
 //   - grant a 60-minute time-limited elevation in Valkey that auto-expires.
-//
-// Nothing here is stubbed — it is wired to the real logAudit write path.
 
 import { z } from 'zod'
 
 import { getAuthInstance } from './instance.ts'
-import { logAudit } from '@/server/audit/runtime'
 import { checkRateLimit } from '@/server/bff'
 import { valkey } from '@ehrbase-ui/valkey'
 import type { RoleContext } from './require-role.ts'
@@ -44,20 +39,6 @@ export async function grantEmergencyAccess(
   // Lifetime ceiling — the 4th attempt is refused and forces re-authentication.
   const limit = await checkRateLimit('emergency-access', auth.sid)
   if (!limit.allowed) {
-    await logAudit({
-      actor: {
-        userId: auth.user.id,
-        username: auth.user.email,
-        displayName: auth.user.name,
-        roles: auth.user.roles,
-      },
-      action: 'ACCESS_DENIED',
-      target: { ehrId: req.ehrId, resourceType: 'EHR' },
-      purpose: 'EMERGENCY',
-      outcome: 'FAILURE',
-      outcomeDetail: 'break_glass_ceiling_reached',
-      source: { sessionId: auth.sid },
-    })
     // Force re-auth: revoke every active session for this user via Better
     // Auth's admin API. The user is signed out of every device and the
     // M15 audit-reviewer dashboard sees the gap.
@@ -88,25 +69,6 @@ export async function grantEmergencyAccess(
     'EX',
     GRANT_TTL_SECONDS,
   )
-
-  // The justification is mandated free text (§5.6). The entire audit store is
-  // PHI-in-scope and encrypted at rest (§14.4), so the justification is
-  // recorded in outcomeDetail here — the one sanctioned exception to the
-  // "error code only" rule for that field.
-  await logAudit({
-    actor: {
-      userId: auth.user.id,
-      username: auth.user.email,
-      displayName: auth.user.name,
-      roles: auth.user.roles,
-    },
-    action: 'EMERGENCY_ACCESS_GRANTED',
-    target: { ehrId: req.ehrId, resourceType: 'EHR' },
-    purpose: 'EMERGENCY',
-    outcome: 'SUCCESS',
-    outcomeDetail: `overrode=[${(req.deniedRoles ?? []).join(',')}] justification=${req.justification}`,
-    source: { sessionId: auth.sid },
-  })
 
   return { status: 'granted', expiresInSeconds: GRANT_TTL_SECONDS }
 }
