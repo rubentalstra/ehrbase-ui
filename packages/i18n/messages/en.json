@@ -293,5 +293,16 @@
   "compose_null_flavour_clear": "Clear",
   "compose_null_flavour_badge": "Not recorded: {rubric}",
   "compose_null_flavour_aria_toggle": "Mark field as not recorded",
-  "compose_null_flavour_aria_clear": "Clear not-recorded mark"
+  "compose_null_flavour_aria_clear": "Clear not-recorded mark",
+
+  "data_table_no_results": "No results.",
+  "data_table_filter_placeholder": "Filter…",
+  "data_table_filter_label": "Filter rows",
+  "data_table_sort_ascending": "Sort ascending",
+  "data_table_sort_descending": "Sort descending",
+  "data_table_rows_per_page": "Rows per page",
+  "data_table_page_of": "Page {page} of {total}",
+  "data_table_previous_page": "Previous page",
+  "data_table_next_page": "Next page",
+  "data_table_row_count_status": "{count} rows"
 }

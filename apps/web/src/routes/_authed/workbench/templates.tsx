@@ -6,7 +6,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { type ColumnDef } from '@tanstack/react-table'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { m } from '@ehrbase-ui/i18n/messages'
@@ -14,21 +15,16 @@ import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary
 import {
   getWebTemplate,
   listTemplates,
+  type TemplateSummary,
   uploadTemplate,
 } from '@/server/functions/template.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import { DataTableColumnHeader } from '@/components/ui/data-table-column-header'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 
 export const Route = createFileRoute('/_authed/workbench/templates')({
@@ -111,6 +107,52 @@ function TemplatesWorkbench() {
   )
 }
 
+// Columns for the template list. The action column carries no header (empty th)
+// and is non-sortable; the data columns get a sortable DataTableColumnHeader.
+function templateColumns(
+  onSelect: (id: string) => void,
+): ColumnDef<TemplateSummary, unknown>[] {
+  return [
+    {
+      accessorKey: 'templateId',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.workbench_templates_col_id()} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.templateId}</span>
+      ),
+    },
+    {
+      accessorKey: 'conceptName',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.workbench_templates_col_concept()} />
+      ),
+      cell: ({ row }) => <>{row.original.conceptName ?? m.workbench_ehr_value_none()}</>,
+    },
+    {
+      accessorKey: 'createdTimestamp',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.workbench_templates_col_created()} />
+      ),
+      cell: ({ row }) => <>{row.original.createdTimestamp ?? m.workbench_ehr_value_none()}</>,
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onSelect(row.original.templateId)}
+        >
+          {m.workbench_templates_view()}
+        </Button>
+      ),
+    },
+  ]
+}
+
 function TemplateList({
   query,
   selectedId,
@@ -120,6 +162,8 @@ function TemplateList({
   selectedId: string | null
   onSelect: (id: string) => void
 }) {
+  const columns = useMemo(() => templateColumns(onSelect), [onSelect])
+
   if (query.isPending) {
     return (
       <div className="space-y-2" aria-busy="true">
@@ -147,38 +191,14 @@ function TemplateList({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{m.workbench_templates_col_id()}</TableHead>
-          <TableHead>{m.workbench_templates_col_concept()}</TableHead>
-          <TableHead>{m.workbench_templates_col_created()}</TableHead>
-          <TableHead className="w-0" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {query.data.map((t) => (
-          <TableRow
-            key={t.templateId}
-            data-state={t.templateId === selectedId ? 'selected' : undefined}
-          >
-            <TableCell className="font-mono text-xs">{t.templateId}</TableCell>
-            <TableCell>{t.conceptName ?? m.workbench_ehr_value_none()}</TableCell>
-            <TableCell>{t.createdTimestamp ?? m.workbench_ehr_value_none()}</TableCell>
-            <TableCell>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => onSelect(t.templateId)}
-              >
-                {m.workbench_templates_view()}
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <DataTable
+      columns={columns}
+      data={query.data}
+      caption={m.workbench_templates_list_heading()}
+      getRowId={(t) => t.templateId}
+      selectedRowId={selectedId}
+      enablePagination={false}
+    />
   )
 }
 

@@ -32,6 +32,7 @@ import { DataTableToolbar } from './data-table-toolbar.tsx'
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -41,6 +42,12 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  /**
+   * Accessible name for the table, rendered as an sr-only <caption> (WCAG H39).
+   * Pass the surrounding heading text so screen readers announce "table" with
+   * context.
+   */
+  caption?: string
   /** Stable row id (e.g. a primary key, or the row index for an AQL RESULT_SET). */
   getRowId?: (row: TData, index: number) => string
   /** Highlights the matching row with data-state="selected" (single-select nav). */
@@ -71,6 +78,7 @@ function ariaSort(
 export function DataTable<TData, TValue>({
   columns,
   data,
+  caption,
   getRowId,
   selectedRowId,
   enableToolbar = false,
@@ -133,15 +141,25 @@ export function DataTable<TData, TValue>({
     </TableHeader>
   )
 
+  // Announce the (filtered) row count to screen readers (WCAG 4.1.3 Status
+  // Messages) — only meaningful when the filter toolbar can change the count.
+  const filterStatus = enableToolbar ? (
+    <span className="sr-only" aria-live="polite" aria-atomic="true">
+      {m.data_table_row_count_status({ count: rows.length })}
+    </span>
+  ) : null
+
   if (virtualize && !isEmpty) {
     return (
       <div className="space-y-3">
         {enableToolbar ? (
           <DataTableToolbar value={globalFilter} onChange={setGlobalFilter} />
         ) : null}
+        {filterStatus}
         <DataTableVirtualShell
           rows={rows}
           columnCount={columnCount}
+          caption={caption}
           header={header}
           maxBodyHeight={maxBodyHeight}
           estimatedRowHeight={estimatedRowHeight}
@@ -156,7 +174,9 @@ export function DataTable<TData, TValue>({
       {enableToolbar ? (
         <DataTableToolbar value={globalFilter} onChange={setGlobalFilter} />
       ) : null}
+      {filterStatus}
       <Table>
+        {caption ? <TableCaption className="sr-only">{caption}</TableCaption> : null}
         {header}
         <TableBody>
           {isEmpty ? (
@@ -196,6 +216,7 @@ export function DataTable<TData, TValue>({
 function DataTableVirtualShell<TData>({
   rows,
   columnCount,
+  caption,
   header,
   maxBodyHeight,
   estimatedRowHeight,
@@ -203,6 +224,7 @@ function DataTableVirtualShell<TData>({
 }: {
   rows: Row<TData>[]
   columnCount: number
+  caption?: string
   header: React.ReactNode
   maxBodyHeight: number
   estimatedRowHeight: number
@@ -230,6 +252,7 @@ function DataTableVirtualShell<TData>({
       style={{ maxHeight: maxBodyHeight }}
     >
       <Table>
+        {caption ? <TableCaption className="sr-only">{caption}</TableCaption> : null}
         {header}
         <TableBody>
           {paddingTop > 0 ? (
@@ -239,6 +262,7 @@ function DataTableVirtualShell<TData>({
           ) : null}
           {virtualItems.map((virtualItem) => {
             const row = rows[virtualItem.index]
+            if (!row) return null
             return (
               <TableRow
                 key={row.id}

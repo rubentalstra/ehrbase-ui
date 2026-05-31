@@ -14,9 +14,10 @@
 // shadcn primitives only (rule 6).
 // No PHI here — workbench only; template node names are data.
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMutation } from '@tanstack/react-query'
+import { type ColumnDef } from '@tanstack/react-table'
 import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
@@ -25,6 +26,8 @@ import { executeAql, type JsonValue } from '@/server/functions/query.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import { DataTableColumnHeader } from '@/components/ui/data-table-column-header'
 import {
   Dialog,
   DialogContent,
@@ -33,14 +36,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { CompositionViewer } from '@/components/openehr/composition-viewer'
 
 export const Route = createFileRoute('/_authed/workbench/compositions')({
@@ -77,6 +72,55 @@ function parseRow(row: JsonValue[]): CompositionRow | null {
   return { uid, name, templateId }
 }
 
+// Columns for the composition list. Sortable data columns + a right-aligned
+// non-sortable action column that opens the CompositionViewer dialog.
+function compositionColumns(
+  onView: (row: CompositionRow) => void,
+): ColumnDef<CompositionRow, unknown>[] {
+  return [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.compositions_col_name()} />
+      ),
+      cell: ({ row }) => <>{row.original.name || m.compositions_col_name()}</>,
+    },
+    {
+      accessorKey: 'templateId',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.compositions_col_template()} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.templateId}</span>
+      ),
+    },
+    {
+      accessorKey: 'uid',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.compositions_col_uid()} />
+      ),
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.uid}</span>,
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: () => m.compositions_col_actions(),
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onView(row.original)}
+          >
+            {m.compositions_view()}
+          </Button>
+        </div>
+      ),
+    },
+  ]
+}
+
 function CompositionsWorkbench() {
   const [ehrIdInput, setEhrIdInput] = useState('')
   const [activeEhrId, setActiveEhrId] = useState<string | null>(null)
@@ -105,17 +149,19 @@ function CompositionsWorkbench() {
     listMutation.mutate(id)
   }
 
-  function openViewer(row: CompositionRow) {
+  const openViewer = useCallback((row: CompositionRow) => {
     setViewerCompositionUid(row.uid)
     setViewerTemplateId(row.templateId)
     setViewerOpen(true)
-  }
+  }, [])
 
   function closeViewer() {
     setViewerOpen(false)
     setViewerCompositionUid(null)
     setViewerTemplateId(null)
   }
+
+  const columns = useMemo(() => compositionColumns(openViewer), [openViewer])
 
   const rows: CompositionRow[] = (listMutation.data?.rows ?? [])
     .map(parseRow)
@@ -166,37 +212,12 @@ function CompositionsWorkbench() {
           ) : listMutation.isSuccess && rows.length === 0 ? (
             <p className="text-muted-foreground text-sm">{m.compositions_empty()}</p>
           ) : rows.length > 0 ? (
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{m.compositions_col_name()}</TableHead>
-                    <TableHead>{m.compositions_col_template()}</TableHead>
-                    <TableHead>{m.compositions_col_uid()}</TableHead>
-                    <TableHead className="text-right">{m.compositions_col_actions()}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.uid}>
-                      <TableCell>{row.name || m.compositions_col_name()}</TableCell>
-                      <TableCell className="font-mono text-xs">{row.templateId}</TableCell>
-                      <TableCell className="font-mono text-xs">{row.uid}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openViewer(row)}
-                        >
-                          {m.compositions_view()}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={rows}
+              caption={m.compositions_title()}
+              getRowId={(r) => r.uid}
+            />
           ) : null}
         </CardContent>
       </Card>

@@ -798,9 +798,9 @@ We add an `openEHR` schema to the autocomplete source so users get suggestions f
 
 ### Result tables
 
-shadcn's `data-table` component wraps `@tanstack/react-table`. AQL responses are dynamic-shape; we build columns at runtime from the first row's keys, with cell formatters for openEHR composite types (`{magnitude, units}` → `"120 mm[Hg]"`).
+All data tables — the AQL result grid included — go through the shared **`DataTable`** primitive at `apps/web/src/components/ui/data-table.tsx`, which wraps `@tanstack/react-table` (built following shadcn's `data-table` guide on top of the vendored `table.tsx` primitive). This is the mandatory entry point for tabular data; hand-rolled `<Table>`-markup tables are not allowed (**ADR-0038**, CLAUDE.md rule 6a). AQL responses are dynamic-shape; we build `ColumnDef`s at runtime from the result's column metadata, with cell formatters for openEHR composite types (`{magnitude, units}` → `"120 mm[Hg]"`).
 
-For large result sets (>500 rows), `@tanstack/react-virtual` virtualizes the table body.
+For large result sets (>500 rows), pass `virtualize` — `DataTable` then renders the body via `@tanstack/react-virtual`, keeping native `<table>/<tr>/<td>` semantics (spacer rows, no display hacks) so the accessibility tree retains its table roles. Sorting, an optional global filter, and client-side pagination come from the primitive's built-ins. Sanctioned exceptions (computed diffs / openEHR-specific grids, e.g. `conflict-dialog.tsx`, the vitals flowsheet) are listed in ADR-0038.
 
 ### Privacy note on AQL
 

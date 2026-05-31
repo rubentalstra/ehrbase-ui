@@ -31,12 +31,14 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### UI & styling
 
-| Package                 | Verified | Pinned                                               | Source                                                  |
-| ----------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------- |
-| `tailwindcss`           | 4.3.0    | **4.3.0**                                            | https://registry.npmjs.org/tailwindcss/latest           |
-| shadcn/ui registry      | —        | latest at install time, components copied in via CLI | https://ui.shadcn.com                                   |
-| `@uiw/react-codemirror` | 4.25.10  | **4.25.10**                                          | https://registry.npmjs.org/@uiw/react-codemirror/latest |
-| `@codemirror/lang-sql`  | 6.10.0   | **6.10.0**                                           | https://registry.npmjs.org/@codemirror/lang-sql/latest  |
+| Package                   | Verified | Pinned                                               | Source                                                    |
+| ------------------------- | -------- | ---------------------------------------------------- | --------------------------------------------------------- |
+| `tailwindcss`             | 4.3.0    | **4.3.0**                                            | https://registry.npmjs.org/tailwindcss/latest             |
+| shadcn/ui registry        | —        | latest at install time, components copied in via CLI | https://ui.shadcn.com                                     |
+| `@uiw/react-codemirror`   | 4.25.10  | **4.25.10**                                          | https://registry.npmjs.org/@uiw/react-codemirror/latest   |
+| `@codemirror/lang-sql`    | 6.10.0   | **6.10.0**                                           | https://registry.npmjs.org/@codemirror/lang-sql/latest    |
+| `@tanstack/react-table`   | 8.21.3   | **8.21.3**                                           | https://registry.npmjs.org/@tanstack/react-table/latest   |
+| `@tanstack/react-virtual` | 3.13.26  | **3.13.26**                                          | https://registry.npmjs.org/@tanstack/react-virtual/latest |
 
 ### Forms / validation
 
@@ -217,6 +219,7 @@ The architecture doc lists ~150 external URLs in §27. The full set is replicate
 - TanStack Router — https://tanstack.com/router/latest
 - TanStack Query — https://tanstack.com/query/latest
 - TanStack Table — https://tanstack.com/table/latest
+- TanStack Virtual — https://tanstack.com/virtual/latest
 - TanStack May 2026 supply-chain incident (CVE-2026-45321) — https://security.snyk.io/vuln/SNYK-JS-TANSTACKREACTSTARTCLIENT-16640209
 - React 19 release notes — https://react.dev/blog/2024/12/05/react-19
 - Vite — https://vitejs.dev/

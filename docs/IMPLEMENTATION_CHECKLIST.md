@@ -331,8 +331,9 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 - [ ] `@uiw/react-codemirror` wrapper with AQL grammar highlighting — AQL Release 1.1.0 spec, types from `@ehrbase-ui/openehr-aql`
 - [ ] AQL autocomplete schema for the main RM classes + the v1.0 archetype catalogue (ADR-0016)
 - [ ] Stored-query persistence — `docs/aql-catalogue.md` model
-- [ ] Result table via shadcn `data-table` + `@tanstack/react-table`
-- [ ] Virtualized rows > 500 via `@tanstack/react-virtual`
+- [x] Shared `DataTable` primitive (sort / filter / pagination / virtualize) — `apps/web/src/components/ui/data-table.tsx`, the mandatory entry point for every table (ADR-0038, CLAUDE.md rule 6a). `@tanstack/react-table` + `@tanstack/react-virtual` pinned in REFERENCES.md. _(Landed early in the foundation phase; the four existing tables — templates, stored queries, compositions, AQL results — were migrated onto it.)_
+- [x] Result table via the `DataTable` primitive + `@tanstack/react-table`
+- [x] Virtualized rows > 500 via `@tanstack/react-virtual`
 - [ ] Query export (CSV / JSON) — rate-limited per §5.9
 - [ ] Stricter `aql-complex` rate limit applied per §5.9
 - [ ] Storybook + E2E: write an AQL query, save it, run it, see virtualised results

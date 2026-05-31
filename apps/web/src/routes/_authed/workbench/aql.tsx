@@ -7,7 +7,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { type ColumnDef } from '@tanstack/react-table'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { m } from '@ehrbase-ui/i18n/messages'
@@ -22,20 +23,15 @@ import {
   listStoredQueries,
   putStoredQuery,
   runStoredQuery,
+  type StoredQuerySummary,
 } from '@/server/functions/stored-query.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DataTable } from '@/components/ui/data-table'
+import { DataTableColumnHeader } from '@/components/ui/data-table-column-header'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -126,6 +122,71 @@ function AdhocQueryPanel() {
 
 const STORED_QUERY_LIST_KEY = ['workbench', 'stored-queries'] as const
 
+// Columns for the stored-query catalogue. Sortable data columns + a non-sortable
+// action column (Load / Run). Callbacks come in via the factory closure so the
+// cell renderers stay fully typed (no `table.options.meta` casting).
+function storedQueryColumns(opts: {
+  onLoad: (name: string, version: string | null) => void
+  onRun: (input: { name: string; version: string | null }) => void
+  runPending: boolean
+}): ColumnDef<StoredQuerySummary, unknown>[] {
+  return [
+    {
+      accessorKey: 'name',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.stored_query_col_name()} />
+      ),
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.name}</span>,
+    },
+    {
+      accessorKey: 'version',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.stored_query_col_version()} />
+      ),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">
+          {row.original.version ?? m.stored_query_value_none()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={m.stored_query_col_type()} />
+      ),
+      cell: ({ row }) => <>{row.original.type ?? m.stored_query_value_none()}</>,
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      header: () => m.stored_query_col_actions(),
+      cell: ({ row }) => (
+        <div className="space-x-2 text-right">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => opts.onLoad(row.original.name, row.original.version)}
+          >
+            {m.stored_query_load()}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={opts.runPending}
+            onClick={() =>
+              opts.onRun({ name: row.original.name, version: row.original.version })
+            }
+          >
+            {opts.runPending ? m.stored_query_running() : m.stored_query_run()}
+          </Button>
+        </div>
+      ),
+    },
+  ]
+}
+
 function StoredQueryPanel() {
   const queryClient = useQueryClient()
   const [name, setName] = useState('')
@@ -176,6 +237,14 @@ function StoredQueryPanel() {
     setVersion(def.version ?? '')
     setAql(def.query)
   }
+
+  // Action-cell state (run.isPending) lives in the deps so the disabled button
+  // re-renders; the callbacks are wrapped to keep the void-return contract.
+  const storedColumns = storedQueryColumns({
+    onLoad: (queryName, queryVersion) => void loadIntoEditor(queryName, queryVersion),
+    onRun: (input) => run.mutate(input),
+    runPending: run.isPending,
+  })
 
   return (
     <>
@@ -247,46 +316,13 @@ function StoredQueryPanel() {
           ) : list.data.length === 0 ? (
             <p className="text-muted-foreground text-sm">{m.stored_query_list_empty()}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{m.stored_query_col_name()}</TableHead>
-                  <TableHead>{m.stored_query_col_version()}</TableHead>
-                  <TableHead>{m.stored_query_col_type()}</TableHead>
-                  <TableHead className="text-right">{m.stored_query_col_actions()}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {list.data.map((q) => (
-                  <TableRow key={`${q.name}@${q.version ?? ''}`}>
-                    <TableCell className="font-mono text-xs">{q.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {q.version ?? m.stored_query_value_none()}
-                    </TableCell>
-                    <TableCell>{q.type ?? m.stored_query_value_none()}</TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void loadIntoEditor(q.name, q.version)}
-                      >
-                        {m.stored_query_load()}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={run.isPending}
-                        onClick={() => run.mutate({ name: q.name, version: q.version })}
-                      >
-                        {run.isPending ? m.stored_query_running() : m.stored_query_run()}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              columns={storedColumns}
+              data={list.data}
+              caption={m.stored_query_list_heading()}
+              getRowId={(q) => `${q.name}@${q.version ?? ''}`}
+              enablePagination={false}
+            />
           )}
         </CardContent>
       </Card>
@@ -327,51 +363,55 @@ function columnKeys(columns: ExecuteAqlResult['columns']): { key: string; label:
   })
 }
 
+// Build the runtime ColumnDefs for an AQL RESULT_SET. Columns are positional, so
+// each accessor reads its index out of the row tuple; the deduped header key from
+// columnKeys() is the stable column `id`. TValue is `unknown` (cells are
+// arbitrary openEHR JSON), so getValue() flows into renderCell without a cast.
+function aqlColumns(
+  columns: ExecuteAqlResult['columns'],
+): ColumnDef<JsonValue[], unknown>[] {
+  return columnKeys(columns).map((col, index) => ({
+    id: col.key,
+    accessorFn: (row) => row[index] ?? null,
+    header: ({ column }) => <DataTableColumnHeader column={column} title={col.label} />,
+    cell: (ctx) => (
+      <span className="align-top font-mono text-xs">{renderCell(ctx.getValue())}</span>
+    ),
+  }))
+}
+
 function AqlResults({ result }: { result: ExecuteAqlResult }) {
+  // Unconditional hook before the empty-result early return (rules of hooks).
+  const columns = useMemo(() => aqlColumns(result.columns), [result.columns])
+
   if (result.rows.length === 0) {
     return <p className="text-muted-foreground text-sm">{m.workbench_aql_empty()}</p>
   }
-
-  const columns = columnKeys(result.columns)
 
   return (
     <div className="space-y-3">
       <p className="text-muted-foreground text-sm">
         {m.workbench_aql_row_count({ count: result.rows.length })}
       </p>
-      <div className="overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key}>{col.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {result.rows.map((row, ri) => (
-              // A RESULT_SET is an ordered grid with no per-row identity, so the
-              // row/cell position IS the key. Same justified use as app-sidebar.
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              <TableRow key={ri}>
-                {row.map((cell, ci) => (
-                  // eslint-disable-next-line @eslint-react/no-array-index-key
-                  <TableCell key={ci} className="align-top font-mono text-xs">
-                    {renderCell(cell)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={result.rows}
+        caption={m.workbench_aql_results_heading()}
+        // A RESULT_SET is an ordered grid with no per-row identity: position IS
+        // identity. (TanStack maps over row.id / cell.id internally, so the old
+        // array-index JSX keys — and their eslint-disable — are gone.)
+        getRowId={(_row, index) => String(index)}
+        // Large result sets virtualise per architecture §8 (> 500 rows).
+        virtualize={result.rows.length > 500}
+        enablePagination={false}
+      />
     </div>
   )
 }
 
-// Scalar cells render as plain text; objects/arrays render as compact JSON. No
-// `as` casts (rule 3) — narrow with typeof / Array.isArray instead.
-function renderCell(cell: JsonValue): string {
+// Scalar cells render as plain text; objects/arrays render as compact JSON. Takes
+// `unknown` (an AQL cell's TValue) and narrows with typeof — no `as` casts (rule 3).
+function renderCell(cell: unknown): string {
   if (cell === null) return '—'
   if (typeof cell === 'string') return cell
   if (typeof cell === 'number' || typeof cell === 'boolean') return String(cell)
