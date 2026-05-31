@@ -10,7 +10,9 @@
 //     value, terminology}) emit one `|suffix` per present attribute;
 //   - scalar leaves emit a single `|suffix` (DV_TEXT→value, DV_COUNT→magnitude,
 //     DV_BOOLEAN→value, DV_URI→value) — except date/time/duration, which are
-//     bare (no `|`), e.g. `…/start_time`.
+//     bare (no `|`), e.g. `…/start_time`;
+//   - DV_ORDINAL scalar → `|code` (the ordinal code, not `|value`);
+//   - DV_MULTIMEDIA file-descriptor → composite `|name`, `|size`, `|mediatype`.
 //
 // Scope: the common form-producible leaf types + arrays + context. Exotic FLAT
 // constructs (reference ranges, `_`-prefixed RM attributes, null-flavour) are
@@ -24,6 +26,17 @@ import { buildFlatPath, parseFlatPath, type FlatSegment } from "./flat-path.ts";
 export type FlatComposition = Record<string, unknown>;
 
 // Scalar leaf rmType → its single FLAT `|suffix`; `null` means a bare key.
+//
+// Evidence from the openEHR_SDK vitalsigns FLAT fixture (see
+// src/__tests__/fixtures/vitalsigns.flat.json):
+//   - DV_DATE_TIME: "…/context/start_time" (bare, no |suffix) → null
+//   - DV_QUANTITY:  "…/systolic|magnitude" + "…/systolic|unit" → composite (not scalar)
+//   - DV_CODED_TEXT: "…/setting|code", "|value", "|terminology" → composite
+//   - DV_TEXT:      handled via composite path (suffix inputs present in template)
+//                   or scalar → "|value"
+//
+// DV_ORDINAL: the ordinal value is the selected code; EHRbase FLAT uses `|code`.
+// DV_DURATION: bare key (ISO 8601 string, e.g. "P1Y2M3DT4H5M6S").
 const FLAT_SCALAR_SUFFIX: Record<string, string | null> = {
   DV_TEXT: "value",
   DV_COUNT: "magnitude",
@@ -34,7 +47,22 @@ const FLAT_SCALAR_SUFFIX: Record<string, string | null> = {
   DV_DATE_TIME: null,
   DV_TIME: null,
   DV_DURATION: null,
+  // DV_ORDINAL: the single suffix-less input encodes the ordinal code.
+  DV_ORDINAL: "code",
 };
+
+// DV_MULTIMEDIA: the renderer captures { name, size, type } from the file picker.
+// FLAT encoding maps these to |name, |size, |mediatype respectively.
+const MULTIMEDIA_FLAT_KEYS: Record<string, string> = {
+  name: "name",
+  size: "size",
+  type: "mediatype",
+};
+
+// rmTypes whose form-state is always a scalar (regardless of template input
+// structure). DV_DURATION's template has composite year/month/… inputs but the
+// renderer produces a single ISO 8601 string, so it must be treated as scalar.
+const SCALAR_OVERRIDE_RM_TYPES = new Set(["DV_DURATION"]);
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null && !Array.isArray(x);
@@ -43,6 +71,7 @@ function isLeaf(node: WebTemplateNode): boolean {
   return (node.inputs?.length ?? 0) > 0;
 }
 function isScalarLeaf(node: WebTemplateNode): boolean {
+  if (SCALAR_OVERRIDE_RM_TYPES.has(node.rmType)) return true;
   const inputs = node.inputs ?? [];
   return inputs.length === 1 && !inputs[0]?.suffix;
 }
@@ -52,6 +81,9 @@ function scalarSuffix(rmType: string): string | null {
 }
 function isMulti(node: WebTemplateNode): boolean {
   return node.max === -1 || (node.max ?? 1) > 1;
+}
+function isMultimediaNode(node: WebTemplateNode): boolean {
+  return node.rmType === "DV_MULTIMEDIA";
 }
 
 // ── form state → FLAT ─────────────────────────────────────────────────────────
@@ -82,6 +114,17 @@ function emitNode(node: WebTemplateNode, value: unknown, segments: FlatSegment[]
 }
 
 function emitLeaf(node: WebTemplateNode, value: unknown, segments: FlatSegment[], out: FlatComposition): void {
+  // DV_MULTIMEDIA: file descriptor { name, size, type } → |name, |size, |mediatype
+  if (isMultimediaNode(node) && isRecord(value)) {
+    for (const [descriptorKey, flatSuffix] of Object.entries(MULTIMEDIA_FLAT_KEYS)) {
+      const attrValue = value[descriptorKey];
+      if (attrValue !== undefined && attrValue !== null) {
+        out[buildFlatPath(segments, flatSuffix)] = attrValue;
+      }
+    }
+    return;
+  }
+
   if (isScalarLeaf(node)) {
     const suffix = scalarSuffix(node.rmType);
     out[buildFlatPath(segments, suffix ?? undefined)] = value;
@@ -142,10 +185,31 @@ export function flatToFormState(template: WebTemplate, flat: FlatComposition): R
     const pathSegments = segments[0]?.id === rootId ? segments.slice(1) : segments;
     if (pathSegments.length === 0) continue;
     const node = resolveNode(template.tree, pathSegments);
+
+    // DV_MULTIMEDIA: FLAT |name/|size/|mediatype keys → rebuild descriptor object.
+    if (node?.rmType === "DV_MULTIMEDIA" && attribute !== undefined) {
+      const reversedKey = multimediaFlatToDescriptorKey(attribute);
+      if (reversedKey !== undefined) {
+        setNested(root, pathSegments, reversedKey, false, value);
+        continue;
+      }
+    }
+
     const scalar = node ? isScalarLeaf(node) : attribute === undefined;
     setNested(root, pathSegments, attribute, scalar, value);
   }
   return root;
+}
+
+/**
+ * Reverse-map a DV_MULTIMEDIA FLAT suffix to the descriptor object key.
+ * FLAT suffix "name" → "name", "size" → "size", "mediatype" → "type".
+ */
+function multimediaFlatToDescriptorKey(flatSuffix: string): string | undefined {
+  for (const [descriptorKey, suffix] of Object.entries(MULTIMEDIA_FLAT_KEYS)) {
+    if (suffix === flatSuffix) return descriptorKey;
+  }
+  return undefined;
 }
 
 function setNested(

@@ -878,45 +878,79 @@ function DvDurationField({ node, path, control, readOnly }: LeafProps) {
   )
 }
 
-// DV_IDENTIFIER → plain text Input. Not in §7 main table but well-defined.
-// Form-state shape: scalar string.
+// DV_IDENTIFIER → composite text Inputs for id, type, issuer, assigner. §7 §7.x.
+// Form-state shape: `{ id, type, issuer, assigner }` (composite object matching
+// the four suffix inputs the template exposes). FLAT: |id, |type, |issuer, |assigner.
 function DvIdentifierField({ node, path, control, readOnly }: LeafProps) {
   const required = (node.min ?? 0) >= 1
   const label = nodeName(node)
-  const inputId = `field-${path}`
+
+  if (readOnly) {
+    return (
+      <Controller
+        control={control}
+        name={path}
+        render={({ field }) => {
+          const composite = isCompositeRecord(field.value) ? field.value : {}
+          const idVal = typeof composite['id'] === 'string' ? composite['id'] : ''
+          return <ReadOnlyField label={label} value={idVal} />
+        }}
+      />
+    )
+  }
+
+  const subFields: Array<{ suffix: string; labelText: string }> = [
+    { suffix: 'id', labelText: 'ID' },
+    { suffix: 'type', labelText: 'Type' },
+    { suffix: 'issuer', labelText: 'Issuer' },
+    { suffix: 'assigner', labelText: 'Assigner' },
+  ]
 
   return (
-    <Controller
-      control={control}
-      name={path}
-      render={({ field, fieldState }) => {
-        const strVal = typeof field.value === 'string' ? field.value : ''
-        const err = errorMessage(fieldState.error)
-        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
-        return (
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={inputId}>
-              {label}
-              {required && <RequiredMark />}
-            </Label>
-            <Input
-              id={inputId}
-              type="text"
-              value={strVal}
-              onChange={(e) => field.onChange(e.target.value)}
-              onBlur={field.onBlur}
-              aria-invalid={fieldState.invalid}
-              aria-describedby={err ? `${inputId}-err` : undefined}
+    <fieldset className="flex flex-col gap-1">
+      <legend className="text-sm font-medium leading-none">
+        {label}
+        {required && <RequiredMark />}
+      </legend>
+      <div className="grid grid-cols-2 gap-2">
+        {subFields.map(({ suffix, labelText }) => {
+          const subPath = `${path}.${suffix}`
+          const subId = `field-${subPath}`
+          return (
+            <Controller
+              key={suffix}
+              control={control}
+              name={subPath}
+              render={({ field, fieldState }) => {
+                const strVal = typeof field.value === 'string' ? field.value : ''
+                const err = errorMessage(fieldState.error)
+                return (
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor={subId} className="text-xs text-muted-foreground">
+                      {labelText}
+                    </Label>
+                    <Input
+                      id={subId}
+                      type="text"
+                      value={strVal}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      onBlur={field.onBlur}
+                      aria-invalid={fieldState.invalid}
+                      aria-describedby={err ? `${subId}-err` : undefined}
+                    />
+                    {err && (
+                      <p id={`${subId}-err`} role="alert" className="text-destructive text-xs">
+                        {err}
+                      </p>
+                    )}
+                  </div>
+                )
+              }}
             />
-            {err && (
-              <p id={`${inputId}-err`} role="alert" className="text-destructive text-xs">
-                {err}
-              </p>
-            )}
-          </div>
-        )
-      }}
-    />
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }
 
@@ -970,46 +1004,27 @@ function DvMultimediaField({ node, path, control, readOnly }: LeafProps) {
   )
 }
 
-// Fallback for unknown / unimplemented rmTypes. Renders a plain text input so
-// the form remains functional. Per the §7 rule: do NOT silently invent a
-// mapping for a new rmType on a production clinical surface — open an ADR.
-function UnknownLeafField({ node, path, control, readOnly }: LeafProps) {
-  const required = (node.min ?? 0) >= 1
+// Fallback for unmapped rmTypes. Renders a DISABLED placeholder so a clinician
+// can see the field but cannot enter data that would be silently mis-encoded.
+// Per the §7 rule: do NOT silently invent a mapping for a new rmType — open an
+// ADR proposing the mapping, citing the openEHR RM entry.
+function UnknownLeafField({ node }: Omit<LeafProps, 'path' | 'control'>) {
   const label = nodeName(node)
-  const inputId = `field-${path}`
-
+  const inputId = `field-unsupported-${node.id}`
+  const placeholder = m.compose_unsupported_type({ rmType: node.rmType })
   return (
-    <Controller
-      control={control}
-      name={path}
-      render={({ field, fieldState }) => {
-        const strVal = typeof field.value === 'string' ? field.value : ''
-        const err = errorMessage(fieldState.error)
-        if (readOnly) return <ReadOnlyField label={label} value={strVal} />
-        return (
-          <div className="flex flex-col gap-1">
-            <Label htmlFor={inputId}>
-              {label}
-              {required && <RequiredMark />}
-            </Label>
-            <Input
-              id={inputId}
-              type="text"
-              value={strVal}
-              onChange={(e) => field.onChange(e.target.value)}
-              onBlur={field.onBlur}
-              aria-invalid={fieldState.invalid}
-              aria-describedby={err ? `${inputId}-err` : undefined}
-            />
-            {err && (
-              <p id={`${inputId}-err`} role="alert" className="text-destructive text-xs">
-                {err}
-              </p>
-            )}
-          </div>
-        )
-      }}
-    />
+    <div className="flex flex-col gap-1">
+      <Label htmlFor={inputId} className="text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={inputId}
+        type="text"
+        disabled
+        placeholder={placeholder}
+        aria-label={placeholder}
+      />
+    </div>
   )
 }
 
@@ -1053,7 +1068,7 @@ function renderLeaf(
       // URI renders as plain text; form-state shape is scalar string.
       return <DvTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
     default:
-      return <UnknownLeafField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      return <UnknownLeafField key={path} node={node} />
   }
 }
 

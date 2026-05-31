@@ -205,5 +205,7 @@
   "viewer_metadata_template": "Template",
   "viewer_loading": "Loading composition…",
   "viewer_load_failed": "Could not load this composition.",
-  "viewer_close": "Close"
+  "viewer_close": "Close",
+
+  "compose_unsupported_type": "Unsupported type: {rmType}"
 }
