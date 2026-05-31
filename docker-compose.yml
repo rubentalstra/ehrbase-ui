@@ -199,6 +199,7 @@ services:
     environment:
       AUTH_DB_OWNER_URL: postgres://auth_owner:auth_owner@platform-db:5432/auth
       DEMOGRAPHIC_DB_OWNER_URL: postgres://demographic_owner:demographic_owner@platform-db:5432/demographic
+      AUDIT_DB_OWNER_URL: postgres://audit_owner:audit_owner@platform-db:5432/audit
     networks: [ehrbase-net]
     restart: 'no'
 
@@ -276,6 +277,12 @@ services:
       DEMOGRAPHIC_DB_URL: postgres://demographic_writer:demographic_writer@platform-db:5432/demographic
       DEMOGRAPHIC_DB_OWNER_URL: postgres://demographic_owner:demographic_owner@platform-db:5432/demographic
       DEMOGRAPHIC_PARTY_NAMESPACE: ${DEMOGRAPHIC_PARTY_NAMESPACE:-demographic}
+      # IHE ATNA access-audit trail (M7 foundation — ADR-0041). Append-only
+      # `audit` DB via the least-privilege audit_writer role. ATNA_AUDIT_SOURCE_ID
+      # / ATNA_ENTERPRISE_SITE_ID identify this node in emitted AuditMessages; the
+      # syslog forwarder to an external Audit Record Repository is M9.
+      AUDIT_DB_URL: postgres://audit_writer:audit_writer@platform-db:5432/audit
+      ATNA_AUDIT_SOURCE_ID: ${ATNA_AUDIT_SOURCE_ID:-ehrbase-ui-dev}
       SESSION_IDLE_TIMEOUT_SECONDS: '900'
       SESSION_ABSOLUTE_TIMEOUT_SECONDS: '43200'
       LOG_LEVEL: info

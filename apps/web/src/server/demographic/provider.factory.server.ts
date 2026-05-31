@@ -3,28 +3,22 @@
 // the process. Wires the two app-side dependencies the adapter packages cannot
 // own themselves:
 //
-//   1. an AuditSink — currently a no-op (the NEN-7513 audit subsystem was
-//      removed; the port stays so the demographic-core contract is unchanged
-//      and a real sink can be re-attached later).
+//   1. an AuditSink — the IHE ATNA access trail (ADR-0041, M9 foundation). The
+//      provider emits a PartyAuditEvent per op; PostgresAuditSink maps it to a
+//      DICOM AuditMessage + appends it to the `audit` Postgres schema. Never
+//      throws (a demographic op is not broken by an audit-DB hiccup).
 //   2. the pseudonymiser — HMAC-SHA256 keyed by AUDIT_PSEUDONYM_SECRET, kept
 //      app-side so the secret never enters an adapter package (rule 12, ADR-0037).
 //
 // `.server.ts`: imports the DB client + the secret-reading pseudonymiser; never
 // reaches the client bundle.
 
-import { type AuditSink, type DemographicProvider } from '@ehrbase-ui/demographic-core'
+import { type DemographicProvider } from '@ehrbase-ui/demographic-core'
 import { createBuiltinProvider } from '@ehrbase-ui/demographic-core/builtin'
 import { pseudonymizeIdentifier } from '@ehrbase-ui/demographic-core/pseudonymize'
 
+import { PostgresAuditSink } from '@/server/audit'
 import { demographicDb } from '@/server/db/demographic-client'
-
-// No-op AuditSink: satisfies the demographic-core port without emitting
-// anything. The access-trail layer was removed with the audit subsystem; the
-// data-lineage layer is still the VERSIONED_PARTY committer columns the adapter
-// writes.
-const noopAuditSink: AuditSink = {
-  record: async () => {},
-}
 
 function build(): DemographicProvider {
   // 'builtin' is the only provider for now. The external FHIR/HL7v2/PDQ adapter
@@ -43,7 +37,7 @@ function build(): DemographicProvider {
 
   return createBuiltinProvider({
     db: demographicDb,
-    audit: noopAuditSink,
+    audit: new PostgresAuditSink('demographic:builtin'),
     pseudonymize: pseudonymizeIdentifier,
     partyRefNamespace,
   })
