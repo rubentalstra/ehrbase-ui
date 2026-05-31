@@ -21,11 +21,14 @@ import {
   type FieldError,
   useFieldArray,
   useFormContext,
+  useWatch,
 } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 
+import { z } from 'zod'
 import type { WebTemplateInput, WebTemplateNode } from '@ehrbase-ui/openehr-web-template'
 import { m } from '@ehrbase-ui/i18n/messages'
+import { NULL_FLAVOUR_CODE, nullFlavourRubric } from '@ehrbase-ui/openehr-rm'
 
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -176,12 +179,142 @@ function isCompositeRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x)
 }
 
+// ── Null-flavour helpers ──────────────────────────────────────────────────────
+//
+// F3 §7: a nullable ELEMENT can carry a null_flavour (DV_CODED_TEXT) instead of
+// a value.  The form-state shape for a null-flavoured leaf is:
+//   { _null_flavour: "<code>", _null_flavour_value?: "<rubric>", _null_flavour_terminology?: "openehr" }
+// The FLAT converter emits `<path>/_null_flavour|code` (and `|value`, `|terminology`)
+// on write, and recovers the same shape on read-back.
+//
+// The null_flavour code emitted by the "Not recorded" toggle is 253 (unknown) —
+// the most common clinical choice when a value is absent but the reason is
+// unspecified.  All four standard codes are encoded in NULL_FLAVOUR_CODE
+// (openehr-rm facade/format.ts); we default to UNKNOWN for the toggle.
+//
+// Codes reused from @ehrbase-ui/openehr-rm (NULL_FLAVOUR_CODE / nullFlavourRubric)
+// to avoid duplication — rule §7: REUSE them.
+
+const NullFlavourShape = z.object({ _null_flavour: z.string() })
+
+function isNullFlavouredState(value: unknown): value is { _null_flavour: string } {
+  return NullFlavourShape.safeParse(value).success
+}
+
 // ── Required marker ───────────────────────────────────────────────────────────
 function RequiredMark() {
   return (
     <span className="text-destructive ml-1" aria-label={m.compose_required_label()}>
       {m.compose_required_marker()}
     </span>
+  )
+}
+
+// ── NullFlavourWrapper ────────────────────────────────────────────────────────
+// Wraps any nullable leaf field (min === 0) with a small "Not recorded" toggle
+// button.  When active, the underlying field input is hidden and a badge shows
+// the flavour rubric.  When cleared, the field is restored to its normal input.
+//
+// The wrapper only renders when the node is optional (min === 0) and readOnly
+// is false — required fields cannot be null-flavoured.
+// In readOnly mode the null_flavour value is displayed as a static badge.
+
+interface NullFlavourWrapperProps {
+  node: WebTemplateNode
+  path: string
+  control: Control<Record<string, unknown>>
+  readOnly?: boolean
+  children: React.ReactNode
+}
+
+function NullFlavourWrapper({ node, path, control, readOnly, children }: NullFlavourWrapperProps) {
+  const required = (node.min ?? 0) >= 1
+  const currentValue = useWatch({ control, name: path })
+  const isNullFlavoured = isNullFlavouredState(currentValue)
+  const flavourCode = isNullFlavoured ? currentValue._null_flavour : undefined
+  const flavourRubric = flavourCode !== undefined ? nullFlavourRubric(flavourCode) : undefined
+  const { setValue } = useFormContext()
+
+  if (required) {
+    // Required fields cannot be null-flavoured: render children directly.
+    return <>{children}</>
+  }
+
+  if (readOnly && isNullFlavoured) {
+    // In read-only mode show a static badge for the null_flavour.
+    const rubricText = flavourRubric ?? flavourCode ?? ''
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-muted-foreground text-xs font-medium">{node.localizedName ?? node.name ?? node.id}</span>
+        <span
+          className="text-muted-foreground inline-flex items-center gap-1 text-sm italic"
+          aria-label={m.compose_null_flavour_badge({ rubric: rubricText })}
+        >
+          {m.compose_null_flavour_label()} ({rubricText})
+        </span>
+      </div>
+    )
+  }
+
+  if (readOnly) {
+    return <>{children}</>
+  }
+
+  const handleToggle = () => {
+    setValue(
+      path,
+      {
+        _null_flavour: NULL_FLAVOUR_CODE.UNKNOWN,
+        _null_flavour_value: 'unknown',
+        _null_flavour_terminology: 'openehr',
+      },
+      { shouldValidate: true },
+    )
+  }
+
+  const handleClear = () => {
+    setValue(path, undefined, { shouldValidate: true })
+  }
+
+  if (isNullFlavoured) {
+    const rubricText = flavourRubric ?? flavourCode ?? ''
+    return (
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-sm italic">
+            {m.compose_null_flavour_badge({ rubric: rubricText })}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            aria-label={m.compose_null_flavour_aria_clear()}
+            className="h-6 px-2 text-xs"
+          >
+            {m.compose_null_flavour_clear()}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {children}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleToggle}
+          aria-label={m.compose_null_flavour_aria_toggle()}
+          className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+        >
+          {m.compose_null_flavour_label()}
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -1275,6 +1408,12 @@ function UnknownLeafField({ node }: Omit<LeafProps, 'path' | 'control'>) {
 }
 
 // ── Leaf dispatcher ───────────────────────────────────────────────────────────
+//
+// F3 §7: every optional (min === 0) leaf is wrapped in NullFlavourWrapper.
+// The wrapper intercepts a null-flavoured form-state value and renders the
+// "Not recorded" badge instead of the field input.  Required fields and
+// DV_MULTIMEDIA (file input) are NOT wrapped — file inputs have their own
+// absent-state handling.
 
 function renderLeaf(
   node: WebTemplateNode,
@@ -1282,40 +1421,73 @@ function renderLeaf(
   control: Control<Record<string, unknown>>,
   readOnly?: boolean,
 ) {
+  // DV_MULTIMEDIA: no null-flavour wrapper (file input has its own handling).
+  if (node.rmType === 'DV_MULTIMEDIA') {
+    return <DvMultimediaField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+  }
+
+  // Unknown rmType: no null-flavour wrapper needed (field is disabled).
+  const knownRmTypes = new Set([
+    'DV_TEXT', 'DV_CODED_TEXT', 'DV_QUANTITY', 'DV_COUNT', 'DV_BOOLEAN',
+    'DV_DATE', 'DV_DATE_TIME', 'DV_TIME', 'DV_ORDINAL', 'DV_PROPORTION',
+    'DV_DURATION', 'DV_IDENTIFIER', 'DV_URI', 'DV_EHR_URI',
+  ])
+  if (!knownRmTypes.has(node.rmType)) {
+    return <UnknownLeafField key={path} node={node} />
+  }
+
+  let leafEl: React.ReactElement
   switch (node.rmType) {
     case 'DV_TEXT':
-      return <DvTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvTextField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_CODED_TEXT':
-      return <DvCodedTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvCodedTextField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_QUANTITY':
-      return <DvQuantityField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvQuantityField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_COUNT':
-      return <DvCountField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvCountField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_BOOLEAN':
-      return <DvBooleanField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvBooleanField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_DATE':
-      return <DvDateField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvDateField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_DATE_TIME':
-      return <DvDateTimeField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvDateTimeField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_TIME':
-      return <DvTimeField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvTimeField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_ORDINAL':
-      return <DvOrdinalField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvOrdinalField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_PROPORTION':
-      return <DvProportionField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvProportionField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_DURATION':
-      return <DvDurationField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvDurationField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_IDENTIFIER':
-      return <DvIdentifierField key={path} node={node} path={path} control={control} readOnly={readOnly} />
-    case 'DV_MULTIMEDIA':
-      return <DvMultimediaField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvIdentifierField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     case 'DV_URI':
     case 'DV_EHR_URI':
       // URI renders as plain text; form-state shape is scalar string.
-      return <DvTextField key={path} node={node} path={path} control={control} readOnly={readOnly} />
+      leafEl = <DvTextField node={node} path={path} control={control} readOnly={readOnly} />
+      break
     default:
       return <UnknownLeafField key={path} node={node} />
   }
+
+  return (
+    <NullFlavourWrapper key={path} node={node} path={path} control={control} readOnly={readOnly}>
+      {leafEl}
+    </NullFlavourWrapper>
+  )
 }
 
 // ── ArrayFieldRenderer (inline, no circular import) ──────────────────────────

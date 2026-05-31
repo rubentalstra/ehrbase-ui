@@ -216,5 +216,11 @@
   "compose_term_searching": "Searching…",
   "compose_term_error": "Could not reach the terminology server.",
   "compose_term_not_configured": "Terminology server not configured — enter a code manually.",
-  "compose_term_selected": "Selected: {display}"
+  "compose_term_selected": "Selected: {display}",
+
+  "compose_null_flavour_label": "Not recorded",
+  "compose_null_flavour_clear": "Clear",
+  "compose_null_flavour_badge": "Not recorded: {rubric}",
+  "compose_null_flavour_aria_toggle": "Mark field as not recorded",
+  "compose_null_flavour_aria_clear": "Clear not-recorded mark"
 }

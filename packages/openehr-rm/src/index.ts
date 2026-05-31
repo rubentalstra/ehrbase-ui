@@ -44,4 +44,11 @@ export {
 } from "./facade/format.ts";
 export type { FormatDvDateTimeOptions, NullFlavourCode } from "./facade/format.ts";
 
+// DV_INTERVAL lenient-parse facade (F3 — §7 library-completeness):
+// tolerates absent lower_included/upper_included on real EHRbase fixtures.
+export {
+  DV_INTERVAL_LENIENT,
+  parseDvIntervalLenient,
+} from "./facade/interval.ts";
+
 export { SPEC_COMPONENT, SPEC_VERSION } from "./spec.ts";

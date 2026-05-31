@@ -43,6 +43,84 @@ function isArray(x: unknown): x is unknown[] {
   return Array.isArray(x);
 }
 
+// ── F3: null_flavour + normal_range STRUCTURED → form-state ──────────────────
+//
+// In EHRbase STRUCTURED (canonicalSDT) format, RM-level attributes on an
+// ELEMENT object use `_`-prefixed keys with `|attribute` suffix:
+//   { "|value": ..., "_null_flavour|code": "253", "_null_flavour|value": "unknown",
+//     "_null_flavour|terminology": "openehr" }
+// and for normal_range on a composite leaf:
+//   { "|magnitude": 5.4, "|unit": "mmol/L",
+//     "_normal_range|lower|magnitude": 3.9, "_normal_range|lower|unit": "mmol/L", … }
+//
+// The `|` in `_null_flavour|code` is NOT a standard FLAT `|attribute` suffix —
+// it is EHRbase's STRUCTURED encoding of the nested attribute.  Our form-state
+// shape mirrors the FLAT convention:
+//   { _null_flavour: "253", _null_flavour_value?: "unknown", … }
+//   { magnitude: 5.4, unit: "mmol/L", _normal_range: { lower: { magnitude: 3.9, unit: "mmol/L" }, … } }
+
+/**
+ * Extract null-flavour form-state keys from a STRUCTURED element object.
+ * Returns an object with `_null_flavour`, `_null_flavour_value?`, and
+ * `_null_flavour_terminology?` when present; empty object otherwise.
+ */
+function extractNullFlavourFromStructured(obj: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const code = obj["_null_flavour|code"];
+  if (typeof code === "string") result["_null_flavour"] = code;
+  const val = obj["_null_flavour|value"];
+  if (typeof val === "string") result["_null_flavour_value"] = val;
+  const term = obj["_null_flavour|terminology"];
+  if (typeof term === "string") result["_null_flavour_terminology"] = term;
+  return result;
+}
+
+/**
+ * Extract normal_range form-state object from a STRUCTURED element object.
+ * EHRbase encodes the range as flat keys in the element object:
+ *   "_normal_range|lower|magnitude", "_normal_range|lower|unit",
+ *   "_normal_range|upper|magnitude", "_normal_range|upper|unit",
+ *   "_normal_range|lower_unbounded", "_normal_range|upper_unbounded",
+ *   "_normal_range|lower_included", "_normal_range|upper_included"
+ * Returns `undefined` when no `_normal_range` keys are found.
+ */
+function extractNormalRangeFromStructured(obj: Record<string, unknown>): Record<string, unknown> | undefined {
+  const range: Record<string, unknown> = {};
+  let found = false;
+
+  for (const [k, v] of Object.entries(obj)) {
+    if (!k.startsWith("_normal_range|")) continue;
+    found = true;
+    // Strip the "_normal_range|" prefix.
+    const rest = k.slice("_normal_range|".length);
+    // Split on "|" — for nested paths like "lower|magnitude".
+    const parts = rest.split("|");
+    if (parts.length === 1) {
+      // Boolean flag: "lower_unbounded", "upper_unbounded", etc.
+      const flag = parts[0];
+      if (flag !== undefined) range[flag] = v;
+    } else if (parts.length === 2) {
+      // Bound attribute: "lower", "magnitude".
+      const bound = parts[0];
+      const attr = parts[1];
+      if (bound !== undefined && attr !== undefined) {
+        const boundObj = recordPropStructured(range, bound);
+        boundObj[attr] = v;
+      }
+    }
+  }
+
+  return found ? range : undefined;
+}
+
+function recordPropStructured(obj: Record<string, unknown>, key: string): Record<string, unknown> {
+  const existing = obj[key];
+  if (isRecord(existing)) return existing;
+  const fresh: Record<string, unknown> = {};
+  obj[key] = fresh;
+  return fresh;
+}
+
 // ── Leaf detection (mirrors convert.ts) ──────────────────────────────────────
 
 function isLeafNode(node: WebTemplateNode): boolean {
@@ -75,8 +153,22 @@ function elementObjectToLeafValue(
   obj: Record<string, unknown>,
   node: WebTemplateNode,
 ): unknown {
+  // F3 null-flavour: detect `_null_flavour|code` in the STRUCTURED element object.
+  // A null-flavoured element has no `|value` and the null_flavour keys are present.
+  // The form-state shape for a null-flavoured leaf is:
+  //   { _null_flavour: "<code>", _null_flavour_value?: "<rubric>", _null_flavour_terminology?: "<term>" }
+  // This must be checked BEFORE the scalar/composite branch so that a
+  // null-flavoured scalar leaf is not misread as its "|value" (absent → undefined).
+  const hasNullFlavour = typeof obj["_null_flavour|code"] === "string";
+  const hasValue = Object.keys(obj).some((k) => k.startsWith("|"));
+  if (hasNullFlavour && !hasValue) {
+    return extractNullFlavourFromStructured(obj);
+  }
+
   if (isScalarLeafNode(node)) {
     // Scalar leaf: prefer "|value", fall back to any single `|`-prefixed key.
+    // normal_range does not attach to scalar leaves (DV_TEXT, DV_DATE_TIME, etc.
+    // are not orderable types that carry reference ranges in clinical practice).
     const direct = obj["|value"];
     if (direct !== undefined) return direct;
     for (const [k, v] of Object.entries(obj)) {
@@ -93,6 +185,11 @@ function elementObjectToLeafValue(
       const suffix = k.slice(1); // strip leading `|`
       result[suffix] = v;
     }
+  }
+  // F3 normal_range: attach as metadata on the composite form-state object.
+  const range = extractNormalRangeFromStructured(obj);
+  if (range !== undefined) {
+    result["_normal_range"] = range;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
