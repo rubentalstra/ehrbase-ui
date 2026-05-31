@@ -47,11 +47,12 @@ jobs:
           # license-review. Keep in sync when adding a packages/* package.
           allow-dependencies-licenses: >-
             pkg:npm/@ehrbase-ui/config-eslint, pkg:npm/@ehrbase-ui/config-tsconfig,
-            pkg:npm/@ehrbase-ui/demographic-adapter-fhir, pkg:npm/@ehrbase-ui/demographic-core,
+            pkg:npm/@ehrbase-ui/demographic-core,
             pkg:npm/@ehrbase-ui/i18n, pkg:npm/@ehrbase-ui/openehr-am, pkg:npm/@ehrbase-ui/openehr-aql,
             pkg:npm/@ehrbase-ui/openehr-base, pkg:npm/@ehrbase-ui/openehr-cds,
             pkg:npm/@ehrbase-ui/openehr-flat, pkg:npm/@ehrbase-ui/openehr-its-rest,
             pkg:npm/@ehrbase-ui/openehr-proc, pkg:npm/@ehrbase-ui/openehr-rm,
             pkg:npm/@ehrbase-ui/openehr-term, pkg:npm/@ehrbase-ui/openehr-web-template,
-            pkg:npm/@ehrbase-ui/term-adapter-snowstorm, pkg:npm/@ehrbase-ui/term-core,
+            pkg:npm/@ehrbase-ui/term-adapter-generic-fhir, pkg:npm/@ehrbase-ui/term-adapter-snowstorm,
+            pkg:npm/@ehrbase-ui/term-core,
             pkg:npm/@ehrbase-ui/valkey
