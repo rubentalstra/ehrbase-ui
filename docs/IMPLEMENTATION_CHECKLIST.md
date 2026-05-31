@@ -197,7 +197,7 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 - [x] PARTY hierarchy implementation: PERSON, PARTY_IDENTITY, CONTACT, ADDRESS, ROLE, basic PARTY_RELATIONSHIP — canonical FHIR-shaped `Party` projection (ADR-0031) + relationship table
 - [x] VERSIONED_PARTY semantics — immutable whole-party snapshot per version (current + history); prior versions readable by id+version; `listVersions`
 - [x] REST surface `/api/demographic/*` in `apps/web/src/routes/api/demographic/` — role-gated, provider-audited
-- [x] FHIR R4 adapter: `packages/demographic-adapter-fhir` — version-aware (R4/R4B; R5/R6 throw at construction per ADR-0033); merge via Patient.link + relationships via RelatedPerson (ADR-0033 addendum)
+- [x] ~~FHIR R4 adapter: `packages/demographic-adapter-fhir`~~ — **REMOVED in the core-refocus (2026-05-31).** Built-in Postgres is the sole demographic provider; the `DemographicProvider` interface is retained so a FHIR/HL7v2/PDQ adapter can be re-added behind a new ADR (ADR-0033).
 - [x] Capability flags (`capabilities.readonly` etc.) drive admin UI gating
 - [x] Identifier-namespace registry: NL (BSN, 11-proef), BE (NISS, mod-97), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL, 11-digit), MRN
 - [x] Pseudonymisation: HMAC-SHA256 with the shared `AUDIT_PSEUDONYM_SECRET` (matches §14.4 + ADR-0024)

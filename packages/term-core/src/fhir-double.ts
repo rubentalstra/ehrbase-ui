@@ -3,7 +3,8 @@
 // CodeSystem/$lookup, ValueSet/$validate-code. Lets the contract suite + adapter
 // tests run in-process, no Docker. The live HAPI/Ontoserver server (docker-compose
 // `terminology` profile, see term-adapter-snowstorm README note) is the
-// belt-and-braces integration check. Mirrors demographic-adapter-fhir/fhir-double.
+// belt-and-braces integration check (same in-memory-double pattern the
+// demographic contract suite uses).
 
 import type { FetchLike } from "./fhir-client.ts";
 import {

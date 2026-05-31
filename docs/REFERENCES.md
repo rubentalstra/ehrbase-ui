@@ -144,7 +144,7 @@ OTel SDK + transport (verified 2026-05-29 via `npm view`):
 | ------------- | --------------------- | -------------- | ------------------------------------------- |
 | clamav/clamav | 1.5-debian (May 2026) | **1.5-debian** | https://hub.docker.com/r/clamav/clamav/tags |
 
-### FHIR (M7 — `demographic-adapter-fhir`, ADR-0033)
+### FHIR (R4) — terminology generic-FHIR adapter (the demographic FHIR adapter was removed 2026-05-31; ADR-0033)
 
 | Spec     | Version                     | Status                     | Source                    |
 | -------- | --------------------------- | -------------------------- | ------------------------- |

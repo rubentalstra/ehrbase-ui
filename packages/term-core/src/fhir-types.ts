@@ -5,7 +5,7 @@
 // boundary — §15). Unknown fields are stripped (default Zod behaviour); we never
 // claim full FHIR conformance (ADR-0034 — the R4 Terminology Service subset only).
 //
-// Reuses the same hand-rolled-Zod FHIR typing approach as demographic-adapter-fhir
+// Hand-rolled Zod FHIR R4 types
 // (NO third-party FHIR SDK on the dependency graph — ADR-0030, rule 5).
 
 import { z } from "zod";

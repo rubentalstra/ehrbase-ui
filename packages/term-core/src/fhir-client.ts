@@ -1,6 +1,6 @@
 // Thin FHIR R4 Terminology Service REST client (ADR-0034). `fetch` is injectable
 // so the contract suite drives a deterministic in-memory double and prod uses the
-// global fetch (same pattern as demographic-adapter-fhir/client.ts). All
+// global fetch (a thin REST client over fetch, no FHIR SDK). All
 // responses are Zod-validated (fhir-types.ts) before returning (§15).
 //
 // Exposes the three GET operations the F2 scope needs: ValueSet/$expand,
@@ -26,7 +26,7 @@ const FHIR_JSON = "application/fhir+json";
 
 // Strip trailing slashes without a regex — a linear scan avoids the
 // polynomial-ReDoS hazard CodeQL flags for `/\/+$/` on slash-heavy input
-// (identical reasoning to demographic-adapter-fhir/client.ts).
+// (a linear scan, not a slash-heavy regex).
 function stripTrailingSlashes(value: string): string {
   let end = value.length;
   while (end > 0 && value.charCodeAt(end - 1) === 47 /* '/' */) end -= 1;
