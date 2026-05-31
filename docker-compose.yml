@@ -116,7 +116,7 @@ services:
     # Health gate on the management-port /health/ready endpoint (port 9000,
     # enabled by KC_HEALTH_ENABLED). Keycloak now reports UP as soon as the
     # server is ready — the realm is applied AFTER this by keycloak-config, so
-    # realm-dependent services (ehrbase, ui, grafana) gate on keycloak-config's
+    # realm-dependent services (ehrbase, ui) gate on keycloak-config's
     # completion, NOT on this healthcheck. The Keycloak 26 image has no
     # curl/wget, but it ships bash — so we use bash's /dev/tcp to speak raw HTTP.
     healthcheck:
@@ -134,11 +134,11 @@ services:
     networks: [ehrbase-net]
 
   # Keycloak configuration-as-code — one-shot, declarative, idempotent
-  # (ADR-0036). Applies the realm + roles + all three OIDC clients from
-  # keycloak/config/ehrbase-realm.json and the four dev demo users from
-  # keycloak/config/ehrbase-users.dev.json, UPDATING in place on every up. This is the
-  # official replacement for the old bespoke kcadm shell scripts (realm import
-  # + grafana-client sync + demo-user seed) — one tool, one source of truth.
+  # (ADR-0036). Applies the realm + roles + both OIDC clients (ehrbase-ui,
+  # ehrbase) from keycloak/config/ehrbase-realm.json and the four dev demo
+  # users from keycloak/config/ehrbase-users.dev.json, UPDATING in place on
+  # every up. This is the official replacement for the old bespoke kcadm shell
+  # scripts (realm import + demo-user seed) — one tool, one source of truth.
   #
   # Secrets are injected via keycloak-config-cli variable substitution
   # ($(env:VAR) with IMPORT_VARSUBSTITUTION_ENABLED) so prod rotates via env,
@@ -162,7 +162,6 @@ services:
       KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: 120s
       IMPORT_VARSUBSTITUTION_ENABLED: 'true'
       IMPORT_FILES_LOCATIONS: '/config/*.json'
-      GRAFANA_OIDC_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:-dev-only-rotate-in-prod}
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-dev-only-rotate-in-prod}
     volumes:
       - ./keycloak/config:/config:ro

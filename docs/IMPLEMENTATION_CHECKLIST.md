@@ -25,7 +25,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1F** Playwright + `@axe-core/playwright` + smoke E2E — §12.4, §24
 - [x] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
 - [x] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010, verification passed) — §17
-- [x] **1I** Pino app logger, stdout only (audit write path lands in M2) — §13.1
+- [x] **1I** Pino app logger, stdout only (app logging only; the audit write path was removed in the core-refocus — deferred post-core) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
 - [x] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) + realm import — §18, §5.6
 - [x] **1L** CI/CD: `ci.yml`, `security.yml`, `codeql.yml`, `dependency-review.yml`, `release.yml`, `dependabot.yml`, CODEOWNERS, PR + issue templates — §20 (semver-tag pinning per ADR-0011)
@@ -44,8 +44,8 @@ break-glass (§5.6) and the BFF proxy depend on a real `logAudit`. ADR-0002,
 0003, 0004, 0005 ratified; ADR-0012 (app DB stack) + ADR-0013 (audit DB
 append-only) added.
 
-- [x] **2A** Audit DB infra — `platform-db` rename + `audit` DB/roles init, Drizzle client, schema, migration (append-only trigger + grants), `db:*` scripts — §14; ADR-0012/0013
-- [x] **2B** Audit write core — `AuditEvent` schema (derived from the table), `logAudit`, pseudonymization, hash chain, durable store, integrity verifier — §14.2–14.5
+- [ ] ~~**2A** Audit DB infra — `audit` DB/roles init, Drizzle client, schema, migration (append-only trigger + grants)~~ — ❌ **removed in the core-refocus (2026-05-30); deferred post-core.** `platform-db` + the `db:*` scripts + the auth/demographic DBs are KEPT; only the `audit` DB/schema/migrations were dropped.
+- [ ] ~~**2B** Audit write core — `AuditEvent` schema, `logAudit`, pseudonymization, hash chain, durable store, integrity verifier~~ — ❌ **removed in the core-refocus (2026-05-30); deferred post-core.**
 - [x] **2C** Valkey session store — read / write / destroy helpers + sliding TTL — §5.3
 - [x] **2D** OIDC login (PKCE + state), callback (token exchange + session set + audited LOGIN), `/api/auth/logout` (Keycloak end-session) — §5.4
 - [x] **2E** `requireAuth` + silent refresh + idle 15 min / absolute 12 h timeouts — §5.5, §5.10
@@ -85,7 +85,7 @@ append-only) added.
 - [x] Error boundaries per feature area
 - [x] TanStack Query global error → toast + correlation ID
 - [x] Public `/accessibility` statement page — §12.8
-- [x] `/me/access-log` scaffold (Art. 15 view; fed by the M4 governance milestone) — §14.8
+- [ ] ~~`/me/access-log` scaffold (Art. 15 view; fed by the M4 governance milestone)~~ — ❌ **removed in the core-refocus (2026-05-30); deferred post-core** (returns with the audit layer)
 - [x] Skip-to-content link, visible focus rings, `scroll-margin-top` for sticky headers — §12.6
 - [~] Manual NVDA + VoiceOver test report under `docs/accessibility/` — §12.7 (report written 2026-05-27; NVDA/VoiceOver passes PENDING human run before v1.0, M8)
 
@@ -93,17 +93,7 @@ append-only) added.
 
 ## Milestone 4 — Audit governance + retention (§14.6–14.12) — ❌ REMOVED (core-refocus 2026-05-30; deferred post-core)
 
-The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm-tier persistence, integrity verifier) shipped in M2. This milestone owns the remaining **governance** chapter — distinct capabilities, each owned here:
-
-- [x] Cold storage tier: ColdStorageProvider abstraction (SeaweedFS dev-default best-effort + AWS S3 Object Lock WORM) — §14.6, ADR-0027
-- [x] Retention: configurable per national clinical-records law (default 20 y; e.g. NL WGBO, FR CSP R1112-7, DE §10 BO, AT ÄrzteG) + tagged purge job — §14.7
-- [x] Scheduled nightly hash-chain integrity job + DPO alerting (extends the M2 verifier; Nitro task ADR-0026) — §14.5
-- [x] DPIA template populated under `docs/compliance/` — §14.10
-- [x] DPA template populated — §14.1
-- [x] RoPA template populated — §14.1
-- [x] Breach response runbook — §14.9
-- [x] Patient-facing Art.15 `/me/access-log` data feed (UI scaffold from M3, fed here) — §14.8
-- [x] Audit-log integrity-check runbook
+**Entire milestone removed in the core-refocus (2026-05-30); deferred post-core.** Everything this milestone owned — the cold-store WORM tier (SeaweedFS dev-default + AWS S3 Object Lock; ADR-0027), configurable national-law retention + tagged purge job, the nightly hash-chain integrity job + DPO alerting, the DPIA / DPA / RoPA templates under `docs/compliance/`, the breach-response + integrity runbooks, and the Art. 15 `/me/access-log` data feed — was removed together with the audit write core (the M2 write path it depended on is also gone). It returns once there is a real EPD to protect (see CLAUDE.md → "Deferred (post-core)").
 
 ## Milestone 5 — Observability (§13) — ❌ REMOVED (core-refocus 2026-05-30; kept only /api/health + /api/ready + plain Pino)
 
@@ -111,12 +101,9 @@ The audit **write path** (schema, `logAudit`, pseudonymization, hash chain, warm
 >
 > **Stack simplification (2026-05-29, ADR-0035 + ADR-0036).** The `db-platform`/`audit`/`auth`/`observability`/`http-bff` packages were collapsed into `apps/web/src/server/*` (no external consumers); Drizzle migrations collapsed to one `db:migrate`; and the bespoke Keycloak `kcadm` shell scripts (realm import + grafana-client sync + demo-user seed) were replaced by one declarative `keycloak-config-cli` container. One-shot containers: 4 → 3.
 
-- [x] OTel SDK bootstrap + sampling + PHI redaction layers — §13.2 (ADR-0009)
-- [x] `pino-opentelemetry-transport` wiring — §13.1
-- [x] `/api/health` + `/api/ready` — §13.4 (probes Valkey + EHRbase + Keycloak + audit DB + auth DB)
-- [x] OTel collector config in `docker-compose.yml` — `otel/opentelemetry-collector-contrib:0.153.0` (web-reverified 2026-05-29)
-- [x] Tempo (`3.0.0`) + Loki (`3.7.2`) + Prometheus (`v3.12.0`) + Grafana (`grafana-oss:13.0.1` + Keycloak SSO) dev stack
-- [x] PHI-redaction layer verification (unit tests for layers 1 + 2; collector layers 3 + 4 in `apps/web/docker/otel/collector-config.yaml`)
+- [x] `/api/health` + `/api/ready` — §13.4 (probes Valkey + EHRbase + Keycloak + auth DB)
+- [x] Plain-stdout Pino app logging — §13.1
+- [ ] ~~OTel SDK bootstrap + sampling + PHI-redaction layers, `pino-opentelemetry-transport` wiring, the OTel collector config, the Tempo / Loki / Prometheus / Grafana dev stack, and the PHI-redaction layer verification~~ — ❌ **removed in the core-refocus (2026-05-30); deferred post-core.** Only the health/readiness probes and plain-stdout Pino logging are kept.
 
 ## Milestone 5.5 — openEHR Spec Foundation (`packages/openehr-*`)
 
@@ -179,7 +166,7 @@ Remaining follow-up: broaden the ADR-0016 round-trip toward every v1.0 archetype
 - [ ] `FieldRenderer` (rmType → shadcn map) — §7 _(UI half)_
 - [ ] `ArrayFieldRenderer` (`useFieldArray` cardinality) — §7 _(UI half)_
 - [~] FLAT converter (write); STRUCTURED converter (read); CANONICAL converter (export) — `packages/openehr-flat` — FLAT write+read **wired** server-side (`composition.{functions,server}.ts` + `callEhrbase`); STRUCTURED/CANONICAL pending
-- [x] `DV_MULTIMEDIA` upload + ClamAV sidecar — §7.x file uploads — `upload.{functions,server}.ts` + `clamav/clamav:1.4.3` sidecar (clamd INSTREAM TCP), magic-byte sniff allow-list, JPEG EXIF strip, 50MB cap, inline-attachment descriptor (storage = EHRbase inline per §7.x, no object store)
+- [x] `DV_MULTIMEDIA` upload — §7.x file uploads — `upload.{functions,server}.ts`, magic-byte sniff allow-list, JPEG EXIF strip, 50MB cap, inline-attachment descriptor (storage = EHRbase inline per §7.x, no object store). _The ClamAV scanning sidecar was removed in the core-refocus (2026-05-30); deferred post-core — the magic-byte / EXIF / size-cap checks are kept._
 - [~] Optimistic concurrency (If-Match ETag) + side-by-side diff modal — §7.x concurrent edits — server half done (BFF + `callEhrbase` forward If-Match, map 412→typed CONFLICT with current etag); diff modal is UI
 - [x] Autosave drafts → encrypted Valkey, 24-hour TTL — §7.x autosave — `drafts.{functions,server}.ts` + AES-256-GCM (`field-encryption.server.ts`, HKDF from `AUDIT_PSEUDONYM_SECRET`)
 - [ ] `CompositionViewer` (STRUCTURED read-back) — §6 _(UI half)_

@@ -8,14 +8,16 @@
 
 Four pre-seeded users, one per realm role from [`keycloak/config/ehrbase-realm.json`](../keycloak/config/ehrbase-realm.json) (the same roles RBAC checks in [`apps/web/src/server/auth/require-role.ts`](../apps/web/src/server/auth/require-role.ts)).
 
-| Username             | Email                             | Password            | Realm role       | What this account can do                                                                                                                                          |
-| -------------------- | --------------------------------- | ------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dev-clinician`      | `dev-clinician@example.test`      | `DevClinician123!`  | `clinician`      | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients (§5.6).                                                    |
-| `dev-admin`          | `dev-admin@example.test`          | `DevAdmin12345!`    | `admin`          | Manage templates, users, roles, configuration. Cannot read PHI without break-glass.                                                                               |
-| `dev-audit-reviewer` | `dev-audit-reviewer@example.test` | `DevReviewer123!`   | `audit-reviewer` | Read the audit log; run the NEN 7513 sample-of-60 review dashboard (§14.13). Also the role allowed to trigger the M4 audit tasks at `/api/admin/audit/tasks/...`. |
-| `dev-researcher`     | `dev-researcher@example.test`     | `DevResearcher123!` | `researcher`     | Read pseudonymised PHI; full AQL access against the pseudonymised dataset. Cannot read identifying fields.                                                        |
+| Username             | Email                             | Password            | Realm role       | What this account can do                                                                                                                                                                                                                          |
+| -------------------- | --------------------------------- | ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev-clinician`      | `dev-clinician@example.test`      | `DevClinician123!`  | `clinician`      | Read PHI for patients in their care relationship; write compositions; run AQL scoped to those patients (§5.6).                                                                                                                                    |
+| `dev-admin`          | `dev-admin@example.test`          | `DevAdmin12345!`    | `admin`          | Manage templates, users, roles, configuration. Cannot read PHI without break-glass.                                                                                                                                                               |
+| `dev-audit-reviewer` | `dev-audit-reviewer@example.test` | `DevReviewer123!`   | `audit-reviewer` | Recognised by RBAC (`requireRole(['audit-reviewer'])`). The audit-review surface (access log, NEN 7513 review dashboard) is part of the deferred governance layer — **not built yet** (see [`CLAUDE.md`](../CLAUDE.md) → "Deferred (post-core)"). |
+| `dev-researcher`     | `dev-researcher@example.test`     | `DevResearcher123!` | `researcher`     | Recognised by RBAC. Intended for research AQL against a pseudonymised dataset; the pseudonymised-dataset gating is part of the deferred governance layer (post-core).                                                                             |
 
 Login works with either the **username** OR the **email** (the realm has `loginWithEmailAllowed: true`).
+
+> The "what this account can do" column describes the **target** per-role capabilities. While the build is engine-first, all four accounts sign in through the same OIDC flow and land on the [Workbench](architecture.md); the role-scoped PHI surfaces and the governance-gated capabilities (audit review, pseudonymised research dataset) are still being built.
 
 The passwords satisfy the realm policy ([`passwordPolicy` in `keycloak/config/ehrbase-realm.json`](../keycloak/config/ehrbase-realm.json)): length(12) + lowerCase + upperCase + digits + specialChars + notUsername + notEmail + passwordHistory(5).
 
@@ -25,10 +27,10 @@ The Keycloak admin console itself uses `admin` / `admin` (`KC_BOOTSTRAP_ADMIN_US
 
 A one-shot container — `keycloak-config` (image `adorsys/keycloak-config-cli`) — runs after Keycloak reports healthy and applies the declarative config under [`keycloak/config/`](../keycloak/config/) via the Keycloak Admin API:
 
-1. `ehrbase-realm.json` — the realm + roles + the three OIDC clients (idempotent, **updates in place**).
+1. `ehrbase-realm.json` — the realm + roles + the two OIDC clients (`ehrbase-ui`, `ehrbase`) (idempotent, **updates in place**).
 2. `ehrbase-users.dev.json` — the four demo identities above, each with a non-temporary password and its realm role.
 
-It is idempotent and declarative: re-running reconciles the desired state, including updates to an already-existing realm (the capability `--import-realm` lacked). keycloak-config-cli manages only the collections each file defines, so `ehrbase-users.dev.json` (users only) never touches the baseline clients/roles. Realm-dependent services (`ehrbase`, `ui`, `grafana`) gate on `keycloak-config` completing.
+It is idempotent and declarative: re-running reconciles the desired state, including updates to an already-existing realm (the capability `--import-realm` lacked). keycloak-config-cli manages only the collections each file defines, so `ehrbase-users.dev.json` (users only) never touches the baseline clients/roles. Realm-dependent services (`ehrbase`, `ui`) gate on `keycloak-config` completing.
 
 ## Enabling / disabling
 
@@ -51,7 +53,7 @@ docker compose logs keycloak-config
 # users created/updated, then exit 0. Realm: ehrbase.
 ```
 
-Then browse to <http://localhost:3000/me>, sign in with any of the four credentials above, and the protected layout renders with the role + email visible on the `/me` page. The `LOGIN` audit event (tagged `retentionPolicy: 'AUTH_LOG'`, per M4) lands in `audit_events`. Visit `/me/access-log` to see the row.
+Then browse to <http://localhost:3000/me>, sign in with any of the four credentials above, and the protected layout renders with the role + email visible on the `/me` page.
 
 ## Why keep demo users out of the realm baseline?
 

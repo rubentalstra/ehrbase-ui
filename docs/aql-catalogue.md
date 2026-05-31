@@ -8,9 +8,8 @@ AQL spec version: **Release 1.1.0** (`specifications.openehr.org/releases/QUERY/
 
 ## Conventions
 
-- **Query name:** `surface_intent` — e.g. `vitals_latest_blood_pressure`. Stable identifier; the BFF logs the name (not the AQL body) in audit lines.
+- **Query name:** `surface_intent` — e.g. `vitals_latest_blood_pressure`. Stable identifier referenced by the BFF and the UI surfaces.
 - **Parameters:** documented inline. All parameters are bound from authenticated context (`ehr_id` from the route, `since` from the UI) — none can come unsanitised from query strings.
-- **Audit:** every query execution emits a `QUERY` audit event with the named query identifier, resource type, and pseudonymised `ehr_id` (per ADR-0024).
 
 ---
 
@@ -52,10 +51,6 @@ AQL spec version: **Release 1.1.0** (`specifications.openehr.org/releases/QUERY/
 - `care_plan_active_tasks` — WORK_PLAN / TASK_PLAN / PLAN_ITEM where status is active. Parameters: `$ehr_id`, `$assignee` (clinician id or null for all).
 - `care_plan_tasks_overdue` — same as above but where `expiry_time` < now and ACTION absent. Parameters: `$ehr_id`.
 
-### Audit-review dashboard (M15)
-
-- `audit_sample_of_60` — random-sample of 60 audit events from the audit DB (NOT EHRbase) for the configured review window. This is the NEN-7513 review pattern; the catalogue keeps the SQL/AQL alongside the openEHR ones for symmetry.
-
 ### Discharge + referrals (M16)
 
 - `discharge_compositions_recent` — `openEHR-EHR-COMPOSITION.discharge_summary.v1` ordered by composition `context/end_time`. Parameters: `$ehr_id`, `$limit`.
@@ -72,9 +67,8 @@ Each entry in `src/lib/aql/catalogue.ts` exports:
   description: 'Most recent blood-pressure observation for the patient.',
   parameters: { ehr_id: 'uuid' },
   aql: `SELECT bp/data[at0001]/events[at0006] FROM EHR[ehr_id/value=$ehr_id] CONTAINS COMPOSITION CONTAINS OBSERVATION bp[openEHR-EHR-OBSERVATION.blood_pressure.v2]`,
-  audit: { action: 'QUERY', resourceType: 'OBSERVATION' },
   consumedBy: ['/_authed/patients/$patientId/vitals'],
 }
 ```
 
-The BFF runs each named query through EHRbase's `/query/aql` endpoint, validates parameters before substitution, logs the query name (not body) for audit, and rate-limits per the §5.9 table.
+The BFF runs each named query through EHRbase's `/query/aql` endpoint, validates parameters before substitution, and rate-limits per the §5.9 table.
