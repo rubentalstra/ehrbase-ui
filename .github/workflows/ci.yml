@@ -2,6 +2,21 @@
 # docs/architecture.md §20.3.
 # Action pinning strategy: ADR-0011 (semver tags, not SHAs).
 #
+# Parallelism (2026-06-01): every job is independent and starts at t=0 — there
+# is NO cross-job `needs`, so the long Playwright jobs run concurrently with the
+# fast checks instead of waiting for them. The old single `quality` job ran
+# lint → typecheck → unit SERIALLY and gated everything behind it; it is split
+# into the parallel `lint` / `typecheck` / `unit` jobs below. Wall-clock is now
+# ~the slowest single job rather than `quality` + slowest job.
+# Trade-off: on a lint/type failure the heavier jobs still run (wasted minutes),
+# but `concurrency.cancel-in-progress` cancels superseded PR runs, and pushing a
+# fix supersedes the wasteful run. To re-introduce a fail-fast gate, add
+# `needs: [lint, typecheck]` to the heavier jobs.
+#
+# NOTE: splitting `quality` renamed the status checks. If branch protection
+# lists "Lint, typecheck, unit + a11y" as required, replace it with the new
+# check names (Lint / Typecheck / Unit + a11y tests, etc.).
+#
 # Security notes (workflow-injection hardening):
 # - No untrusted input (github.event.issue.title, github.head_ref, etc.) is
 #   interpolated into any `run:` block. If a future job needs such input,
@@ -33,54 +48,87 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality:
-    name: Lint, typecheck, unit + a11y
+  lint:
+    name: Lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
           standalone: true
           cache: true
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Verify pnpm audit signatures (supply chain — §5.12)
-        run: pnpm audit signatures
-        continue-on-error: true
-
       - name: Compile Paraglide messages (generated module — gitignored)
         run: pnpm paraglide:compile
-
       - name: i18n message completeness (§11.7)
         run: pnpm --filter @ehrbase-ui/i18n exec node scripts/paraglide-check.mjs
-
-      - name: Typecheck
-        run: pnpm typecheck
-
       - name: Lint
         run: pnpm exec eslint . --max-warnings=0
 
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages (generated module — gitignored)
+        run: pnpm paraglide:compile
+      - name: Typecheck
+        run: pnpm typecheck
+
+  unit:
+    name: Unit + a11y tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - run: pnpm install --frozen-lockfile
+      - name: Verify pnpm audit signatures (supply chain — §5.12)
+        run: pnpm audit signatures
+        continue-on-error: true
+      - name: Compile Paraglide messages (generated module — gitignored)
+        run: pnpm paraglide:compile
       - name: Unit + accessibility tests
         run: pnpm --filter @ehrbase-ui/web run test:coverage
-
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v7
@@ -89,10 +137,26 @@ jobs:
           path: apps/web/coverage/
           retention-days: 14
 
+  # Aggregate gate that keeps the original required-status-check name
+  # ("Lint, typecheck, unit + a11y") green only when all three parallel checks
+  # pass — so branch protection needs no change after the split. Near-instant;
+  # it does NOT gate the heavier jobs (those still start at t=0). `needs.*.result`
+  # is trusted GitHub context, not user input (workflow-injection note above).
+  quality:
+    name: Lint, typecheck, unit + a11y
+    runs-on: ubuntu-24.04
+    needs: [lint, typecheck, unit]
+    if: always()
+    steps:
+      - name: Require lint + typecheck + unit to have passed
+        run: |
+          result="${{ needs.lint.result }}/${{ needs.typecheck.result }}/${{ needs.unit.result }}"
+          echo "lint/typecheck/unit = $result"
+          test "$result" = "success/success/success"
+
   build:
     name: Build app
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 15
     steps:
       - uses: step-security/harden-runner@v2
@@ -114,7 +178,6 @@ jobs:
   storybook-build:
     name: Build Storybook
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 15
     steps:
       - uses: step-security/harden-runner@v2
@@ -146,7 +209,6 @@ jobs:
     # (any WCAG 2.2 AA / EN 301 549 violation fails) run here. ADR-0047.
     name: Storybook tests (browser)
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 15
     steps:
       - uses: step-security/harden-runner@v2
@@ -173,7 +235,6 @@ jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 30
     steps:
       - uses: step-security/harden-runner@v2
@@ -213,7 +274,6 @@ jobs:
     # docs/architecture.md §5, §14; Milestone 2 verification step 7.
     name: Playwright E2E (full stack)
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 30
     env:
       VALKEY_URL: redis://localhost:6379
