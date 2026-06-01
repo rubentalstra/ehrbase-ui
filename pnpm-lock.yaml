@@ -65,8 +65,8 @@ importers:
         specifier: 3.1054.0
         version: 3.1054.0
       '@aws-sdk/lib-storage':
-        specifier: 3.1054.0
-        version: 3.1054.0(@aws-sdk/client-s3@3.1054.0)
+        specifier: 3.1057.0
+        version: 3.1057.0(@aws-sdk/client-s3@3.1054.0)
       '@ehrbase-ui/config-tsconfig':
         specifier: workspace:*
         version: link:../../packages/config-tsconfig
@@ -757,11 +757,11 @@ packages:
     resolution: {integrity: sha512-Ys/JJe++8Z2Y5meR1taMBaVcrGBA0/XsVTQR+qOKZbdNyg+8Jlv5rYZSwh8SqEHY00goSOZy7PHzZ2rLNQxDLg==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/lib-storage@3.1054.0':
-    resolution: {integrity: sha512-cnEZOTWnfRDS5wpCT6yVgQai16R+qhC5E9p1wfmjwj4H4YfI0dVq7I2zUZjUjb4Pfy0dIziCuwQg1jEVQzW/Ew==}
+  '@aws-sdk/lib-storage@3.1057.0':
+    resolution: {integrity: sha512-0LlXWaklL2LGBSJ6w3YwsJaFCR9yu57648aEyyIRLM5NT+rQ3Xbx0/pCsuM4fD+QJZhASMMAALAl/pdiN5B+FQ==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
-      '@aws-sdk/client-s3': ^3.1054.0
+      '@aws-sdk/client-s3': ^3.1057.0
 
   '@aws-sdk/middleware-bucket-endpoint@3.972.16':
     resolution: {integrity: sha512-FhasMTBDBmMN7EEa1hUeHwo5p5Mv3Dm8w0VEbdXX/6ola/uyhRuJt8zGkH09mLTmab20USTzEpPqyqEoe1MqNg==}
@@ -8376,7 +8376,7 @@ snapshots:
       '@smithy/types': 4.14.2
       tslib: 2.8.1
 
-  '@aws-sdk/lib-storage@3.1054.0(@aws-sdk/client-s3@3.1054.0)':
+  '@aws-sdk/lib-storage@3.1057.0(@aws-sdk/client-s3@3.1054.0)':
     dependencies:
       '@aws-sdk/client-s3': 3.1054.0
       '@smithy/core': 3.24.5
