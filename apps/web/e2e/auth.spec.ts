@@ -104,7 +104,9 @@ test.describe('Authenticated flow', () => {
     // racing (URL matches but body is a transient 500). Re-render cleanly now
     // that the session cookie is set, so the reused page is authed + rendered.
     await gotoStable(page, '/me')
-    await expect(page.getByRole('heading', { name: /my account/i })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: /my account/i }),
+    ).toBeVisible()
   })
 
   test.afterAll(async () => {
@@ -125,7 +127,9 @@ test.describe('Authenticated flow', () => {
   })
 
   test('login shows the user name and clinician role', async () => {
-    await expect(page.getByRole('heading', { name: /my account/i })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: /my account/i }),
+    ).toBeVisible()
     // Exact match: /clinician/i would also hit "Signed in as Dev Clinician".
     await expect(page.getByText('clinician', { exact: true })).toBeVisible()
   })
@@ -139,14 +143,25 @@ test.describe('Authenticated flow', () => {
     expect(results.violations).toEqual([])
   })
 
-  test('break-glass grants emergency access', async () => {
+  test('break-glass is gated behind selecting a patient', async () => {
     await gotoStable(page, '/me')
+    // ADR-0045 / ADR-0046: the grant is keyed to a selected patient's resolved
+    // ehrId, so the submit stays disabled until a patient is picked — a
+    // justification alone is not enough. The full grant flow (pick patient →
+    // resolve ehrId → POST → granted) needs a seeded patient + EHRbase and is
+    // covered by the patient-context E2E, not this auth/shell suite.
     await page.fill(
       '#bg-justification',
       'Patient in ER, unconscious, need allergy history urgently.',
     )
-    await page.getByRole('button', { name: /request emergency access/i }).click()
-    await expect(page.getByText(/emergency access granted/i)).toBeVisible()
+    // The patient picker (the missing precondition) is present...
+    await expect(
+      page.getByRole('button', { name: /choose a patient/i }),
+    ).toBeVisible()
+    // ...and without a picked patient the emergency-access submit stays disabled.
+    await expect(
+      page.getByRole('button', { name: /request emergency access/i }),
+    ).toBeDisabled()
   })
 
   test('the workspace shell renders its landmarks', async () => {
@@ -155,7 +170,9 @@ test.describe('Authenticated flow', () => {
     await expect(page.locator('#main-content')).toBeVisible()
     await expect(page.getByRole('contentinfo')).toBeVisible()
     // Sidebar brand + user menu trigger are present.
-    await expect(page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i })).toBeVisible()
+    await expect(
+      page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i }),
+    ).toBeVisible()
   })
 
   test('sidebar open/closed state survives a reload (cookie)', async () => {
@@ -165,7 +182,10 @@ test.describe('Authenticated flow', () => {
       return cookies.find((c) => c.name === 'sidebar_state')?.value
     }
 
-    await page.getByRole('banner').getByRole('button', { name: /toggle sidebar/i }).click()
+    await page
+      .getByRole('banner')
+      .getByRole('button', { name: /toggle sidebar/i })
+      .click()
     // Let the cookie write settle.
     await page.waitForTimeout(200)
     const afterToggle = sidebarStateCookie(await page.context().cookies())
@@ -191,7 +211,11 @@ test.describe('Authenticated flow', () => {
 
     await trigger.click()
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByPlaceholder(/command or search/i)).toBeVisible()
+    // ADR-0046: the palette is the global patient search; its input prompts for
+    // name / MRN / DOB (m.command_patients_hint), not a generic command string.
+    await expect(
+      dialog.getByPlaceholder(/name, MRN, or date of birth/i),
+    ).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
 
@@ -232,7 +256,8 @@ test.describe('Authenticated flow', () => {
     // skip past the (DOM-first) skip-link. Blur whatever is focused so Tab
     // starts from no-focus → first tabbable = skip-link.
     await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+      if (document.activeElement instanceof HTMLElement)
+        document.activeElement.blur()
     })
     await page.keyboard.press('Tab')
     const skip = page.getByRole('link', { name: /skip to main content/i })

@@ -77,7 +77,9 @@ const baseOptions: LoggerOptions = {
 
 // Build the logger. In production, no `transport` key at all → Pino writes
 // JSON synchronously to stdout (process.stdout), no worker thread, no
-// __dirname resolution. In dev, attach pretty + (optionally) OTel transport.
+// __dirname resolution. In dev, attach JSON-to-stdout + pretty-to-stderr.
+// (The OTel log transport was removed in the 2026-05-30 core-refocus and is
+// deferred with the rest of the observability stack — CLAUDE.md "Deferred".)
 export const appLog = isProduction
   ? pino(baseOptions)
   : pino({
