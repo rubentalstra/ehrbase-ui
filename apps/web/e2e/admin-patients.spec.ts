@@ -38,14 +38,18 @@ test.describe('Admin · Patients (M7)', () => {
     const context = await browser.newContext()
     page = await context.newPage()
 
-    // SSO login as dev-admin (same flow as auth.spec.ts; admin role required).
+    // OAuth2 login as dev-admin (same flow as auth.spec.ts; admin role
+    // required). genericOAuth keycloak provider — /sign-in/oauth2 (ADR-0044).
     for (let attempt = 0; attempt < 6; attempt++) {
-      const ssoResp = await page.request.post('/api/auth/sign-in/sso', {
+      const ssoResp = await page.request.post('/api/auth/sign-in/oauth2', {
         headers: { 'content-type': 'application/json' },
         data: { providerId: 'keycloak', callbackURL: '/admin/patients' },
       })
-      if (ssoResp.status() < 500) {
-        const body = (await ssoResp.json()) as { url?: string }
+      // Only a 2xx carries the JSON `{ url }`; guard the parse so a non-OK or
+      // empty body retries rather than throwing and aborting the suite.
+      if (ssoResp.ok()) {
+        const text = await ssoResp.text()
+        const body = text ? (JSON.parse(text) as { url?: string }) : {}
         if (body.url) {
           await page.goto(body.url)
           break

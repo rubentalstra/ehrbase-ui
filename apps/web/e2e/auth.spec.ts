@@ -72,21 +72,23 @@ test.describe('Authenticated flow', () => {
       }
       cspErrors.push(text)
     })
-    // Better Auth + TanStack Start docs pattern (ADR-0028): the /login
-    // page calls authClient.signIn.sso() which POSTs to /api/auth/sign-in/sso
-    // and follows the returned Keycloak URL. We do the same here without
-    // pulling React in — POST the SSO endpoint, then page.goto() the URL
-    // it returns.
+    // Better Auth + TanStack Start docs pattern (ADR-0044): the /login page
+    // calls authClient.signIn.oauth2() which POSTs to /api/auth/sign-in/oauth2
+    // (genericOAuth keycloak provider) and follows the returned Keycloak URL.
+    // We do the same here without pulling React in — POST the endpoint, then
+    // page.goto() the URL it returns. (The @better-auth/sso plugin + its
+    // /sign-in/sso route were removed in ADR-0044.)
     for (let attempt = 0; attempt < 6; attempt++) {
-      const ssoResp = await page.request.post(
-        '/api/auth/sign-in/sso',
-        {
-          headers: { 'content-type': 'application/json' },
-          data: { providerId: 'keycloak', callbackURL: '/me' },
-        },
-      )
-      if (ssoResp.status() < 500) {
-        const body = (await ssoResp.json()) as { url?: string }
+      const ssoResp = await page.request.post('/api/auth/sign-in/oauth2', {
+        headers: { 'content-type': 'application/json' },
+        data: { providerId: 'keycloak', callbackURL: '/me' },
+      })
+      // Only a 2xx carries the JSON `{ url }`. Guard the parse: a non-OK or
+      // empty/non-JSON body (e.g. a renamed endpoint) must retry, not throw an
+      // opaque "Unexpected end of JSON input" that aborts the whole suite.
+      if (ssoResp.ok()) {
+        const text = await ssoResp.text()
+        const body = text ? (JSON.parse(text) as { url?: string }) : {}
         if (body.url) {
           await page.goto(body.url)
           break
@@ -116,7 +118,7 @@ test.describe('Authenticated flow', () => {
     await gotoStable(fresh, '/me')
     // Better Auth + TanStack Start docs pattern: protected layout redirects
     // to /login?redirect=..., which then sends the user to the Keycloak
-    // realm via authClient.signIn.sso.
+    // realm via authClient.signIn.oauth2 (genericOAuth — ADR-0044).
     await fresh.waitForURL(/\/(realms\/ehrbase|login(\?|$))/)
     expect(fresh.url()).toMatch(/realms\/ehrbase|\/login(\?|$)/)
     await fresh.close()
