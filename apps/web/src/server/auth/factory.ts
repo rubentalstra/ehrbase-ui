@@ -1,23 +1,33 @@
-// Better Auth instance factory (docs/architecture.md §5; ADR-0028).
+// Better Auth instance factory (docs/architecture.md §5; ADR-0044 — supersedes
+// ADR-0028/0029's SSO-plugin choice).
 //
-// Framework-agnostic: the host application chooses which cookie plugin to
-// hand in via `extraPlugins`. For TanStack Start that's
-// `tanstackStartCookies()` from 'better-auth/tanstack-start' — and per the
-// Better Auth docs that plugin MUST come last in the plugins array.
+// Keycloak is integrated via the first-party **genericOAuth** plugin's
+// `keycloak()` helper rather than the @better-auth/sso plugin. Rationale
+// (ADR-0044): this app has ONE central Keycloak realm (tenancy is modelled by
+// realm groups + the `organization` plugin, not by per-org IdPs), and — unlike
+// the SSO plugin — genericOAuth providers are registered into
+// `ctx.context.socialProviders`, so the core `auth.api.getAccessToken` endpoint
+// can transparently REFRESH the Keycloak access token from the stored
+// refresh_token. That refresh is what keeps server-side EHRbase calls (the
+// forwarded-token CONTRIBUTION committer) working past the short
+// accessTokenLifespan instead of 401-ing once the token expires.
 //
-// On every successful sign-in we mirror the user's Keycloak realm roles into
-// the `keycloakRoles` column, which is what `requireRole(...)` reads.
+// Realm roles are NOT provisioned onto the user row here — the authoritative
+// read path decodes `account.access_token` on every request (require-role.ts,
+// auth.functions.ts, realm-roles.server.ts). Keycloak stays the single source.
+//
+// Framework-agnostic: the host app hands in its cookie plugin via
+// `extraPlugins` (tanstackStartCookies for TanStack Start), appended LAST per
+// the Better Auth docs.
 
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin, organization } from 'better-auth/plugins'
-import { sso } from '@better-auth/sso'
+import { admin, genericOAuth, keycloak, organization } from 'better-auth/plugins'
 
 import { authDb } from '@/server/db/auth-client'
 import * as authSchema from '@/server/db/auth'
 
 import { decodeJwtPayload, extractKeycloakRoles } from './jwt.ts'
-import { provisionFromKeycloak } from './provision.ts'
 
 export type BuildAuthOptions = {
   /** BETTER_AUTH_SECRET — must be ≥32 random chars in production. */
@@ -30,12 +40,25 @@ export type BuildAuthOptions = {
    * baseURL origin.
    */
   trustedOrigins: string[]
+  /** Keycloak OIDC client for the genericOAuth provider. `issuer` MUST be the
+   *  URL the browser (and, via host-gateway, this server) reaches Keycloak at —
+   *  every issued token's `iss` is pinned to it, and EHRbase validates that
+   *  exact issuer (docker-compose ehrbase JWT_ISSUERURI). */
+  keycloak: {
+    issuer: string
+    clientId: string
+    clientSecret: string
+  }
   /**
    * Framework-specific plugins (e.g. tanstackStartCookies). They are
    * appended LAST to the internal plugins list per the Better Auth docs.
    */
   extraPlugins?: BetterAuthOptions['plugins']
 }
+
+// Keycloak's OIDC provider id, fixed so the `account.provider_id` rows, the
+// sign-in trigger (signIn.oauth2), and the getAccessToken refresh all agree.
+export const KEYCLOAK_PROVIDER_ID = 'keycloak'
 
 export function buildAuth(opts: BuildAuthOptions) {
   return betterAuth({
@@ -54,23 +77,25 @@ export function buildAuth(opts: BuildAuthOptions) {
       admin(),
       // Per-hospital tenancy + per-department teams (v1.0 multi-hospital
       // story; deployments that ship single-tenant can leave the org table
-      // empty and gate purely on `keycloakRoles`).
+      // empty and gate purely on the Keycloak realm roles).
       organization({ teams: { enabled: true } }),
-      // SSO (Keycloak via OIDC). The provider row in the `sso_provider`
-      // table is created at boot by ensureKeycloakSsoProviderRegistered();
-      // this plugin block just wires the lifecycle hooks.
-      sso({
-        provisionUserOnEveryLogin: true,
-        provisionUser: async ({ user, userInfo, token }) => {
-          await provisionFromKeycloak({
-            user,
-            userInfo,
-            token: {
-              accessToken: token?.accessToken,
-              idToken: token?.idToken,
-            },
-          })
-        },
+      // Keycloak via OIDC (genericOAuth keycloak() helper). The discoveryUrl is
+      // derived from the issuer, so token/JWKS/userinfo endpoints are
+      // auto-discovered. PKCE S256 is mandatory for the realm's client.
+      genericOAuth({
+        config: [
+          keycloak({
+            clientId: opts.keycloak.clientId,
+            clientSecret: opts.keycloak.clientSecret,
+            issuer: opts.keycloak.issuer,
+            pkce: true,
+            scopes: ['openid', 'profile', 'email'],
+            // Re-sync name / email from Keycloak on every sign-in — Keycloak
+            // is authoritative for identity. (Keycloak returns `expires_in`, so
+            // accessTokenExpiresAt is recorded and getAccessToken can refresh.)
+            overrideUserInfo: true,
+          }),
+        ],
       }),
       // Framework-specific plugins last (per Better Auth docs; tanstackStartCookies
       // must be the final plugin or cookie writes silently no-op).

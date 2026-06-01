@@ -3,28 +3,22 @@
 // the process. Wires the two app-side dependencies the adapter packages cannot
 // own themselves:
 //
-//   1. an AuditSink — currently a no-op (the NEN-7513 audit subsystem was
-//      removed; the port stays so the demographic-core contract is unchanged
-//      and a real sink can be re-attached later).
+//   1. an AuditSink — the IHE ATNA access trail (ADR-0041, M9 foundation). The
+//      provider emits a PartyAuditEvent per op; PostgresAuditSink maps it to a
+//      DICOM AuditMessage + appends it to the `audit` Postgres schema. Never
+//      throws (a demographic op is not broken by an audit-DB hiccup).
 //   2. the pseudonymiser — HMAC-SHA256 keyed by AUDIT_PSEUDONYM_SECRET, kept
 //      app-side so the secret never enters an adapter package (rule 12, ADR-0037).
 //
 // `.server.ts`: imports the DB client + the secret-reading pseudonymiser; never
 // reaches the client bundle.
 
-import { type AuditSink, type DemographicProvider } from '@ehrbase-ui/demographic-core'
+import { type DemographicProvider } from '@ehrbase-ui/demographic-core'
 import { createBuiltinProvider } from '@ehrbase-ui/demographic-core/builtin'
 import { pseudonymizeIdentifier } from '@ehrbase-ui/demographic-core/pseudonymize'
 
+import { PostgresAuditSink } from '@/server/audit'
 import { demographicDb } from '@/server/db/demographic-client'
-
-// No-op AuditSink: satisfies the demographic-core port without emitting
-// anything. The access-trail layer was removed with the audit subsystem; the
-// data-lineage layer is still the VERSIONED_PARTY committer columns the adapter
-// writes.
-const noopAuditSink: AuditSink = {
-  record: async () => {},
-}
 
 function build(): DemographicProvider {
   // 'builtin' is the only provider for now. The external FHIR/HL7v2/PDQ adapter
@@ -33,7 +27,7 @@ function build(): DemographicProvider {
   // new ADR when an external patient index is needed. Until then any non-builtin
   // value is rejected (no silent fallback — rule 13).
   const provider = (process.env.DEMOGRAPHIC_PROVIDER ?? 'builtin').toLowerCase()
-  const partyRefNamespace = process.env.DEMOGRAPHIC_PARTY_NAMESPACE ?? 'demographic'
+  const partyRefNamespace = getPartyRefNamespace()
 
   if (provider !== 'builtin') {
     throw new Error(
@@ -43,10 +37,23 @@ function build(): DemographicProvider {
 
   return createBuiltinProvider({
     db: demographicDb,
-    audit: noopAuditSink,
+    audit: new PostgresAuditSink('demographic:builtin'),
     pseudonymize: pseudonymizeIdentifier,
     partyRefNamespace,
+    // Auto-assign a short human MRN at create (ADR-0046) — the primary
+    // human-facing handle. Default on; a deployment fed MRNs by an external
+    // hospital system sets DEMOGRAPHIC_AUTO_MRN=false.
+    autoAssignMrn: (process.env.DEMOGRAPHIC_AUTO_MRN ?? 'true').toLowerCase() !== 'false',
   })
+}
+
+/**
+ * The PartyRef namespace this deployment stamps into `EHR_STATUS.subject.external_ref`
+ * (rule 12) — the single source the factory + the EHR-linkage server fns share, so an
+ * EHR looked up / provisioned by party id uses the same namespace `createParty` did.
+ */
+export function getPartyRefNamespace(): string {
+  return process.env.DEMOGRAPHIC_PARTY_NAMESPACE ?? 'demographic'
 }
 
 let cached: DemographicProvider | undefined

@@ -59,9 +59,14 @@ deferred).
 outcome) is satisfied by the **IHE ATNA event trail**, _not_ by a bespoke hash chain. IHE ATNA is
 the open standard; NEN-7513 is the national requirement it fulfils.
 
-**Placement.** Foundational milestone **M9**, before any clinical surface, so every surface from M10
-onward is audited + access-controlled from day one. This **un-defers CLAUDE.md Inviolable rules 1
-and 2, and the audit half of rule 11** (CONTRIBUTION + ATTESTATION + IHE-ATNA access event).
+**Placement.** The audit **emitter foundation** — the IHE-ATNA AuditMessage builder, the
+`auditAccess` helper, the append-only Postgres `audit` schema, and the `PostgresAuditSink` wired into
+the demographic provider — lands in **M7** (the first PHI surface, so it is audited from day one).
+**M9 extends** it: wire `auditAccess` into the `callEhrbase` choke point (composition / query /
+template / directory access), add the fine-grained care-relationship access gate, the optional
+syslog forwarder, and the audit-review / Article-15 read side (M22). This **un-defers CLAUDE.md
+Inviolable rules 1 and 2, and the audit half of rule 11** (CONTRIBUTION + ATTESTATION + IHE-ATNA
+access event).
 
 **Deferred enhancements (add later — not blockers for v1.0 clinical build):** tamper-evidence
 hash-chain over the `audit` table, configurable national-law retention + tagged purge, cold-store

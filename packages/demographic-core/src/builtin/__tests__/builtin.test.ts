@@ -48,10 +48,17 @@ beforeAll(async () => {
 async function setup(): Promise<ContractHarness> {
   const database = await getDb();
   await database.execute(
-    sql`truncate table demographic_party, demographic_party_history, demographic_party_identifier, demographic_party_name, demographic_relationship`,
+    sql`truncate table demographic_party, demographic_party_history, demographic_party_identifier, demographic_party_name, demographic_mrn_counter, demographic_relationship`,
   );
   const audit = new RecordingAuditSink();
-  const provider = new BuiltinDemographicProvider({ db: database, audit, pseudonymize: testPseudonymize });
+  // autoAssignMrn off here so the shared contract assertions (identifier counts)
+  // stay MRN-free; auto-MRN has its own dedicated test (auto-mrn.test.ts).
+  const provider = new BuiltinDemographicProvider({
+    db: database,
+    audit,
+    pseudonymize: testPseudonymize,
+    autoAssignMrn: false,
+  });
   return { provider, audit };
 }
 

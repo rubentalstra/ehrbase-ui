@@ -1,12 +1,11 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Meta, StoryObj } from '@storybook/tanstack-react'
 
 import { ModeToggle } from '@/components/theme/mode-toggle'
-import { withTheme } from '@/test/storybook-decorators'
 
+// Theme context is supplied globally by the preview decorator (ADR-0047).
 const meta = {
   title: 'Shell/ModeToggle',
   component: ModeToggle,
-  decorators: [withTheme],
   parameters: { layout: 'centered' },
   tags: ['autodocs'],
 } satisfies Meta<typeof ModeToggle>

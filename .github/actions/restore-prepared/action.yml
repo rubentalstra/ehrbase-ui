@@ -1,0 +1,30 @@
+name: Restore prepared workspace
+description: >-
+  Install the pnpm + Node toolchain and restore the `prepare` job's
+  node_modules + generated code (orval) + compiled Paraglide messages from the
+  run-scoped cache. Downstream jobs use this instead of re-running
+  install / regen / paraglide:compile (CI flow — see ci.yml header).
+
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        standalone: true
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: '.nvmrc'
+    - name: Restore prepared workspace (node_modules + codegen)
+      uses: actions/cache/restore@v5
+      with:
+        path: |
+          node_modules
+          apps/*/node_modules
+          packages/*/node_modules
+          packages/*/src/generated
+          packages/i18n/src/paraglide
+        # Run-scoped key written by the `prepare` job in the same run.
+        key: prepared-${{ github.run_id }}-${{ github.run_attempt }}
+        fail-on-cache-miss: true

@@ -1,8 +1,8 @@
 // /login — entry point for unauthenticated visitors (docs/architecture.md
-// §5; ADR-0028). Mirrors the official Better Auth + TanStack Start
+// §5; ADR-0044). Mirrors the official Better Auth + TanStack Start
 // integration: a real React page whose Sign-in button calls
-// `authClient.signIn.sso(...)` so the browser navigates to Keycloak
-// directly — no server-side GET shim.
+// `authClient.signIn.oauth2(...)` (genericOAuth) so the browser navigates to
+// Keycloak directly — no server-side GET shim.
 //
 // If the visitor already has a session (`?error` notwithstanding), the
 // route bounces them straight to the redirect target.
@@ -48,7 +48,7 @@ function Login() {
 
   async function start() {
     setPending(true)
-    await authClient.signIn.sso({
+    await authClient.signIn.oauth2({
       providerId: 'keycloak',
       callbackURL,
     })

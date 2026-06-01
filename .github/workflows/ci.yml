@@ -2,21 +2,30 @@
 # docs/architecture.md §20.3.
 # Action pinning strategy: ADR-0011 (semver tags, not SHAs).
 #
+# Flow (2026-06-01): PREPARE ONCE, then fan out.
+#   prepare → install + regen (orval) + paraglide:compile ONCE, and cache
+#             node_modules + the generated code (run-scoped key).
+#   every other job → `needs: prepare`, restores that cache via the
+#             `./.github/actions/restore-prepared` composite action, and runs
+#             ITS task only. No job re-installs, re-generates, or re-compiles.
+#   build → builds the app once and uploads `.output`; `e2e-integration`
+#             downloads it instead of building a second time.
+#   quality → near-instant aggregator that keeps the original required
+#             status-check name green when lint + typecheck + unit pass (so
+#             branch protection needs no change).
+# Runner VMs are isolated, so "prepare once" means caching the outputs and
+# restoring them — that is what the composite action does. The fast checks and
+# the long Playwright jobs all run in parallel after prepare.
+#
 # Security notes (workflow-injection hardening):
 # - No untrusted input (github.event.issue.title, github.head_ref, etc.) is
-#   interpolated into any `run:` block. If a future job needs such input,
-#   use env: with $-shell-quoting per
+#   interpolated into any `run:` block. `needs.*.result` / github.run_id are
+#   trusted GitHub context, not user input.
 #   https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
 #
 # pnpm + Node ordering, per https://github.com/pnpm/action-setup:
-#   1. pnpm/action-setup@v6 with `standalone: true` installs @pnpm/exe
-#      (Node-bundled binary). This works even when the runner's default
-#      Node is older than what pnpm 11.3.0 requires (>= 22.13).
-#   2. pnpm/action-setup's built-in `cache: true` handles store caching
-#      (auto store-prune post-action, lockfile-keyed).
-#   3. actions/setup-node@v6 installs the Node version from .nvmrc (no
-#      `cache:` parameter — pnpm/action-setup already cached the store).
-#   4. `pnpm install --frozen-lockfile`.
+#   pnpm/action-setup@v6 (standalone) → actions/setup-node@v6 (.nvmrc) →
+#   pnpm install --frozen-lockfile. Only the `prepare` job installs.
 
 name: CI
 
@@ -33,8 +42,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality:
-    name: Lint, typecheck, unit + a11y
+  prepare:
+    name: Prepare (install + codegen)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -42,45 +51,88 @@ jobs:
         uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
           persist-credentials: false
-
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
           standalone: true
           cache: true
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Verify pnpm audit signatures (supply chain — §5.12)
         run: pnpm audit signatures
         continue-on-error: true
-
-      - name: Compile Paraglide messages (generated module — gitignored)
+      - name: Generate API clients (orval — gitignored; turbo build/test/typecheck dep)
+        run: pnpm regen
+      - name: Compile Paraglide messages (generated module)
         run: pnpm paraglide:compile
-
       - name: i18n message completeness (§11.7)
         run: pnpm --filter @ehrbase-ui/i18n exec node scripts/paraglide-check.mjs
+      - name: Cache prepared workspace for the downstream jobs
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            packages/*/src/generated
+            packages/i18n/src/paraglide
+          key: prepared-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: Typecheck
-        run: pnpm typecheck
-
+  lint:
+    name: Lint
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/restore-prepared
       - name: Lint
         run: pnpm exec eslint . --max-warnings=0
 
+  typecheck:
+    name: Typecheck
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/restore-prepared
+      - name: Typecheck
+        run: pnpm typecheck
+
+  unit:
+    name: Unit + a11y tests
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/restore-prepared
       - name: Unit + accessibility tests
         run: pnpm --filter @ehrbase-ui/web run test:coverage
-
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v7
@@ -89,10 +141,25 @@ jobs:
           path: apps/web/coverage/
           retention-days: 14
 
+  # Aggregate gate that keeps the original required-status-check name
+  # ("Lint, typecheck, unit + a11y") green only when all three parallel checks
+  # pass — so branch protection needs no change after the split. Near-instant.
+  quality:
+    name: Lint, typecheck, unit + a11y
+    runs-on: ubuntu-24.04
+    needs: [lint, typecheck, unit]
+    if: always()
+    steps:
+      - name: Require lint + typecheck + unit to have passed
+        run: |
+          result="${{ needs.lint.result }}/${{ needs.typecheck.result }}/${{ needs.unit.result }}"
+          echo "lint/typecheck/unit = $result"
+          test "$result" = "success/success/success"
+
   build:
     name: Build app
+    needs: prepare
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 15
     steps:
       - uses: step-security/harden-runner@v2
@@ -101,20 +168,20 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-        with:
-          standalone: true
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/restore-prepared
       - run: pnpm run build
+      - name: Upload built server output (reused by e2e-integration)
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-output
+          path: apps/web/.output
+          retention-days: 1
+          include-hidden-files: true
 
   storybook-build:
     name: Build Storybook
+    needs: prepare
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 15
     steps:
       - uses: step-security/harden-runner@v2
@@ -123,16 +190,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-        with:
-          standalone: true
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-      - run: pnpm install --frozen-lockfile
-      - name: Compile Paraglide messages (generated module — gitignored)
-        run: pnpm paraglide:compile
+      - uses: ./.github/actions/restore-prepared
       - run: pnpm run storybook:build
       - uses: actions/upload-artifact@v7
         with:
@@ -140,10 +198,31 @@ jobs:
           path: apps/web/storybook-static/
           retention-days: 14
 
+  storybook-test:
+    # Runs every story as a real browser test via @storybook/addon-vitest
+    # (Chromium / Playwright). Story play() functions + the addon-a11y hard gate
+    # (any WCAG 2.2 AA / EN 301 549 violation fails) run here. ADR-0047.
+    name: Storybook tests (browser)
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/restore-prepared
+      - name: Install Playwright Chromium
+        run: pnpm --filter @ehrbase-ui/web exec playwright install --with-deps chromium
+      - name: Run stories as browser tests
+        run: pnpm --filter @ehrbase-ui/web run test-storybook
+
   e2e:
     name: Playwright E2E
+    needs: prepare
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 30
     steps:
       - uses: step-security/harden-runner@v2
@@ -152,20 +231,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
-        with:
-          standalone: true
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-      - run: pnpm install --frozen-lockfile
-      - name: Compile Paraglide messages
-        # src/server.ts imports @/paraglide/server.js eagerly (official
-        # Paraglide + TanStack Start integration). On a fresh runner the
-        # generated dir doesn't exist yet; vite dev's plugin compile races
-        # the server-entry resolution and Playwright's webServer times out.
-        run: pnpm paraglide:compile
+      - uses: ./.github/actions/restore-prepared
       - name: Install Playwright Chromium
         run: pnpm --filter @ehrbase-ui/web exec playwright install --with-deps chromium
       - run: pnpm e2e
@@ -178,12 +244,12 @@ jobs:
 
   e2e-integration:
     # Full auth-flow E2E against the live stack (Keycloak + Valkey + the audit
-    # database). Brings up the compose services, applies the append-only audit
-    # migration, then runs the gated auth.spec.ts (E2E_FULL_STACK=1).
-    # docs/architecture.md §5, §14; Milestone 2 verification step 7.
+    # database). Reuses the `build` job's `.output` (no second build), brings up
+    # the compose services, migrates, then runs the gated auth.spec.ts
+    # (E2E_FULL_STACK=1). docs/architecture.md §5, §14.
     name: Playwright E2E (full stack)
+    needs: build
     runs-on: ubuntu-24.04
-    needs: quality
     timeout-minutes: 30
     env:
       VALKEY_URL: redis://localhost:6379
@@ -217,26 +283,18 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/restore-prepared
+      - name: Download the built server output (from the build job)
+        uses: actions/download-artifact@v8
         with:
-          standalone: true
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-      - run: pnpm install --frozen-lockfile
-      - name: Compile Paraglide messages
-        run: pnpm paraglide:compile
-      - name: Build app (the full-stack suite runs against the built server)
-        run: pnpm build
+          name: app-output
+          path: apps/web/.output
       - name: Start stack (Keycloak + Valkey + audit DB)
         run: docker compose up -d --wait platform-db valkey keycloak
       - name: Apply Keycloak config (realm + clients + demo users, synchronous)
         # `docker compose run` blocks until the one-shot keycloak-config-cli
         # container exits, unlike `up --wait` which has known timing issues for
-        # one-shot containers without a healthcheck. Without this the
-        # e2e/auth.spec.ts beforeAll races config application and can see a
-        # fresh Keycloak without the realm/clients/demo identities. ADR-0036.
+        # one-shot containers without a healthcheck. ADR-0036.
         run: docker compose run --rm keycloak-config
       - name: Apply DB migrations (audit + auth + demographic)
         run: pnpm db:migrate

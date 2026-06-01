@@ -27,7 +27,7 @@ Scaffolds every tooling rail the later milestones plug into. No PHI-touching cod
 - [x] **1E** Vitest + `vitest-axe` + Button axe baseline test — §12.4, §24
 - [x] **1F** Playwright + `@axe-core/playwright` + smoke E2E — §12.4, §24
 - [x] **1G** Paraglide JS init + `en.json` + first `m.*` call — §11
-- [x] **1H** Storybook 10.4.1 + `addon-a11y` (diverges from arch doc 9.x — ADR-0010) — §17
+- [x] **1H** Storybook 10.4.1 on the official `@storybook/tanstack-react` framework + `addon-a11y` + `addon-vitest` (stories run as browser tests, a11y hard gate, blocking `storybook-test` CI job — ADR-0010, ADR-0047) — §17, §24
 - [x] **1I** Pino app logger, stdout only (app logging only; the audit write path was removed in the core-refocus) — §13.1
 - [x] **1J** `orval` config + vendored EHRbase OpenAPI stub — §15
 - [x] **1K** Dockerfile + docker-compose dev stack (EHRbase + Keycloak + Valkey + Postgres) + realm import — §18, §5.6
@@ -139,9 +139,11 @@ M9** (IHE ATNA from the BFF — [ADR-0041](adr/0041-audit-access-governance.md))
 
 ## Milestone 7 — Demographic admin + EHR linkage (pluggable provider; ADR-0031)
 
-> **Server foundation landed 2026-05-30.** The interface + built-in Postgres adapter + REST surface +
-> identifier registry + pseudonymisation + contract suite all ship. **Remaining = the admin UI +
-> `EHR_STATUS.subject` wiring** — the first clinical milestone of the re-sequenced build.
+> **Server foundation (2026-05-30) + admin UI + audit foundation + EHR linkage (2026-05-31) shipped.**
+> The provider / REST / registry / pseudonymisation / contract-suite, the admin patients UI, the
+> patient server functions, EHR auto-provisioning, the IHE-ATNA **audit foundation** (built here per
+> [ADR-0041](adr/0041-audit-access-governance.md); M9 extends it), and the dev demo-data seed all
+> land in M7. **Remaining = tests / Storybook + the merge-approval clinical-safety question.**
 
 - [x] `DemographicProvider` interface in `packages/demographic-core` — ADR-0031
 - [x] Built-in Postgres adapter (`demographic` schema + roles) — schema in `demographic-core/builtin`; client/migrations in `apps/web/src/server/db` (ADR-0035)
@@ -151,9 +153,12 @@ M9** (IHE ATNA from the BFF — [ADR-0041](adr/0041-audit-access-governance.md))
 - [x] Identifier-namespace registry: NL (BSN), BE (NISS), FR (NIR), DE (KVNR), IT (CF), ES (TIS), PT (NUTS), AT (bPK), PL (PESEL), MRN
 - [x] Pseudonymisation: HMAC-SHA256 with the shared secret
 - [x] Dual-adapter contract suite (`@ehrbase-ui/demographic-core/contract`)
-- [ ] **Full demographic admin UI** at `/_authed/admin/patients/*` — create + edit + identifiers + relationships + deactivate + merge + version-history (capability-gated)
-- [ ] EHRbase `EHR_STATUS.subject` populated as `PARTY_IDENTIFIED` with `external_ref` through the provider — at patient-create
-- [ ] Storybook + E2E: built-in adapter golden-path
+- [x] Patient **server functions** (`patient.{functions,server}.ts`) — search/get/versions/capabilities (clinician+admin reads); create/update/deactivate/merge/identifiers/relationships + EHR link (admin writes); errors → stable codes only (rule 2)
+- [x] **Demographic admin UI** at `/_authed/admin/patients/*` — list/search, create (PatientForm + IdentifierField with live checksum validation), detail (demographics, identifiers add/end, version-history, deactivate, capability-gated merge, linked-EHR view/provision), readonly-capability banner. _(Relationships read deferred — needs a provider `listRelationships`; the add/end server fns exist.)_
+- [x] EHRbase `EHR_STATUS.subject` wired as `PARTY_SELF` + `external_ref` through the provider — auto-provisioned at patient-create (+ `provisionEhr` retry; no orphans)
+- [x] **Audit foundation** (rule 1, [ADR-0041](adr/0041-audit-access-governance.md)) — append-only Postgres `audit` schema + IHE-ATNA AuditMessage builder + `auditAccess` + `PostgresAuditSink` wired into the provider. _(M9 extends to the EHRbase composition/query path + care-relationship gate + syslog + review side.)_
+- [x] **Dev demo-data seed** behind `SEED_DEMO_DATA` (rule 14, `docs/DEV-DEMO-DATA.md`)
+- [ ] Tests + Storybook: server-fn unit (mocked provider + `callEhrbase` + audit-row), ATNA-builder unit, `PatientForm` axe, gated E2E golden-path
 - [ ] M7 patient-merge: confirm whether a 2-person approval gate is needed (clinical-safety question — revisit at M24)
 
 ## Milestone 8 — 7-persona RBAC + workspace shell + patient context (CLINICAL-UI.md §§7.1–7.4, ADR-0040)
@@ -161,31 +166,40 @@ M9** (IHE ATNA from the BFF — [ADR-0041](adr/0041-audit-access-governance.md))
 > The patient-bound layout + cross-cutting surfaces that lead to every clinical screen. Reads the M7
 > `DemographicProvider`. Establishes the role model + patient context; **rich role dashboards move to
 > M19** (after the data they aggregate exists — ADR-0042).
+>
+> **Human-centric identity rewrite shipped (ADR-0046 / rule 15):** no machine identifier is a
+> user-facing handle. Auto-MRN at create; global patient search by name/DOB/MRN (⌘K + `/patients`);
+> the `/patients/$patientId` patient-context shell + persistent banner; the `PatientPicker` retrofit
+> removed every UUID input (break-glass, workbench, merge). The 7-persona role model + role
+> picker/landing + recently-viewed + encounters remain open below.
 
 - [ ] 7 Keycloak realm roles (physician / nurse / lab-technician / pharmacist / admin / audit-reviewer / researcher) + `ehrbase-users.dev.json` demo users — ADR-0040, ADR-0036
 - [ ] Extend `ROLES` const (`apps/web/src/server/auth/require-role.ts` + `apps/web/src/lib/auth/auth.functions.ts`) to the 7-set; `clinician` umbrella inheritance for the four clinical sub-roles
 - [ ] First-login role picker at `/_authed/role-picker` for multi-role users — ADR-0040/0017
-- [ ] Patient header banner — layout wrapping `/_authed/patients/$patientId/*`; reads M7 provider + EHR `ehr_status` + summary AQL `patient_summary_header` (empty-then-populates)
+- [x] Patient header banner — layout wrapping `/_authed/patients/$patientId/*`; reads M7 provider + resolved EHR (ADR-0046; `patient-banner.tsx`). Summary AQL (allergies/problems) fills in later milestones
 - [ ] Care-team / care-relationship model + banner indicator (display) — consumed by the M9 access gate
-- [ ] Global patient search at `/_authed/patients/search` — M7 provider + EHRbase existence check
+- [x] Global patient search (name/DOB/MRN) — ⌘K command palette + `/_authed/patients` page (ADR-0046; M7 provider + EHRbase existence check via getLinkedEhr)
 - [ ] Recently-viewed list at `/_authed/patients/recent` — per-user app-DB table
 - [ ] Encounter / visit list at `/_authed/patients/$patientId/encounters` — AQL over `DIRECTORY/FOLDER` (empty until M12 notes create encounters)
 - [ ] Basic role landing (`/_authed/home` → my-patients list per role) — NOT the rich dashboards (M19)
-- [ ] Keep `/_authed/workbench/*` as an admin/developer-gated tool (ADR-0042 / plan)
+- [x] Keep `/_authed/workbench/*` as an admin/developer tool — UUID inputs replaced by patient search (ADR-0046); AQL stays a power tool
 - [ ] Storybook stories for the banner + role landing; E2E: deep link to a patient survives login; role picker works
 
-## Milestone 9 — Access governance: IHE ATNA audit + fine-grained access control (ADR-0041)
+## Milestone 9 — Access governance: extend IHE ATNA + fine-grained access control (ADR-0041)
 
-> **Foundational — before any clinical surface**, so M10+ are audited + access-controlled from day
-> one. EHRbase 2.x has no native ATNA/ABAC (ADR-0043), so this is ours, in open source.
+> **The audit EMITTER foundation shipped in M7** — the IHE-ATNA AuditMessage builder, `auditAccess`,
+> the append-only Postgres `audit` schema, and the `PostgresAuditSink` on the demographic provider.
+> M9 **extends** it across the EHRbase write/read path, adds the fine-grained access gate, and feeds
+> the read-side consumers (M22). EHRbase 2.x has no native ATNA/ABAC (ADR-0043), so this is ours.
 
-- [ ] BFF `auditAccess(...)` helper — fired from `callEhrbase` + route loaders on every read/write/query; builds an IHE-ATNA-conformant DICOM AuditMessage (actor + role + purpose-of-use; patient/EHR + resource; action C/R/U/D/E; outcome 0/4/8/12)
-- [ ] Postgres `audit` schema + Drizzle migration — queryable event store (consumed by M22)
-- [ ] Optional RFC-5424 syslog/TLS forwarder to an external Audit Record Repository
+- [x] BFF `auditAccess(...)` helper + IHE-ATNA DICOM AuditMessage builder — **M7** (`apps/web/src/server/audit/`)
+- [x] Append-only Postgres `audit` schema + migration (queryable; consumed by M22) — **M7**
+- [x] `PostgresAuditSink` wired into the demographic provider; EHR-provision + linked-EHR lookups audited — **M7**
+- [ ] Wire `auditAccess()` into the `callEhrbase` choke point so every composition / query / template / directory access is audited (retrofit the engine server fns + the BFF proxy)
 - [ ] Fine-grained access control — care-relationship/care-team check enforced in the BFF before proxying; deny → 403 + `break-glass: available` (wired to the M2 break-glass flow)
 - [ ] `ATTESTATION` helper for signed content (used by M12 notes, M15 CDS-override, M16 orders)
-- [ ] ADR follow-up: pin the TS DICOM-AuditMessage builder + syslog transport library
-- [ ] Wire `auditAccess()` into the M7 demographic REST surface + the existing composition/query/template server functions (retrofit the engine surfaces)
+- [ ] Optional RFC-5424 syslog/TLS forwarder to an external Audit Record Repository
+- [ ] ADR follow-up: pin the syslog transport library (the TS AuditMessage builder shipped in M7)
 - [ ] Storybook/E2E: a read + a write each land a correct audit row; an out-of-care-relationship access is denied + audited; break-glass grants + is audited
 
 ## Milestone 10 — Problems + allergies + immunisations (CLINICAL-UI.md §§7.8, 7.10, 7.11)

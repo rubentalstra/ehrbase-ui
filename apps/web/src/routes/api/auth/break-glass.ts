@@ -16,6 +16,7 @@ import { auth as betterAuth } from '@/lib/auth/auth.server'
 import {
   BreakGlassRequestSchema,
   grantEmergencyAccess,
+  resolveUserAppRoles,
 } from '@/server/auth'
 import type { RoleContext } from '@/server/auth'
 import {
@@ -25,10 +26,6 @@ import {
 } from '@/server/bff'
 
 const PostBodySchema = BreakGlassRequestSchema.extend({ csrfToken: z.string() })
-
-const UserShapeSchema = z
-  .object({ keycloakRoles: z.array(z.string()).default([]) })
-  .partial()
 
 function json(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
@@ -46,14 +43,16 @@ async function resolveRoleContext(
 ): Promise<RoleContext | null> {
   const session = await betterAuth.api.getSession({ headers: request.headers })
   if (!session) return null
-  const shape = UserShapeSchema.safeParse(session.user)
+  // Roles come from the linked Keycloak access_token (ADR-0044) — the same
+  // authoritative source as require-role.ts, not a denormalised column.
+  const roles = await resolveUserAppRoles(session.user.id)
   return {
     sid: session.session.token,
     user: {
       id: session.user.id,
       email: session.user.email ?? '',
       name: session.user.name ?? '',
-      roles: shape.success ? (shape.data.keycloakRoles ?? []) : [],
+      roles,
     },
   }
 }
@@ -85,7 +84,6 @@ export const Route = createFileRoute('/api/auth/break-glass')({
         const outcome = await grantEmergencyAccess(auth, {
           justification: parsed.data.justification,
           ehrId: parsed.data.ehrId,
-          deniedRoles: parsed.data.deniedRoles,
         })
 
         if (outcome.status === 'forced_logout') {
@@ -94,6 +92,11 @@ export const Route = createFileRoute('/api/auth/break-glass')({
           // on the next request. Surface the forced-reauth signal so the UI
           // can navigate to /login.
           return json(401, { code: 'FORCED_REAUTH' })
+        }
+        if (outcome.status === 'denied') {
+          // Non-clinician personas cannot break the glass (audited as
+          // ACCESS_DENIED inside grantEmergencyAccess).
+          return json(403, { code: 'NOT_ELIGIBLE' })
         }
         return json(200, {
           code: 'GRANTED',

@@ -1,7 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="WEB_MODULE" version="4">
   <component name="NewModuleRootManager">
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.playwright-mcp" />
+      <excludeFolder url="file://$MODULE_DIR$/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/web/.output" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/web/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/web/test-results" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/demographic-core/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/i18n/project.inlang/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/i18n/src/paraglide/messages" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-am/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-aql/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-base/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-cds/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-flat/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-its-rest/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-its-rest/openapi/.sanitized" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-its-rest/src/generated" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-rm/.turbo" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/openehr-web-template/.turbo" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>

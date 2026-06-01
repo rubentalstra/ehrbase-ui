@@ -63,3 +63,4 @@ pnpm-debug.log*
 
 # Sourcemaps generated for release artefacts (uploaded out-of-band, never served)
 *.map
+.playwright-mcp

@@ -18,7 +18,10 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCspReportRouteImport } from './routes/api/csp-report'
 import { Route as AuthedMeRouteImport } from './routes/_authed/me'
 import { Route as AuthedWorkbenchRouteRouteImport } from './routes/_authed/workbench/route'
+import { Route as AuthedPatientsRouteRouteImport } from './routes/_authed/patients/route'
+import { Route as AuthedAdminRouteRouteImport } from './routes/_authed/admin/route'
 import { Route as AuthedWorkbenchIndexRouteImport } from './routes/_authed/workbench/index'
+import { Route as AuthedPatientsIndexRouteImport } from './routes/_authed/patients/index'
 import { Route as ApiLogClientErrorRouteImport } from './routes/api/log/client-error'
 import { Route as ApiEhrbaseSplatRouteImport } from './routes/api/ehrbase/$'
 import { Route as ApiDemographicSplatRouteImport } from './routes/api/demographic/$'
@@ -30,6 +33,11 @@ import { Route as AuthedWorkbenchDirectoryRouteImport } from './routes/_authed/w
 import { Route as AuthedWorkbenchCompositionsRouteImport } from './routes/_authed/workbench/compositions'
 import { Route as AuthedWorkbenchComposeRouteImport } from './routes/_authed/workbench/compose'
 import { Route as AuthedWorkbenchAqlRouteImport } from './routes/_authed/workbench/aql'
+import { Route as AuthedPatientsPatientIdRouteRouteImport } from './routes/_authed/patients/$patientId/route'
+import { Route as AuthedPatientsPatientIdIndexRouteImport } from './routes/_authed/patients/$patientId/index'
+import { Route as AuthedAdminPatientsIndexRouteImport } from './routes/_authed/admin/patients.index'
+import { Route as AuthedAdminPatientsNewRouteImport } from './routes/_authed/admin/patients.new'
+import { Route as AuthedAdminPatientsPartyIdRouteImport } from './routes/_authed/admin/patients.$partyId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -75,10 +83,25 @@ const AuthedWorkbenchRouteRoute = AuthedWorkbenchRouteRouteImport.update({
   path: '/workbench',
   getParentRoute: () => AuthedRouteRoute,
 } as any)
+const AuthedPatientsRouteRoute = AuthedPatientsRouteRouteImport.update({
+  id: '/patients',
+  path: '/patients',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
+const AuthedAdminRouteRoute = AuthedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthedRouteRoute,
+} as any)
 const AuthedWorkbenchIndexRoute = AuthedWorkbenchIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedWorkbenchRouteRoute,
+} as any)
+const AuthedPatientsIndexRoute = AuthedPatientsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedPatientsRouteRoute,
 } as any)
 const ApiLogClientErrorRoute = ApiLogClientErrorRouteImport.update({
   id: '/api/log/client-error',
@@ -138,16 +161,48 @@ const AuthedWorkbenchAqlRoute = AuthedWorkbenchAqlRouteImport.update({
   path: '/aql',
   getParentRoute: () => AuthedWorkbenchRouteRoute,
 } as any)
+const AuthedPatientsPatientIdRouteRoute =
+  AuthedPatientsPatientIdRouteRouteImport.update({
+    id: '/$patientId',
+    path: '/$patientId',
+    getParentRoute: () => AuthedPatientsRouteRoute,
+  } as any)
+const AuthedPatientsPatientIdIndexRoute =
+  AuthedPatientsPatientIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedPatientsPatientIdRouteRoute,
+  } as any)
+const AuthedAdminPatientsIndexRoute =
+  AuthedAdminPatientsIndexRouteImport.update({
+    id: '/patients/',
+    path: '/patients/',
+    getParentRoute: () => AuthedAdminRouteRoute,
+  } as any)
+const AuthedAdminPatientsNewRoute = AuthedAdminPatientsNewRouteImport.update({
+  id: '/patients/new',
+  path: '/patients/new',
+  getParentRoute: () => AuthedAdminRouteRoute,
+} as any)
+const AuthedAdminPatientsPartyIdRoute =
+  AuthedAdminPatientsPartyIdRouteImport.update({
+    id: '/patients/$partyId',
+    path: '/patients/$partyId',
+    getParentRoute: () => AuthedAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
   '/login': typeof LoginRoute
+  '/admin': typeof AuthedAdminRouteRouteWithChildren
+  '/patients': typeof AuthedPatientsRouteRouteWithChildren
   '/workbench': typeof AuthedWorkbenchRouteRouteWithChildren
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
+  '/patients/$patientId': typeof AuthedPatientsPatientIdRouteRouteWithChildren
   '/workbench/aql': typeof AuthedWorkbenchAqlRoute
   '/workbench/compose': typeof AuthedWorkbenchComposeRoute
   '/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
@@ -159,12 +214,18 @@ export interface FileRoutesByFullPath {
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/patients/': typeof AuthedPatientsIndexRoute
   '/workbench/': typeof AuthedWorkbenchIndexRoute
+  '/admin/patients/$partyId': typeof AuthedAdminPatientsPartyIdRoute
+  '/admin/patients/new': typeof AuthedAdminPatientsNewRoute
+  '/admin/patients/': typeof AuthedAdminPatientsIndexRoute
+  '/patients/$patientId/': typeof AuthedPatientsPatientIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accessibility': typeof AccessibilityRoute
   '/login': typeof LoginRoute
+  '/admin': typeof AuthedAdminRouteRouteWithChildren
   '/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
@@ -180,7 +241,12 @@ export interface FileRoutesByTo {
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/patients': typeof AuthedPatientsIndexRoute
   '/workbench': typeof AuthedWorkbenchIndexRoute
+  '/admin/patients/$partyId': typeof AuthedAdminPatientsPartyIdRoute
+  '/admin/patients/new': typeof AuthedAdminPatientsNewRoute
+  '/admin/patients': typeof AuthedAdminPatientsIndexRoute
+  '/patients/$patientId': typeof AuthedPatientsPatientIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,11 +254,14 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteRouteWithChildren
   '/accessibility': typeof AccessibilityRoute
   '/login': typeof LoginRoute
+  '/_authed/admin': typeof AuthedAdminRouteRouteWithChildren
+  '/_authed/patients': typeof AuthedPatientsRouteRouteWithChildren
   '/_authed/workbench': typeof AuthedWorkbenchRouteRouteWithChildren
   '/_authed/me': typeof AuthedMeRoute
   '/api/csp-report': typeof ApiCspReportRoute
   '/api/health': typeof ApiHealthRoute
   '/api/ready': typeof ApiReadyRoute
+  '/_authed/patients/$patientId': typeof AuthedPatientsPatientIdRouteRouteWithChildren
   '/_authed/workbench/aql': typeof AuthedWorkbenchAqlRoute
   '/_authed/workbench/compose': typeof AuthedWorkbenchComposeRoute
   '/_authed/workbench/compositions': typeof AuthedWorkbenchCompositionsRoute
@@ -204,7 +273,12 @@ export interface FileRoutesById {
   '/api/demographic/$': typeof ApiDemographicSplatRoute
   '/api/ehrbase/$': typeof ApiEhrbaseSplatRoute
   '/api/log/client-error': typeof ApiLogClientErrorRoute
+  '/_authed/patients/': typeof AuthedPatientsIndexRoute
   '/_authed/workbench/': typeof AuthedWorkbenchIndexRoute
+  '/_authed/admin/patients/$partyId': typeof AuthedAdminPatientsPartyIdRoute
+  '/_authed/admin/patients/new': typeof AuthedAdminPatientsNewRoute
+  '/_authed/admin/patients/': typeof AuthedAdminPatientsIndexRoute
+  '/_authed/patients/$patientId/': typeof AuthedPatientsPatientIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -212,11 +286,14 @@ export interface FileRouteTypes {
     | '/'
     | '/accessibility'
     | '/login'
+    | '/admin'
+    | '/patients'
     | '/workbench'
     | '/me'
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
+    | '/patients/$patientId'
     | '/workbench/aql'
     | '/workbench/compose'
     | '/workbench/compositions'
@@ -228,12 +305,18 @@ export interface FileRouteTypes {
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/patients/'
     | '/workbench/'
+    | '/admin/patients/$partyId'
+    | '/admin/patients/new'
+    | '/admin/patients/'
+    | '/patients/$patientId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accessibility'
     | '/login'
+    | '/admin'
     | '/me'
     | '/api/csp-report'
     | '/api/health'
@@ -249,18 +332,26 @@ export interface FileRouteTypes {
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/patients'
     | '/workbench'
+    | '/admin/patients/$partyId'
+    | '/admin/patients/new'
+    | '/admin/patients'
+    | '/patients/$patientId'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/accessibility'
     | '/login'
+    | '/_authed/admin'
+    | '/_authed/patients'
     | '/_authed/workbench'
     | '/_authed/me'
     | '/api/csp-report'
     | '/api/health'
     | '/api/ready'
+    | '/_authed/patients/$patientId'
     | '/_authed/workbench/aql'
     | '/_authed/workbench/compose'
     | '/_authed/workbench/compositions'
@@ -272,7 +363,12 @@ export interface FileRouteTypes {
     | '/api/demographic/$'
     | '/api/ehrbase/$'
     | '/api/log/client-error'
+    | '/_authed/patients/'
     | '/_authed/workbench/'
+    | '/_authed/admin/patients/$partyId'
+    | '/_authed/admin/patients/new'
+    | '/_authed/admin/patients/'
+    | '/_authed/patients/$patientId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -355,12 +451,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkbenchRouteRouteImport
       parentRoute: typeof AuthedRouteRoute
     }
+    '/_authed/patients': {
+      id: '/_authed/patients'
+      path: '/patients'
+      fullPath: '/patients'
+      preLoaderRoute: typeof AuthedPatientsRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
+    '/_authed/admin': {
+      id: '/_authed/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthedAdminRouteRouteImport
+      parentRoute: typeof AuthedRouteRoute
+    }
     '/_authed/workbench/': {
       id: '/_authed/workbench/'
       path: '/'
       fullPath: '/workbench/'
       preLoaderRoute: typeof AuthedWorkbenchIndexRouteImport
       parentRoute: typeof AuthedWorkbenchRouteRoute
+    }
+    '/_authed/patients/': {
+      id: '/_authed/patients/'
+      path: '/'
+      fullPath: '/patients/'
+      preLoaderRoute: typeof AuthedPatientsIndexRouteImport
+      parentRoute: typeof AuthedPatientsRouteRoute
     }
     '/api/log/client-error': {
       id: '/api/log/client-error'
@@ -439,8 +556,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWorkbenchAqlRouteImport
       parentRoute: typeof AuthedWorkbenchRouteRoute
     }
+    '/_authed/patients/$patientId': {
+      id: '/_authed/patients/$patientId'
+      path: '/$patientId'
+      fullPath: '/patients/$patientId'
+      preLoaderRoute: typeof AuthedPatientsPatientIdRouteRouteImport
+      parentRoute: typeof AuthedPatientsRouteRoute
+    }
+    '/_authed/patients/$patientId/': {
+      id: '/_authed/patients/$patientId/'
+      path: '/'
+      fullPath: '/patients/$patientId/'
+      preLoaderRoute: typeof AuthedPatientsPatientIdIndexRouteImport
+      parentRoute: typeof AuthedPatientsPatientIdRouteRoute
+    }
+    '/_authed/admin/patients/': {
+      id: '/_authed/admin/patients/'
+      path: '/patients'
+      fullPath: '/admin/patients/'
+      preLoaderRoute: typeof AuthedAdminPatientsIndexRouteImport
+      parentRoute: typeof AuthedAdminRouteRoute
+    }
+    '/_authed/admin/patients/new': {
+      id: '/_authed/admin/patients/new'
+      path: '/patients/new'
+      fullPath: '/admin/patients/new'
+      preLoaderRoute: typeof AuthedAdminPatientsNewRouteImport
+      parentRoute: typeof AuthedAdminRouteRoute
+    }
+    '/_authed/admin/patients/$partyId': {
+      id: '/_authed/admin/patients/$partyId'
+      path: '/patients/$partyId'
+      fullPath: '/admin/patients/$partyId'
+      preLoaderRoute: typeof AuthedAdminPatientsPartyIdRouteImport
+      parentRoute: typeof AuthedAdminRouteRoute
+    }
   }
 }
+
+interface AuthedAdminRouteRouteChildren {
+  AuthedAdminPatientsPartyIdRoute: typeof AuthedAdminPatientsPartyIdRoute
+  AuthedAdminPatientsNewRoute: typeof AuthedAdminPatientsNewRoute
+  AuthedAdminPatientsIndexRoute: typeof AuthedAdminPatientsIndexRoute
+}
+
+const AuthedAdminRouteRouteChildren: AuthedAdminRouteRouteChildren = {
+  AuthedAdminPatientsPartyIdRoute: AuthedAdminPatientsPartyIdRoute,
+  AuthedAdminPatientsNewRoute: AuthedAdminPatientsNewRoute,
+  AuthedAdminPatientsIndexRoute: AuthedAdminPatientsIndexRoute,
+}
+
+const AuthedAdminRouteRouteWithChildren =
+  AuthedAdminRouteRoute._addFileChildren(AuthedAdminRouteRouteChildren)
+
+interface AuthedPatientsPatientIdRouteRouteChildren {
+  AuthedPatientsPatientIdIndexRoute: typeof AuthedPatientsPatientIdIndexRoute
+}
+
+const AuthedPatientsPatientIdRouteRouteChildren: AuthedPatientsPatientIdRouteRouteChildren =
+  {
+    AuthedPatientsPatientIdIndexRoute: AuthedPatientsPatientIdIndexRoute,
+  }
+
+const AuthedPatientsPatientIdRouteRouteWithChildren =
+  AuthedPatientsPatientIdRouteRoute._addFileChildren(
+    AuthedPatientsPatientIdRouteRouteChildren,
+  )
+
+interface AuthedPatientsRouteRouteChildren {
+  AuthedPatientsPatientIdRouteRoute: typeof AuthedPatientsPatientIdRouteRouteWithChildren
+  AuthedPatientsIndexRoute: typeof AuthedPatientsIndexRoute
+}
+
+const AuthedPatientsRouteRouteChildren: AuthedPatientsRouteRouteChildren = {
+  AuthedPatientsPatientIdRouteRoute:
+    AuthedPatientsPatientIdRouteRouteWithChildren,
+  AuthedPatientsIndexRoute: AuthedPatientsIndexRoute,
+}
+
+const AuthedPatientsRouteRouteWithChildren =
+  AuthedPatientsRouteRoute._addFileChildren(AuthedPatientsRouteRouteChildren)
 
 interface AuthedWorkbenchRouteRouteChildren {
   AuthedWorkbenchAqlRoute: typeof AuthedWorkbenchAqlRoute
@@ -466,11 +661,15 @@ const AuthedWorkbenchRouteRouteWithChildren =
   AuthedWorkbenchRouteRoute._addFileChildren(AuthedWorkbenchRouteRouteChildren)
 
 interface AuthedRouteRouteChildren {
+  AuthedAdminRouteRoute: typeof AuthedAdminRouteRouteWithChildren
+  AuthedPatientsRouteRoute: typeof AuthedPatientsRouteRouteWithChildren
   AuthedWorkbenchRouteRoute: typeof AuthedWorkbenchRouteRouteWithChildren
   AuthedMeRoute: typeof AuthedMeRoute
 }
 
 const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
+  AuthedAdminRouteRoute: AuthedAdminRouteRouteWithChildren,
+  AuthedPatientsRouteRoute: AuthedPatientsRouteRouteWithChildren,
   AuthedWorkbenchRouteRoute: AuthedWorkbenchRouteRouteWithChildren,
   AuthedMeRoute: AuthedMeRoute,
 }

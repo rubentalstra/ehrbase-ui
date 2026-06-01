@@ -15,7 +15,7 @@
 // — exactly what EHR_STATUS.subject.external_ref must carry. No demographic data
 // ever travels inside a composition.
 
-import { and, count, desc, eq, exists, ilike, isNull } from "drizzle-orm";
+import { and, count, desc, eq, exists, ilike, isNull, like, sql } from "drizzle-orm";
 import type { PgAsyncDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
 import type { AuditSink, PartyAuditAction } from "../audit.ts";
@@ -43,12 +43,18 @@ import {
   PartyNotFoundError,
 } from "../errors.ts";
 import {
+  demographicMrnCounter,
   demographicParty,
   demographicPartyHistory,
   demographicPartyIdentifier,
   demographicPartyName,
   demographicRelationship,
 } from "./schema.ts";
+
+/** Registry namespace of the human-facing Medical Record Number (ADR-0046). */
+const MRN_NAMESPACE = "mrn";
+/** Zero-padding width for an auto-assigned MRN (e.g. 7 → "0000042"). */
+const MRN_PAD_WIDTH = 7;
 
 // Driver-agnostic base: postgres-js (prod) and PGlite (tests) both extend
 // PgAsyncDatabase. We use the core query builder with explicit table imports
@@ -66,6 +72,13 @@ export interface BuiltinProviderDeps {
   now?: () => Date;
   /** The PartyRef namespace placed in EHR_STATUS.subject.external_ref (rule 12). Default "demographic". */
   partyRefNamespace?: string;
+  /**
+   * Auto-assign a short human MRN at createParty when none is supplied (ADR-0046
+   * — every patient gets a memorable record number). Default true. Set false for
+   * deployments where MRNs come from an external system, or to keep test fixtures
+   * MRN-free (the contract suite disables it).
+   */
+  autoAssignMrn?: boolean;
 }
 
 const CAPABILITIES: DemographicProviderCapabilities = {
@@ -98,6 +111,7 @@ export class BuiltinDemographicProvider implements DemographicProvider {
   readonly #newId: () => string;
   readonly #now: () => Date;
   readonly #namespace: string;
+  readonly #autoAssignMrn: boolean;
 
   constructor(deps: BuiltinProviderDeps) {
     this.#db = deps.db;
@@ -106,6 +120,7 @@ export class BuiltinDemographicProvider implements DemographicProvider {
     this.#newId = deps.newId ?? (() => crypto.randomUUID());
     this.#now = deps.now ?? (() => new Date());
     this.#namespace = deps.partyRefNamespace ?? "demographic";
+    this.#autoAssignMrn = deps.autoAssignMrn ?? true;
   }
 
   // ─── helpers ───────────────────────────────────────────────────────────────
@@ -160,6 +175,23 @@ export class BuiltinDemographicProvider implements DemographicProvider {
       const match = prev.find((p) => p.namespace === ident.namespace && p.value === ident.value);
       return { ...ident, id: match?.id ?? this.#newId() };
     });
+  }
+
+  /**
+   * Allocate the next MRN value atomically. The single-row counter is created on
+   * first use (insert) and incremented on every subsequent allocation (conflict),
+   * serialised on the row lock — concurrent createParty calls never collide.
+   */
+  async #allocateMrn(tx: DemographicDb): Promise<string> {
+    const rows = await tx
+      .insert(demographicMrnCounter)
+      .values({ id: 1, lastValue: 1 })
+      .onConflictDoUpdate({
+        target: demographicMrnCounter.id,
+        set: { lastValue: sql`${demographicMrnCounter.lastValue} + 1` },
+      })
+      .returning({ value: demographicMrnCounter.lastValue });
+    return String(rows[0]?.value ?? 1).padStart(MRN_PAD_WIDTH, "0");
   }
 
   /** Rebuild the extracted CURRENT index rows (identifier + name) for a party. */
@@ -279,27 +311,39 @@ export class BuiltinDemographicProvider implements DemographicProvider {
     const norm = CreatePartyInputSchema.parse(input);
     this.#validateIdentifiers(norm.identifiers);
     const id = this.#newId();
-    const identifiers = this.#reconcileIdentifiers(norm.identifiers, []);
-    const party: Party = PartySchema.parse({
-      id,
-      active: true,
-      version: 1,
-      identifiers,
-      names: norm.names,
-      gender: norm.gender,
-      birthDate: norm.birthDate,
-      deceased: norm.deceased,
-      addresses: norm.addresses,
-      contacts: norm.contacts,
-    });
+    const baseIdentifiers = this.#reconcileIdentifiers(norm.identifiers, []);
 
     return this.#audited(
       "CREATE",
       ctx,
-      { partyId: id, subjectIdHash: this.#subjectHash(identifiers) },
+      { partyId: id, subjectIdHash: this.#subjectHash(baseIdentifiers) },
       async () => {
         try {
           await this.#db.transaction(async (tx) => {
+            // Auto-assign a human MRN (ADR-0046) when enabled and none supplied —
+            // allocated inside the tx so the counter + party commit atomically.
+            let identifiers = baseIdentifiers;
+            if (this.#autoAssignMrn && !identifiers.some((i) => i.namespace === MRN_NAMESPACE)) {
+              const mrn = await this.#allocateMrn(tx);
+              identifiers = [...identifiers, { namespace: MRN_NAMESPACE, value: mrn, id: this.#newId() }];
+            }
+            // A stored party must always be identifiable (>=1 identifier). With
+            // auto-MRN off, the caller must supply one.
+            if (identifiers.length === 0) {
+              throw new DemographicValidationError("a party requires at least one identifier");
+            }
+            const party: Party = PartySchema.parse({
+              id,
+              active: true,
+              version: 1,
+              identifiers,
+              names: norm.names,
+              gender: norm.gender,
+              birthDate: norm.birthDate,
+              deceased: norm.deceased,
+              addresses: norm.addresses,
+              contacts: norm.contacts,
+            });
             await this.#insertCurrent(tx, party, ctx);
           });
         } catch (err) {
@@ -436,7 +480,11 @@ export class BuiltinDemographicProvider implements DemographicProvider {
     }
     if (query.birthDate) {
       detailParts.push("birthDate");
-      conditions.push(eq(demographicParty.birthDate, query.birthDate));
+      // Prefix match so a partial DOB (YYYY or YYYY-MM) matches stored full dates
+      // (ADR-0046 — clinicians often recall only the year); a full YYYY-MM-DD
+      // prefix-matches only itself, so this subsumes exact match. (Digit/hyphen
+      // input — no LIKE metacharacters.)
+      conditions.push(like(demographicParty.birthDate, `${query.birthDate}%`));
     }
 
     const where = and(...conditions);

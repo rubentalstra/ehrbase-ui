@@ -17,9 +17,10 @@
 //   SSO plugin:
 //     - ssoProvider
 //
-// `keycloakRoles` is a CUSTOM column on `user`, populated by the SSO
-// plugin's `provisionUser` callback from the Keycloak `realm_access.roles`
-// claim. Drives `requireRole(...)` (src/lib/auth/require-role.server.ts).
+// `keycloakRoles` is a CUSTOM column on `user`. It is now VESTIGIAL (ADR-0044):
+// roles are read FRESH from the linked `account.access_token` JWT on every
+// request (require-role.ts / realm-roles.server.ts), so nothing writes it
+// anymore. Kept (unpopulated) to avoid a migration; safe to drop later.
 
 import {
   boolean,
@@ -51,8 +52,8 @@ export const user = pgTable('user', {
   banReason: text('ban_reason'),
   banExpires: timestamp('ban_expires', { withTimezone: true }),
 
-  // Custom — populated by the SSO provisionUser hook from
-  // jwt.realm_access.roles. Source of truth for clinical RBAC.
+  // Custom — VESTIGIAL (ADR-0044). Roles are decoded fresh from the linked
+  // account.access_token on every request; this column is no longer written.
   keycloakRoles: jsonb('keycloak_roles')
     .$type<string[]>()
     .default([])
