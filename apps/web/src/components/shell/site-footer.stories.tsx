@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Meta, StoryObj } from '@storybook/tanstack-react'
 
 import { SiteFooter } from '@/components/shell/site-footer'
-import { withRouter } from '@/test/storybook-decorators'
 
+// `@storybook/tanstack-react` supplies the (mocked) router, so the footer's
+// <Link>s resolve without a hand-written decorator (ADR-0047).
 const meta = {
   title: 'Shell/SiteFooter',
   component: SiteFooter,
-  decorators: [withRouter],
   parameters: { layout: 'fullscreen' },
   tags: ['autodocs'],
 } satisfies Meta<typeof SiteFooter>

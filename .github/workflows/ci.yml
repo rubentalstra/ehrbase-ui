@@ -140,6 +140,36 @@ jobs:
           path: apps/web/storybook-static/
           retention-days: 14
 
+  storybook-test:
+    # Runs every story as a real browser test via @storybook/addon-vitest
+    # (Chromium / Playwright). Story play() functions + the addon-a11y hard gate
+    # (any WCAG 2.2 AA / EN 301 549 violation fails) run here. ADR-0047.
+    name: Storybook tests (browser)
+    runs-on: ubuntu-24.04
+    needs: quality
+    timeout-minutes: 15
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          standalone: true
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+      - run: pnpm install --frozen-lockfile
+      - name: Compile Paraglide messages (generated module — gitignored)
+        run: pnpm paraglide:compile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @ehrbase-ui/web exec playwright install --with-deps chromium
+      - name: Run stories as browser tests
+        run: pnpm --filter @ehrbase-ui/web run test-storybook
+
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-24.04

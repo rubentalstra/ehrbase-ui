@@ -8,10 +8,13 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 
-// Storybook runs its own Vite build with a different preview shell that
-// can't host the TanStack Start / Nitro / Paraglide plugins. Detect the
-// Storybook context and emit a stripped plugin chain when it loads this
-// file. See .storybook/main.ts viteFinal hook.
+// Storybook runs its own Vite build with a preview shell that can't host the
+// TanStack Start / Nitro / devtools / Paraglide plugins. When STORYBOOK=true
+// (set by the storybook + test-storybook scripts) this config collapses to its
+// Storybook-safe plugin set: just Tailwind. React comes from
+// `@storybook/react-vite` (via the `@storybook/tanstack-react` framework), which
+// also strips the TanStack Start plugin and mocks server functions — so nothing
+// else from the app chain is needed in the preview. See .storybook/main.ts.
 const isStorybook =
   process.env.STORYBOOK === 'true' ||
   process.argv.some((a) => a.includes('storybook'))
@@ -23,7 +26,7 @@ export default defineConfig({
     },
   },
   plugins: isStorybook
-    ? [tailwindcss(), viteReact()]
+    ? [tailwindcss()]
     : [
         devtools(),
         nitro({

@@ -1,12 +1,16 @@
 // Storybook story for FieldRenderer — one story per major rmType group.
-// Storybook 10 / @storybook/react-vite.
+// Storybook 10 / @storybook/tanstack-react (ADR-0047).
 
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Meta, StoryObj } from '@storybook/tanstack-react'
+import { expect, userEvent, within } from 'storybook/test'
 import { useForm, FormProvider } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-import { parseWebTemplate, generateFormSchema } from '@ehrbase-ui/openehr-web-template'
+import {
+  parseWebTemplate,
+  generateFormSchema,
+} from '@ehrbase-ui/openehr-web-template'
 import type { WebTemplate } from '@ehrbase-ui/openehr-web-template'
 import { FieldRenderer } from './field-renderer'
 
@@ -21,7 +25,9 @@ function isRecordSchema(
 // Wrapper that provides the RHF context Storybook stories need.
 function StoryWrapper({ template }: { template: WebTemplate }) {
   const rawSchema = generateFormSchema(template)
-  const schema = isRecordSchema(rawSchema) ? rawSchema : z.record(z.string(), z.unknown())
+  const schema = isRecordSchema(rawSchema)
+    ? rawSchema
+    : z.record(z.string(), z.unknown())
   const form = useForm<Record<string, unknown>>({
     resolver: zodResolver(schema),
     defaultValues: {},
@@ -77,7 +83,11 @@ const textAndQuantityTemplate = parseWebTemplate({
         min: 0,
         max: 1,
         inputs: [
-          { suffix: 'magnitude', type: 'DECIMAL', validation: { range: { min: 0, minOp: '>=' } } },
+          {
+            suffix: 'magnitude',
+            type: 'DECIMAL',
+            validation: { range: { min: 0, minOp: '>=' } },
+          },
           {
             suffix: 'unit',
             type: 'CODED_TEXT',
@@ -186,7 +196,9 @@ const dateAndCountTemplate = parseWebTemplate({
         rmType: 'DV_COUNT',
         min: 0,
         max: 1,
-        inputs: [{ type: 'INTEGER', validation: { range: { min: 0, minOp: '>=' } } }],
+        inputs: [
+          { type: 'INTEGER', validation: { range: { min: 0, minOp: '>=' } } },
+        ],
       },
     ],
   },
@@ -233,6 +245,15 @@ type Story = StoryObj<typeof meta>
 
 export const TextAndQuantity: Story = {
   args: { template: textAndQuantityTemplate },
+  // Interaction: the first DV_TEXT field ("Clinical note") is a controlled RHF
+  // input — typing into it updates its value.
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const [note] = canvas.getAllByRole('textbox')
+    if (!note) throw new Error('expected the first DV_TEXT field to render')
+    await userEvent.type(note, 'Patient stable')
+    await expect(note).toHaveValue('Patient stable')
+  },
 }
 
 export const SelectAndBoolean: Story = {

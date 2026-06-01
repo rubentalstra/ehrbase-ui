@@ -1,14 +1,14 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Meta, StoryObj } from '@storybook/tanstack-react'
 
 import { AppSidebar } from '@/components/app-sidebar'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { withRouter } from '@/test/storybook-decorators'
 
+// Router is supplied (mocked) by the framework; only the sidebar layout context
+// is local to these stories (ADR-0047).
 const meta = {
   title: 'Shell/AppSidebar',
   component: AppSidebar,
   decorators: [
-    withRouter,
     (Story) => (
       <SidebarProvider>
         <Story />

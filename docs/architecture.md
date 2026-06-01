@@ -2152,15 +2152,16 @@ Vite 7.3.x continues to receive **important fixes and security patches** under V
 
 ### Storybook for the component library
 
-Storybook 9.x (Vite 7 first-class) is used for the component library — every shadcn-customized primitive, every openEHR form-renderer piece (`FieldRenderer`, `ArrayFieldRenderer`, the AQL editor, the audit-review dashboard cells), every state of the empty-error-loading triad.
+Storybook 10.4 (pinned — ADR-0010) is used for the component library — every shadcn-customized primitive, every openEHR form-renderer piece (`FieldRenderer`, `ArrayFieldRenderer`, the AQL editor, the audit-review dashboard cells), every state of the empty-error-loading triad. It runs on the official **`@storybook/tanstack-react`** framework (ADR-0047), which natively mocks `createServerFn` server functions, stubs `.server.ts` modules, and wraps each story in a memory-backed TanStack Router — replacing the hand-written stub files + router decorator a TanStack Start app would otherwise need.
 
-Three reasons it earns a place in v1.0 even though some greenfield projects defer it:
+Four reasons it earns a place in v1.0 even though some greenfield projects defer it:
 
 1. **It is documentation for outside contributors.** This is an open-source project; the design system needs a public surface that doesn't require running the full app to inspect.
 2. **It is the testbed for visual states without PHI.** A clinician's "I can't read this in the dim ICU at 03:00" feedback is reproducible against a Storybook story, not against the production app.
 3. **Accessibility regressions surface earlier.** The `@storybook/addon-a11y` addon runs `axe-core` against every story on every render. The CI gate from §12 already enforces zero violations on component tests; Storybook surfaces the same violations during development with hot-reload, before the test suite even runs.
+4. **Stories are executable tests.** Via `@storybook/addon-vitest` (ADR-0047) every story runs as a real browser test (Vitest 4 browser mode, Playwright/Chromium) in the blocking `storybook-test` CI job — render assertions, `play()` interaction tests, and the a11y gate as `test: 'error'` (any WCAG 2.2 AA / EN 301 549 violation fails). See §24.
 
-Storybook output is built as a static site (`storybook build`) and deployed alongside the main app docs at `/storybook/` — separate origin/path, no PHI in any story, no real Keycloak/EHRbase connection in published builds. Mock data lives under `src/components/__fixtures__/`.
+Storybook output is also built as a static site (`storybook build`) and deployed alongside the main app docs at `/storybook/` — separate origin/path, no PHI in any story, no real Keycloak/EHRbase connection in published builds. Mock data lives under `src/components/__fixtures__/`.
 
 ### Conventions
 
@@ -3010,15 +3011,18 @@ Older browsers see a soft-block landing page with upgrade instructions and a sup
 
 ## 24. Testing Strategy
 
-| Layer                 | Tool                                 | What                                                          |
-| --------------------- | ------------------------------------ | ------------------------------------------------------------- |
-| Unit                  | **Vitest**                           | utils, schema generators, FLAT converter, audit hash          |
-| Component             | Vitest + Testing Library             | shadcn-composed forms, dynamic field renderer                 |
-| Accessibility         | `vitest-axe`, `@axe-core/playwright` | every component test, every E2E flow                          |
-| API contract          | Vitest + MSW                         | server functions mocking EHRbase                              |
-| E2E                   | **Playwright**                       | login flow, create composition, AQL query, patient access log |
-| Load                  | k6 (optional)                        | sustained AQL query throughput                                |
-| Audit chain integrity | dedicated nightly job + Vitest unit  | recompute hash, assert no breaks                              |
+| Layer                 | Tool                                                                                 | What                                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Unit                  | **Vitest** (`unit` project, jsdom)                                                   | utils, schema generators, FLAT converter, audit hash                                                 |
+| Component             | Vitest + Testing Library                                                             | shadcn-composed forms, dynamic field renderer                                                        |
+| Story / browser       | **Storybook + `@storybook/addon-vitest`** (`storybook` project, Playwright/Chromium) | every story rendered + `play()` interaction-tested in a real browser; a11y as a hard gate (ADR-0047) |
+| Accessibility         | `vitest-axe`, `@axe-core/playwright`, Storybook `addon-a11y` (`test: 'error'`)       | every component test, every story, every E2E flow                                                    |
+| API contract          | Vitest + MSW                                                                         | server functions mocking EHRbase                                                                     |
+| E2E                   | **Playwright**                                                                       | login flow, create composition, AQL query, patient access log                                        |
+| Load                  | k6 (optional)                                                                        | sustained AQL query throughput                                                                       |
+| Audit chain integrity | dedicated nightly job + Vitest unit                                                  | recompute hash, assert no breaks                                                                     |
+
+Vitest is split into two **projects** (ADR-0047): `unit` (jsdom; `pnpm test`) and `storybook` (browser mode; `pnpm test-storybook`, gated in CI by the `storybook-test` job). The Storybook project needs a Chromium binary (`playwright install chromium`). The a11y gate runs per story and **fails** on any WCAG 2.2 AA / EN 301 549 violation; the page-level `region` best-practice rule is disabled only at the component-story level (a component in isolation has no page `<main>` — page landmarks are checked by the Playwright e2e axe pass).
 
 Coverage gates: 80 % statements on `src/lib`, 60 % overall. Audit and auth modules pinned to 90 %.
 
