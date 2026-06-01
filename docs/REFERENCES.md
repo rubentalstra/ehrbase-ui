@@ -86,9 +86,13 @@ Each entry was fetched against the npm registry, Docker Hub, or the vendor's rel
 
 ### Component library / docs
 
-| Package     | Verified | Pinned                                                                                                        | Source                                      |
-| ----------- | -------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `storybook` | 10.4.1   | **10.4.1** (diverges from arch doc §17 which names 9.x — see [ADR-0010](adr/0010-storybook-major-upgrade.md)) | https://registry.npmjs.org/storybook/latest |
+| Package                      | Verified | Pinned                                                                                             | Source                                                      |
+| ---------------------------- | -------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `storybook`                  | 10.4.1   | **10.4.1** (arch doc §17 updated to 10.4 — see [ADR-0010](adr/0010-storybook-major-upgrade.md))    | https://registry.npmjs.org/storybook/latest                 |
+| `@storybook/tanstack-react`  | 10.4.1   | **10.4.1** (official TanStack framework — [ADR-0047](adr/0047-storybook-tanstack-framework.md))    | https://registry.npmjs.org/@storybook/tanstack-react/latest |
+| `@storybook/addon-vitest`    | 10.4.1   | **10.4.1** (stories-as-tests, browser mode — [ADR-0047](adr/0047-storybook-tanstack-framework.md)) | https://registry.npmjs.org/@storybook/addon-vitest/latest   |
+| `@vitest/browser-playwright` | 4.1.7    | **4.1.7** (lockstep with `vitest@4.1.7` — its peer requires the exact version)                     | https://registry.npmjs.org/@vitest/browser-playwright       |
+| `@vitest/browser`            | 4.1.7    | **4.1.7** (peer of `@storybook/addon-vitest`; lockstep with `vitest`)                              | https://registry.npmjs.org/@vitest/browser                  |
 
 ### API generation
 
@@ -191,11 +195,11 @@ OTel SDK + transport (verified 2026-05-29 via `npm view`):
 
 Items that have moved since the architecture doc was last touched (2026-05-26 base; 2026-05-29 monorepo addendum) or that we have deliberately pinned away from the doc's value.
 
-| Item      | Arch doc says  | Pinned to | Reason                                                                                                                             |
-| --------- | -------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Node.js   | 24.15.0        | 24.16.0   | Newer LTS patch (released 2026-05-21).                                                                                             |
-| Storybook | 9.x            | 10.4.1    | User-decided to take latest at scaffold time. Tracked in ADR-0010. Reversal path: fall back to 9.x if Vite 7 plugin compat breaks. |
-| Vite      | 7.3.x for v1.0 | 7.3.3     | v8.0.14 stable on npm; intentionally NOT adopted, blocked by TanStack/router#7436 + #7091. Watch for resolution.                   |
+| Item      | Arch doc says  | Pinned to | Reason                                                                                                                                                                      |
+| --------- | -------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Node.js   | 24.15.0        | 24.16.0   | Newer LTS patch (released 2026-05-21).                                                                                                                                      |
+| Storybook | 9.x            | 10.4.1    | Took latest at scaffold time (ADR-0010); §17 now updated. Framework is `@storybook/tanstack-react` + stories run as browser tests via `@storybook/addon-vitest` (ADR-0047). |
+| Vite      | 7.3.x for v1.0 | 7.3.3     | v8.0.14 stable on npm; intentionally NOT adopted, blocked by TanStack/router#7436 + #7091. Watch for resolution.                                                            |
 
 ---
 

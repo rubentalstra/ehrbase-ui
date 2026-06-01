@@ -36,12 +36,14 @@ import type {
   AddIdentifierInput,
   CreatePatientResult,
   DeactivatePatientInput,
+  EhrIdInput,
   EndIdentifierInput,
   EndRelationshipInput,
   GetPatientInput,
   LinkedEhrResult,
   MergePatientInput,
   PartyIdInput,
+  PatientContextResult,
   PatientSearchResult,
   ProvisionEhrResult,
   UpdatePatientInput,
@@ -143,6 +145,49 @@ export async function getLinkedEhrImpl(input: PartyIdInput): Promise<LinkedEhrRe
     if (e instanceof Response && e.status === 404) return { ehrId: null }
     throw e
   }
+}
+
+export async function getPatientContextImpl(input: PartyIdInput): Promise<PatientContextResult> {
+  // Resolve the patient + their EHR in one call so no surface handles a raw
+  // ehrId (ADR-0046). Reuses the audited read impls (RBAC + ATNA inside each).
+  // The patient IDENTITY is the critical part: a transient EHR-lookup failure
+  // (EHRbase hiccup / expired upstream token) must NOT blank the banner — fall
+  // back to ehrId:null (renders "no EHR linked") rather than failing the context.
+  const party = await getPatientImpl({ id: input.id })
+  const ehrId = await getLinkedEhrImpl({ id: input.id })
+    .then((r) => r.ehrId)
+    .catch(() => null)
+  return { party, ehrId }
+}
+
+// Minimal shape of an EHR_STATUS we read to recover the demographic subject.
+const EhrStatusSubjectSchema = z.object({
+  subject: z
+    .object({
+      external_ref: z
+        .object({ namespace: z.string(), id: z.object({ value: z.string() }) })
+        .optional(),
+    })
+    .optional(),
+})
+
+export async function getPatientByEhrIdImpl(input: EhrIdInput): Promise<Party | null> {
+  const role = await requireRole(READ_ROLES, { phi: true })
+  const { fetchEhrStatus } = await import('./ehr.server.ts')
+
+  // callEhrbase conflates 403/404 → 404 when the EHR / status is absent.
+  const res = await fetchEhrStatus({ ehrId: input.ehrId }).catch((e: unknown) => {
+    if (e instanceof Response && e.status === 404) return null
+    throw e
+  })
+  if (!res) return null
+
+  const parsed = EhrStatusSubjectSchema.safeParse(JSON.parse(res.ehrStatus))
+  const partyId = parsed.success ? (parsed.data.subject?.external_ref?.id.value ?? null) : null
+  if (!partyId) return null
+
+  const ctx = providerCtx(role, crypto.randomUUID())
+  return viaProvider(() => getDemographicProvider().getParty(partyId, {}, ctx))
 }
 
 // ─── Writes ────────────────────────────────────────────────────────────────────

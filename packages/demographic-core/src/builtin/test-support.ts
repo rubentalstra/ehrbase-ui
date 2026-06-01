@@ -12,6 +12,7 @@ import type { DemographicDb } from "./adapter.ts";
 import {
   demographicChangeTypeEnum,
   demographicGenderEnum,
+  demographicMrnCounter,
   demographicParty,
   demographicPartyHistory,
   demographicPartyIdentifier,
@@ -28,6 +29,7 @@ const SCHEMA_ENTITIES = {
   demographicPartyHistory,
   demographicPartyIdentifier,
   demographicPartyName,
+  demographicMrnCounter,
   demographicRelationship,
 };
 

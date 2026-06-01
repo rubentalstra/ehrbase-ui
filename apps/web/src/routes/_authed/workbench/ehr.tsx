@@ -8,16 +8,14 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
+import { PatientEhrSelect } from '@/components/patient/patient-ehr-select'
 import { createEhr, getEhr, getEhrStatus } from '@/server/functions/ehr.functions'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/_authed/workbench/ehr')({
@@ -25,11 +23,8 @@ export const Route = createFileRoute('/_authed/workbench/ehr')({
   errorComponent: FeatureErrorBoundary,
 })
 
-const UuidSchema = z.uuid()
-
 function EhrWorkbench() {
   const [createdId, setCreatedId] = useState<string | null>(null)
-  const [ehrIdInput, setEhrIdInput] = useState('')
   const [inspectId, setInspectId] = useState<string | null>(null)
 
   const create = useMutation({
@@ -42,8 +37,6 @@ function EhrWorkbench() {
       toast.error(m.workbench_ehr_create_failed())
     },
   })
-
-  const validInput = UuidSchema.safeParse(ehrIdInput.trim()).success
 
   return (
     <div className="space-y-6">
@@ -77,23 +70,8 @@ function EhrWorkbench() {
           <CardTitle>{m.workbench_ehr_inspect_heading()}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Label htmlFor="ehr-id-input">{m.workbench_ehr_inspect_hint()}</Label>
-          <div className="flex gap-2">
-            <Input
-              id="ehr-id-input"
-              value={ehrIdInput}
-              onChange={(e) => setEhrIdInput(e.target.value)}
-              placeholder={m.workbench_ehr_inspect_placeholder()}
-              className="font-mono"
-            />
-            <Button
-              type="button"
-              disabled={!validInput}
-              onClick={() => setInspectId(ehrIdInput.trim())}
-            >
-              {m.workbench_ehr_inspect_submit()}
-            </Button>
-          </div>
+          <p className="text-muted-foreground text-sm">{m.workbench_pick_patient_hint()}</p>
+          <PatientEhrSelect onChange={(ehrId) => setInspectId(ehrId)} />
         </CardContent>
       </Card>
 

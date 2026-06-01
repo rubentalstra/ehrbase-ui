@@ -1,10 +1,10 @@
 # ADR-0010 — Storybook major upgrade (9 → 10)
 
-- **Status:** Accepted
+- **Status:** Accepted (the major-version pin stands; the build-workaround below is superseded)
 - **Date:** 2026-05-26
 - **Deciders:** Initial maintainer (@rubentalstra)
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** ADR-0047 (for the server-function-stub build workaround only — the Storybook-10 pin itself is unchanged)
 
 ## Context
 
@@ -61,6 +61,14 @@ run. The fix lives in `vite.config.ts`: when `process.env.STORYBOOK === 'true'`
 (set by the `pnpm storybook` and `pnpm storybook:build` scripts), the plugin
 chain collapses to `[tailwindcss(), viteReact()]`. The Storybook preview
 shell handles everything else.
+
+> **Superseded by ADR-0047 (2026-06-01).** The original workaround for
+> server-only code leaking into the preview was a set of hand-written stub/shim
+> files aliased in `.storybook/main.ts`. ADR-0047 replaces them with the official
+> `@storybook/tanstack-react` framework (which mocks server functions + the
+> router natively) and adds a browser-based story-test gate. The `isStorybook`
+> guard survives in simplified form (`[tailwindcss()]`; React now comes from the
+> framework). The Storybook-10 version pin recorded in this ADR is unchanged.
 
 ## Links
 

@@ -49,7 +49,9 @@ function navSections(roles: string[]): NavSection[] {
     {
       label: m.nav_section_clinical(),
       items: [
-        { label: m.nav_patients(), icon: UsersIcon, disabled: true },
+        // Global patient search → patient context (ADR-0046). The ⌘K palette is
+        // the faster entry; this is the persistent nav affordance.
+        { label: m.nav_patients(), icon: UsersIcon, to: '/patients' },
         { label: m.nav_aql(), icon: SearchIcon, disabled: true },
         { label: m.nav_templates(), icon: FileTextIcon, disabled: true },
       ],

@@ -12,6 +12,7 @@ import { z } from 'zod'
 
 import { m } from '@ehrbase-ui/i18n/messages'
 import { FeatureErrorBoundary } from '@/components/errors/feature-error-boundary'
+import { PatientEhrSelect } from '@/components/patient/patient-ehr-select'
 import {
   createDirectory,
   getDirectory,
@@ -20,7 +21,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
@@ -30,16 +30,12 @@ export const Route = createFileRoute('/_authed/workbench/directory')({
   errorComponent: FeatureErrorBoundary,
 })
 
-const UuidSchema = z.uuid()
-
 function DirectoryWorkbench() {
   const queryClient = useQueryClient()
-  const [ehrIdInput, setEhrIdInput] = useState('')
   const [activeEhrId, setActiveEhrId] = useState<string | null>(null)
   const [folderJson, setFolderJson] = useState('')
   const [createError, setCreateError] = useState<string | null>(null)
 
-  const validEhrId = UuidSchema.safeParse(ehrIdInput.trim()).success
   const directoryKey = ['workbench', 'directory', activeEhrId] as const
 
   const directory = useQuery({
@@ -61,11 +57,6 @@ function DirectoryWorkbench() {
       toast.error(m.workbench_directory_create_failed())
     },
   })
-
-  function handleLoad() {
-    if (!validEhrId) return
-    setActiveEhrId(ehrIdInput.trim())
-  }
 
   function handleCreate() {
     setCreateError(null)
@@ -95,20 +86,9 @@ function DirectoryWorkbench() {
       </div>
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="space-y-1">
-            <Label htmlFor="directory-ehr-id">{m.workbench_directory_ehr_id_label()}</Label>
-            <Input
-              id="directory-ehr-id"
-              value={ehrIdInput}
-              onChange={(e) => setEhrIdInput(e.target.value)}
-              placeholder={m.workbench_directory_ehr_id_placeholder()}
-              className="font-mono"
-            />
-          </div>
-          <Button type="button" disabled={!validEhrId} onClick={handleLoad}>
-            {m.workbench_directory_load()}
-          </Button>
+        <CardContent className="space-y-3 pt-6">
+          <p className="text-muted-foreground text-sm">{m.workbench_pick_patient_hint()}</p>
+          <PatientEhrSelect onChange={(ehrId) => setActiveEhrId(ehrId)} />
         </CardContent>
       </Card>
 

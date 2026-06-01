@@ -22,6 +22,10 @@ permissions:
   contents: read
   security-events: write # for SARIF upload to GitHub Security tab
 
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   trivy-fs:
     name: Trivy filesystem scan
@@ -55,6 +59,11 @@ jobs:
     name: Trivy container image scan
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    # Skip on PRs: this builds the full Docker image (multi-minute) and is
+    # ADVISORY (continue-on-error) + not a required status check, so running it
+    # on every PR is wasted time. It runs on push-to-main + the weekly schedule,
+    # which is where the SARIF upload to the Security tab matters.
+    if: github.event_name != 'pull_request'
     # Foundation milestone: image scan runs in advisory mode (does not block
     # the PR). The base image has known HIGH/CRITICAL CVEs that get resolved
     # when alpine/node updates flow through Dependabot. Tighten to

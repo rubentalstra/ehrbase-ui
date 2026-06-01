@@ -156,6 +156,20 @@ export const demographicPartyName = pgTable(
   ],
 );
 
+// ─── demographic_mrn_counter — monotonic source for auto-assigned MRNs ────────
+// A single-row counter (id = 1) holding the LAST allocated MRN sequence number.
+// createParty allocates the next value atomically via
+// `insert … on conflict do update set last_value = last_value + 1 returning`,
+// which serialises concurrent allocations on the row lock (driver-agnostic — no
+// raw SEQUENCE, so PGlite pushSchema + the generated migration stay one source).
+// Auto-MRN gives every patient a short human record number (ADR-0046); it is the
+// primary human handle alongside name + DOB. Production may instead supply MRNs
+// from an external system (BuiltinProviderDeps.autoAssignMrn = false).
+export const demographicMrnCounter = pgTable("demographic_mrn_counter", {
+  id: integer("id").primaryKey(),
+  lastValue: integer("last_value").notNull(),
+});
+
 // ─── demographic_relationship — PARTY_RELATIONSHIP (own lifecycle) ────────────
 export const demographicRelationship = pgTable(
   "demographic_relationship",
@@ -182,5 +196,6 @@ export const demographicSchema = {
   demographicPartyHistory,
   demographicPartyIdentifier,
   demographicPartyName,
+  demographicMrnCounter,
   demographicRelationship,
 };
